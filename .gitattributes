@@ -1,0 +1,45 @@
+# =============================================================================
+#  Git attributes — line endings and binary file handling
+# =============================================================================
+
+# --- Line endings ---
+
+# Use LF everywhere. CRLF is converted to LF on commit, restored on checkout on Windows
+* text=auto eol=lf
+
+# Windows batch scripts require CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# --- Binary files (no conversion, no diff) ---
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+# SVG is text (XML), useful to diff
+*.svg   text
+*.pdf   binary
+*.zip   binary
+*.whl   binary
+*.pyc   binary
+*.pyo   binary
+*.db    binary
+*.sqlite binary
+
+# --- Programming languages ---
+*.py    text
+*.sql   text
+*.yml   text
+*.yaml  text
+*.json  text
+*.md    text
+*.txt   text
+*.sh    text    eol=lf
+*.toml  text
+*.ini   text
+
+# --- Docker ---
+Dockerfile      text eol=lf
+docker-compose* text

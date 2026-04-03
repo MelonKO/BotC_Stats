@@ -5,26 +5,26 @@
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│                  BotC Monorepo               │
-├──────────────┬──────────────┬───────────────┤
-│   core/      │  uploader/   │  (future)     │
-│  Docker +    │  CSV → API   │  telegram-bot │
-│  PostgreSQL  │  Importer    │  web-ui       │
-│  + FastAPI   │              │               │
-│  + Nginx     │              │               │
-└──────────────┴──────────────┴───────────────┘
-         │              │
-         ▼              ▼
-    PostgreSQL DB ←── POST /api/import
+┌───────────────────────────────────────────────────────────┐
+│                    BotC Monorepo                           │
+├──────────────┬──────────────┬─────────────────────────────┤
+│   core/      │  uploader/   │  (future)                   │
+│  Docker +    │  CSV → API   │  telegram-bot, web-ui, ...  │
+│  PostgreSQL  │  Importer    │                             │
+│  + FastAPI   │              │                             │
+│  + Nginx     │              │                             │
+└──────┬───────┴──────┬───────┴─────────────────────────────┘
+       │              │
+       ▼              ▼
+  PostgreSQL DB ←── POST /api/import
 ```
 
 ## Components
 
-| Компонент | Описание | Документация |
+| Компонент | Описание | Подробности |
 |-----------|----------|-------------|
-| **core/** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
-| **uploader/** | CLI-утилита для импорта CSV-файлов с партиями через REST API. | [uploader/README.md](uploader/README.md) |
+| **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
+| **[uploader/](uploader/)** | CLI-утилита для импорта CSV-файлов с партиями через REST API. | [uploader/README.md](uploader/README.md) |
 
 ## Quick Start
 
@@ -33,6 +33,7 @@
 ```bash
 cd core
 cp .env.example .env
+bash scripts/generate-cert.sh
 docker-compose up -d
 ```
 
@@ -46,8 +47,8 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 ```bash
 cd uploader
-python -m venv venv && source venv/bin/activate  # Linux/macOS
-python -m venv venv && venv\Scripts\activate      # Windows
+python -m venv venv
+venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 
 # Настроить .env — вставить API_KEY
@@ -67,19 +68,109 @@ BotC/
 │   ├── init-scripts/
 │   ├── api/
 │   ├── nginx/
-│   └── scripts/
+│   ├── scripts/
+│   └── docs/               # SSH and API access documentation
 ├── uploader/               # CSV importer CLI
 │   ├── uploader.py
 │   └── requirements.txt
 └── test_sample.csv         # Sample data for testing
 ```
 
+## Database Schema
+
+### Основные таблицы
+
+| Таблица | Назначение |
+|---------|------------|
+| `players` | Реестр игроков (уникальное имя, контакты) |
+| `roles` | Справочник ролей (название, цвет, тип) |
+| `games` | Метаданные партий (дата, сценарий, рассказчик, победитель) |
+| `game_players` | Раскладка партии (связь игрок-роль, выживание) |
+| `api_keys` | Хранение хешей API-ключей для аутентификации |
+
+### Аналитические представления
+
+| Представление | Данные |
+|---------------|--------|
+| `v_player_stats` | Статистика игрока: игры, победы, винрейт, выживаемость |
+| `v_role_stats` | Эффективность ролей: винрейт, выживаемость, частота смены ролей |
+| `v_game_summary` | Сводка по партии: состав, победитель, количество выживших |
+
+## Security
+
+### Гибридная модель доступа
+
+| Метод | Для кого | Порт | Аутентификация |
+|-------|----------|------|----------------|
+| SSH-туннель | Администратор | 22 | SSH-ключ |
+| REST API (HTTPS) | Внешние импортеры | 443 | API-ключ (SHA-256 хеш) |
+| Docker network | Внутренние сервисы | — | Прямое подключение |
+
+Порт PostgreSQL **не проброшен наружу** — доступен только внутри Docker network.
+
+### Многопользовательская модель БД
+
+| Пользователь | Права | Назначение |
+|--------------|-------|------------|
+| `postgres` | Суперпользователь | Администрирование |
+| `botc_user` | CRUD (SELECT, INSERT, UPDATE, DELETE) | Приложение |
+| `api_service` | INSERT на игры/players/roles/staging, SELECT на views | API-сервис импорта |
+
+## Useful Queries
+
+```sql
+-- Топ-5 игроков по винрейту (мин. 5 игр)
+SELECT name, games_played, win_rate_pct
+FROM v_player_stats
+WHERE games_played >= 5
+ORDER BY win_rate_pct DESC
+LIMIT 5;
+
+-- Топ ролей по винрейту
+SELECT role_name, times_played, win_rate_pct
+FROM v_role_stats
+WHERE times_played >= 3
+ORDER BY win_rate_pct DESC;
+
+-- Последняя импортированная партия
+SELECT * FROM v_game_summary ORDER BY game_date DESC LIMIT 1;
+```
+
+## Backup & Restore
+
+```bash
+# Backup
+docker-compose exec db pg_dump -U postgres botc_stats > backup.sql
+
+# Restore
+docker-compose exec db psql -U postgres botc_stats < backup.sql
+```
+
 ## Versioning
 
-Каждый компонент версионируется отдельно. Теги в monorepo:
+Проект использует **единую версию** для всех компонентов (monorepo semver). Один тег = гарантированная совместимость.
 
-- `core-v1.x.x` — версии ядра (БД + API)
-- `uploader-v2.x.x` — версии загрузчика
+### Правила
+
+| Тип изменения | Бамп | Пример |
+|---|---|---|
+| Багфикс в любом компоненте | PATCH | `v3.0.0` → `v3.0.1` |
+| Новая фича в любом компоненте | MINOR | `v3.0.1` → `v3.1.0` |
+| Breaking change (даже в одном компоненте) | MAJOR | `v3.1.0` → `v4.0.0` |
+
+### Формат релиза
+
+Каждый тег сопровождается описанием, что изменилось в каждом компоненте:
+
+```
+v3.1.0
+  core:      no changes
+  uploader:  added CSV input validation
+
+v4.0.0
+  core:      BREAKING — changed API endpoint to /api/v2/import
+  uploader:  updated to use new /api/v2/import
+```
 
 ## License
 

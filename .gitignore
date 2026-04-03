@@ -1,6 +1,9 @@
 # Environment files
 .env
 
+# AI assistant context (local developer preference)
+QWEN.md
+
 # Python
 __pycache__/
 *.pyc

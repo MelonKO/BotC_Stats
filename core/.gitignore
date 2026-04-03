@@ -1,0 +1,32 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*.dump
+*.backup
+
+# Docker
+docker-compose.override.yml
+
+# SSL certificates (generated, should not be committed)
+nginx/ssl/*.pem
+!nginx/ssl/.gitkeep
+
+# Python cache
+api/app/__pycache__/
+api/app/*.pyc

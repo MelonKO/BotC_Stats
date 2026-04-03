@@ -1,395 +1,86 @@
-# Blood on the Clocktower — PostgreSQL Schema
+# Blood on the Clocktower — Project
 
-> Схема базы данных для учёта партий, игроков и статистики в настольной игре **Blood on the Clocktower**.
+**Blood on the Clocktower (BotC)** — система учёта партий настольной игры Blood on the Clocktower с базой данных PostgreSQL, REST API и набором инструментов для импорта и аналитики.
 
----
+## Architecture
 
-## 📋 Оглавление
-
-- [Назначение](#-назначение)
-- [Технологии](#-технологии)
-- [Структура базы данных](#-структура-базы-данных)
-  - [Типы данных (ENUM)](#-типы-данных-enum)
-  - [Таблицы](#-таблицы)
-  - [Представления (Views)](#-представления-views)
-- [Заполнение базы данных](#-заполнение-базы-данных)
-  - [Способ 1: Прямая вставка в таблицы](#-способ-1-прямая-вставка-в-таблицы)
-  - [Способ 2: Импорт через staging-таблицу (рекомендуется)](#-способ-2-импорт-через-staging-таблицу-рекомендуется)
-- [Примеры запросов](#-примеры-запросов)
-- [Устранение неполадок](#-устранение-неполадок)
-- [Запуск через Docker](#-запуск-через-docker)
-- [Лицензия](#-лицензия)
-
----
-
-## 🎯 Назначение
-
-Данная схема предназначена для:
-
-✅ **Учёта проведённых партий**: дата, сценарий, рассказчик, победившая команда.  
-✅ **Хранения раскладки**: кто какую роль получил, выжил ли игрок, менялась ли роль.  
-✅ **Аналитики**: автоматический расчёт винрейта игроков, эффективности ролей, сводок по партиям.  
-✅ **Гибкого импорта**: поддержка как ручного заполнения, так и пакетного импорта из Excel/CSV.
-
-Схема нормализована (3НФ) для обеспечения целостности данных, но включает механизм **staging-таблицы** для удобного импорта денормализованных данных.
-
----
-
-## ⚙️ Технологии
-
-| Компонент | Версия / Требование |
-|-----------|---------------------|
-| **PostgreSQL** | 14+ (требуется `gen_random_uuid()`) |
-| **Кодировка** | UTF-8 (поддержка кириллицы) |
-| **Расширения** | `pgcrypto` или встроенная функция `gen_random_uuid()` в PG 13+ |
-
----
-
-## 🗄️ Структура базы данных
-
-### 🔹 Типы данных (ENUM)
-
-```sql
-CREATE TYPE role_type AS ENUM (
-    'Горожанин',  -- Townsfolk: полезные способности для доброй команды
-    'Изгой',      -- Outsider: пассивные или негативные эффекты, обычно синие
-    'Приспешник', -- Minion: помогает демону, красная команда
-    'Демон',      -- Demon: главная роль злой команды
-    'Странник'    -- Traveler: нейтральные роли, могут меняться в ходе игры
-);
+```
+┌─────────────────────────────────────────────┐
+│                  BotC Monorepo               │
+├──────────────┬──────────────┬───────────────┤
+│   core/      │  uploader/   │  (future)     │
+│  Docker +    │  CSV → API   │  telegram-bot │
+│  PostgreSQL  │  Importer    │  web-ui       │
+│  + FastAPI   │              │               │
+│  + Nginx     │              │               │
+└──────────────┴──────────────┴───────────────┘
+         │              │
+         ▼              ▼
+    PostgreSQL DB ←── POST /api/import
 ```
 
----
+## Components
 
-### 🔹 Таблицы
+| Компонент | Описание | Документация |
+|-----------|----------|-------------|
+| **core/** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
+| **uploader/** | CLI-утилита для импорта CSV-файлов с партиями через REST API. | [uploader/README.md](uploader/README.md) |
 
-#### `players` — Реестр игроков
+## Quick Start
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `id` | UUID | Уникальный идентификатор (автогенерация) |
-| `name` | TEXT | Имя игрока (**уникальное**, обязательное) |
-| `telegram`, `vk`, `phone`, `email` | TEXT | Контакты для связи |
-| `notes` | TEXT | Произвольные заметки |
-
-```sql
--- Пример: добавление нового игрока
-INSERT INTO players (name, telegram) VALUES ('Анна Никитина', '@anna_botc');
-```
-
----
-
-#### `roles` — Справочник ролей
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `id` | UUID | Уникальный идентификатор |
-| `name` | TEXT | Название роли (**уникальное**, например, «Пукка») |
-| `color` | TEXT | Команда: `'синий'`, `'красный'`, `'нейтральный'` |
-| `role_type` | role_type | Тип роли из ENUM |
-
-```sql
--- Пример: добавление новой роли
-INSERT INTO roles (name, color, role_type) 
-VALUES ('Император', 'синий', 'Горожанин');
-```
-
-> ⚠️ **Важно**: Все роли, используемые в партиях, должны быть предварительно добавлены в эту таблицу.
-
----
-
-#### `games` — Метаданные партий
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `id` | UUID | Уникальный идентификатор партии |
-| `game_date` | DATE | Дата проведения (по умолчанию — сегодня) |
-| `scenario_name` | TEXT | Название сценария (например, «Вселенная зла») |
-| `storyteller_id` | UUID | Ссылка на `players.id` — кто вёл игру |
-| `color_win` | TEXT | Победившая команда: `'синий'` или `'красный'` |
-
-```sql
--- Пример: создание записи о партии
-INSERT INTO games (game_date, scenario_name, storyteller_id, color_win)
-VALUES ('2026-01-15', 'Вселенная зла', 
-        (SELECT id FROM players WHERE name = 'МелонКО'), 'синий');
-```
-
----
-
-#### `game_players` — Раскладка партии (участники)
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `id` | UUID | Уникальный идентификатор записи |
-| `game_id` | UUID | Ссылка на `games.id` |
-| `player_id` | UUID | Ссылка на `players.id` |
-| `role_start_id` | UUID | Роль, выданная в начале игры |
-| `role_end_id` | UUID | Роль в момент окончания (может измениться) |
-| `color_end` | TEXT | Команда игрока в конце: `'синий'` / `'красный'` |
-| `is_alive` | BOOLEAN | Выжил ли игрок к концу партии |
-
-```sql
--- Пример: добавление участника в партию
-INSERT INTO game_players (
-    game_id, player_id, role_start_id, role_end_id, color_end, is_alive
-)
-VALUES (
-    (SELECT id FROM games WHERE scenario_name = 'Вселенная зла' LIMIT 1),
-    (SELECT id FROM players WHERE name = 'Анна Никитина'),
-    (SELECT id FROM roles WHERE name = 'Дамочка'),
-    (SELECT id FROM roles WHERE name = 'Дамочка'),
-    'синий',
-    true
-);
-```
-
-> 🔗 Ограничение `UNIQUE (game_id, player_id)` предотвращает дублирование участия одного игрока в одной партии.
-
----
-
-### 🔹 Представления (Views) — Готовая аналитика
-
-| Представление | Назначение |
-|---------------|------------|
-| `v_player_stats` | Статистика игрока: игры, победы, винрейт, выживаемость |
-| `v_role_stats` | Эффективность ролей: как часто выигрывают с конкретной ролью |
-| `v_game_summary` | Сводка по партии: состав, победитель, количество выживших |
-| `v_role_type_stats` | Агрегированная статистика по типам ролей (Горожанин/Демон и т.д.) |
-
-```sql
--- Пример: топ-5 игроков по винрейту (минимум 5 игр)
-SELECT name, games_played, win_rate_pct 
-FROM v_player_stats 
-WHERE games_played >= 5 
-ORDER BY win_rate_pct DESC 
-LIMIT 5;
-```
-
----
-
-## 📥 Заполнение базы данных
-
-### 🔹 Способ 1: Прямая вставка в таблицы
-
-Подходит для:
-- Небольших объёмов данных
-- Точечного добавления игроков или ролей
-- Ручного управления через pgAdmin / DBeaver / psql
-
-**Порядок действий**:
-1. Добавить игроков в `players`
-2. Добавить роли в `roles` (если новых)
-3. Создать запись партии в `games`
-4. Добавить участников в `game_players`
-
-**Преимущества**:
-- Полный контроль над данными
-- Немедленная валидация ограничений БД
-
-**Недостатки**:
-- Трудоёмко для массового импорта
-- Требует знания структуры и внешних ключей
-
----
-
-### 🔹 Способ 2: Импорт через staging-таблицу (рекомендуется)
-
-Подходит для:
-- Пакетного импорта из Excel/CSV
-- Заполнения данных людьми без технических навыков
-- Регулярного обновления статистики
-
-#### 📁 Структура CSV-файла
-
-```csv
-game_date,scenario_name,storyteller_name,color_win,player_name,role_start_name,role_end_name,color_end,is_alive
-2026-01-15,Вселенная зла,МелонКО,синий,Анна Никитина,Дамочка,Дамочка,синий,true
-2026-01-15,Вселенная зла,МелонКО,синий,Борис Петров,Азартный игрок,Азартный игрок,синий,true
-2026-01-15,Вселенная зла,МелонКО,синий,Виктор Сидоров,Убийца,Политик,синий,true
-2026-01-15,Вселенная зла,МелонКО,красный,Галина Иванова,Пукка,Пукка,красный,false
-```
-
-> 📌 **Правила заполнения**:
-> - Одна партия = несколько строк (по одной на каждого игрока)
-> - Метаданные партии (`game_date`, `scenario_name`, `storyteller_name`, `color_win`) повторяются в каждой строке
-> - Используйте **имена**, а не ID: `storyteller_name: МелонКО`, `role_start_name: Дамочка`
-> - Значения `is_alive`: `true` / `false` (или `1` / `0`)
-> - Цвета: только `'синий'` или `'красный'`
-
-#### 🔄 Процесс импорта
-
-```sql
--- Шаг 1: Загрузка CSV в staging-таблицу
-\COPY games_import_staging FROM 'C:/data/party_2026_01.csv' DELIMITER ',' CSV HEADER;
-
--- Шаг 2: Запуск процедуры импорта с валидацией
-SELECT * FROM process_games_import();
-
--- Ожидаемый результат при успехе:
---  games_created | players_created | errors
---  --------------+-----------------+--------
---              1 |               0 | 
-```
-
-#### 🛡️ Строгая валидация ролей
-
-Процедура `process_games_import()`:
-1. **Проверяет** наличие всех ролей из CSV в таблице `roles`
-2. **Прерывает импорт**, если найдены неизвестные роли, и возвращает список ошибок
-3. **Создаёт автоматически** отсутствующих игроков и рассказчиков по имени
-4. **Распределяет данные** в нормализованные таблицы `games` и `game_players`
-5. **Очищает** staging-таблицу после успешного импорта
-
-```sql
--- Пример ошибки при отсутствии роли в справочнике:
---  games_created | players_created | errors
---  --------------+-----------------+--------------------------------------------------
---              0 |               0 | Отсутствуют роли в справочнике: Император, Вор. Добавьте их в таблицу roles перед импортом.
-```
-
-**Решение**:
-```sql
--- Добавить недостающие роли
-INSERT INTO roles (name, color, role_type) VALUES 
-    ('Император', 'синий', 'Горожанин'),
-    ('Вор', 'красный', 'Приспешник');
-
--- Повторить импорт
-SELECT * FROM process_games_import();
-```
-
-#### 📊 Импорт через GUI (pgAdmin / DBeaver)
-
-Если не используете консоль:
-
-1. Откройте **pgAdmin** → ваша база → **Tools** → **Import/Export Data**
-2. Выберите таблицу `games_import_staging`
-3. Укажите путь к CSV, формат `CSV`, отметьте `Header: true`
-4. Нажмите **Import**
-5. Выполните `SELECT * FROM process_games_import();` в Query Tool
-
----
-
-## 🔍 Примеры запросов
-
-```sql
--- 🏆 Топ-3 самых частых ролей по винрейту (минимум 3 игры)
-SELECT role_name, times_played, win_rate_pct 
-FROM v_role_stats 
-WHERE times_played >= 3 
-ORDER BY win_rate_pct DESC 
-LIMIT 3;
-
--- 📅 Все партии за последний месяц с рассказчиком
-SELECT game_date, scenario_name, storyteller, color_win, players 
-FROM v_game_summary 
-WHERE game_date >= CURRENT_DATE - INTERVAL '1 month'
-ORDER BY game_date DESC;
-
--- 💀 Кто чаще умирает? Игроки с винрейтом < 30% и смертностью > 70%
-SELECT name, games_played, win_rate_pct, 
-       ROUND(100.0 * died / games_played, 1) AS death_rate_pct
-FROM v_player_stats 
-WHERE games_played >= 5 
-  AND win_rate_pct < 30 
-  AND died * 1.0 / games_played > 0.7
-ORDER BY death_rate_pct DESC;
-
--- 🎭 Роли, которые чаще всего меняются в ходе игры
-SELECT role_name, role_changed_count, times_played,
-       ROUND(100.0 * role_changed_count / times_played, 1) AS change_rate_pct
-FROM v_role_stats 
-WHERE times_played >= 5
-ORDER BY change_rate_pct DESC;
-```
-
----
-
-## 🚨 Устранение неполадок
-
-| Проблема | Возможная причина | Решение |
-|----------|-------------------|---------|
-| `ERROR: роль "Х" не существует` | Роль не добавлена в справочник `roles` | Выполните `INSERT INTO roles ...` с нужным названием |
-| `ERROR: дублируется ключ (name)` | Игрок/роль уже существует | Проверьте `SELECT * FROM players WHERE name = '...'` |
-| `ERROR: нарушено ограничение CHECK (color_win)` | В CSV указано не 'синий'/'красный' | Исправьте значения на допустимые |
-| Импорт не создал записи, но не вернул ошибку | Staging-таблица была пуста | Проверьте загрузку CSV: `SELECT COUNT(*) FROM games_import_staging;` |
-| Винрейт отображается как `NULL` | У игрока/роли ещё нет сыгранных партий | Это нормально; `NULL` означает «нет данных» |
-
----
-
-## 📦 Развёртывание схемы
+### 1. Запуск сервера (core)
 
 ```bash
-# 1. Создайте базу данных
-createdb botc_stats -U postgres
-
-# 2. Примените схему
-psql -d botc_stats -U postgres -f botc_schema_v4.sql
-
-# 3. Проверьте установку
-psql -d botc_stats -U postgres -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
-```
-
----
-
-## 🤝 Вклад в проект
-
-1. Создайте ветку для новой фичи: `git checkout -b feature/new-role-type`
-2. Внесите изменения в схему или документацию
-3. Протестируйте миграции на тестовой БД
-4. Отправьте Pull Request с описанием изменений
-
----
-
-## 📄 Лицензия
-
-Схема распространяется под лицензией **MIT**. Используйте, модифицируйте и делитесь — с указанием авторства.
-
----
-
-> 💡 **Совет**: Регулярно делайте бэкапы базы:
-> `pg_dump botc_stats -U postgres -F c -f botc_backup_$(date +%Y%m%d).dump`
-
----
-
-## 🐳 Запуск через Docker
-
-Проект включает готовую Docker-конфигурацию для быстрого развертывания PostgreSQL.
-
-**Директория:** `docker-botc/`
-
-### Быстрый старт
-
-```bash
-cd docker-botc
-
-# 1. Скопировать .env.example в .env и настроить переменные
+cd core
 cp .env.example .env
-
-# 2. Запустить контейнер
 docker-compose up -d
-
-# 3. Проверить логи
-docker-compose logs -f db
 ```
 
-### Подключение к БД
+### 2. Создание API-ключа
 
 ```bash
-# Через psql внутри контейнера
-docker-compose exec db psql -U postgres -d botc_stats
-
-# Через внешний клиент (localhost:5432)
-psql -h localhost -p 5432 -U postgres -d botc_stats
+bash scripts/create-api-key.sh create "Your Name" "contact"
 ```
 
-### Управление
+### 3. Импорт данных (uploader)
 
 ```bash
-docker-compose down              # Остановить
-docker-compose restart           # Перезапустить
-docker-compose down -v           # Удалить данные
+cd uploader
+python -m venv venv && source venv/bin/activate  # Linux/macOS
+python -m venv venv && venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+
+# Настроить .env — вставить API_KEY
+python uploader.py path/to/games.csv
 ```
 
-> Подробная документация в `docker-botc/README.md`.
+## Project Structure
+
+```
+BotC/
+├── .gitattributes          # Git line endings config
+├── .gitignore
+├── BotC_Schema.sql         # Standalone DB schema (for reference)
+├── README.md               # This file
+├── core/                   # Docker stack (DB + API + Nginx)
+│   ├── docker-compose.yml
+│   ├── init-scripts/
+│   ├── api/
+│   ├── nginx/
+│   └── scripts/
+├── uploader/               # CSV importer CLI
+│   ├── uploader.py
+│   └── requirements.txt
+└── test_sample.csv         # Sample data for testing
+```
+
+## Versioning
+
+Каждый компонент версионируется отдельно. Теги в monorepo:
+
+- `core-v1.x.x` — версии ядра (БД + API)
+- `uploader-v2.x.x` — версии загрузчика
+
+## License
+
+MIT

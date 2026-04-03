@@ -1,0 +1,115 @@
+import asyncpg
+from app.schemas import GameImportRequest
+from app.db import get_connection
+
+
+async def import_game(data: GameImportRequest, owner: dict) -> dict:
+    """
+    Импортирует партию через API.
+
+    Процесс:
+    1. Валидирует роли (проверяет существование в БД)
+    2. Вставляет данные в games_import_staging
+    3. Вызывает process_games_import()
+    4. Возвращает результат
+
+    Returns:
+        dict со статусом, game_id, количеством созданных игроков и ошибками
+    """
+    async with get_connection() as conn:
+        # Шаг 1: Валидация ролей на сервере (двойная проверка)
+        role_names = set()
+        for p in data.players:
+            role_names.add(p.role_start)
+            role_names.add(p.role_end)
+
+        existing_roles = await conn.fetch(
+            "SELECT name FROM roles WHERE name = ANY($1)",
+            list(role_names),
+        )
+        existing_role_names = {r["name"] for r in existing_roles}
+        missing_roles = role_names - existing_role_names
+
+        if missing_roles:
+            return {
+                "status": "error",
+                "errors": [
+                    f"Отсутствуют роли: {', '.join(sorted(missing_roles))}. "
+                    f"Обратитесь к администратору для добавления ролей."
+                ],
+            }
+
+        # Шаг 2: Вставляем в staging
+        for p in data.players:
+            await conn.execute(
+                """
+                INSERT INTO games_import_staging (
+                    game_date, scenario_name, storyteller_name, color_win,
+                    player_name, role_start_name, role_end_name,
+                    color_end, is_alive
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                """,
+                data.game_date,
+                data.scenario_name,
+                data.storyteller_name,
+                data.color_win,
+                p.name,
+                p.role_start,
+                p.role_end,
+                p.color_end,
+                p.is_alive,
+            )
+
+        # Шаг 3: Вызываем process_games_import()
+        row = await conn.fetchrow("SELECT * FROM process_games_import()")
+
+        games_created = row["games_created"]
+        players_created = row["players_created"]
+        errors = row["errors"]
+
+        if errors:
+            return {
+                "status": "error",
+                "errors": [errors],
+            }
+
+        # Шаг 4: Получаем ID созданной игры
+        game_row = await conn.fetchrow(
+            """
+            SELECT id::text FROM games
+            WHERE game_date = $1 AND scenario_name = $2
+            ORDER BY id DESC LIMIT 1
+            """,
+            data.game_date,
+            data.scenario_name,
+        )
+
+        return {
+            "status": "ok",
+            "game_id": game_row["id"] if game_row else None,
+            "players_created": players_created,
+            "errors": [],
+        }
+
+
+async def get_all_roles() -> list[dict]:
+    """Возвращает список всех доступных ролей."""
+    async with get_connection() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT name, color, role_type
+            FROM roles
+            ORDER BY role_type, name
+            """
+        )
+        return [dict(r) for r in rows]
+
+
+async def check_db_connection() -> bool:
+    """Проверяет подключение к БД."""
+    try:
+        async with get_connection() as conn:
+            await conn.fetchval("SELECT 1")
+        return True
+    except Exception:
+        return False

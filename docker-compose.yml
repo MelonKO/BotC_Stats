@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  #  PostgreSQL — база данных
+  # ============================================================
+  db:
+    image: postgres:16
+    container_name: botc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-botc_stats}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      BOTC_USER_PASSWORD: ${BOTC_USER_PASSWORD:-change_me}
+      API_SERVICE_PASSWORD: ${API_SERVICE_PASSWORD:-change_me}
+    # Порт доступен только на localhost хоста — для SSH-туннеля
+    # Внутренние сервисы подключаются через Docker network
+    # Внешний доступ: только через Nginx (API, HTTPS :443)
+    ports:
+      - "127.0.0.1:5432:5432"
+    command: ["postgres", "-c", "listen_addresses=*"]
+    volumes:
+      - botc_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  FastAPI — REST API для внешних импортеров
+  # ============================================================
+  api:
+    build: ./api
+    container_name: botc-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://api_service:${API_SERVICE_PASSWORD:-change_me}@db:5432/botc_stats
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Nginx — reverse proxy + SSL
+  # ============================================================
+  nginx:
+    image: nginx:alpine
+    container_name: botc-nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - botc_internal
+
+volumes:
+  botc_data:
+
+networks:
+  botc_internal:
+    driver: bridge

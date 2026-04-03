@@ -1,0 +1,4 @@
+# SSL certificates will be generated here by scripts/generate-cert.sh
+# Placeholders:
+#   cert.pem — self-signed certificate
+#   key.pem  — private key

@@ -1,0 +1,94 @@
+from fastapi import FastAPI, Depends, HTTPException, Header
+from contextlib import asynccontextmanager
+import asyncio
+
+from app.schemas import (
+    GameImportRequest,
+    ImportStatusResponse,
+    RolesResponse,
+    HealthResponse,
+)
+from app.auth import validate_api_key
+from app.import_logic import import_game, get_all_roles, check_db_connection
+from app.db import get_pool, close_pool
+
+
+# ============================================================
+#  Application lifecycle
+# ============================================================
+
+async def wait_for_db(max_retries: int = 30, delay: float = 2.0):
+    """Ждём готовности БД при старте с повторными попытками."""
+    for attempt in range(1, max_retries + 1):
+        try:
+            pool = await get_pool()
+            async with pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            print(f"Database connected on attempt {attempt}")
+            return True
+        except Exception as e:
+            print(f"DB attempt {attempt}/{max_retries} failed: {e}")
+            if attempt < max_retries:
+                await asyncio.sleep(delay)
+    return False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: wait for DB to be ready
+    db_ready = await wait_for_db()
+    if not db_ready:
+        print("WARNING: Could not connect to database, API will be degraded")
+    yield
+    # Shutdown: close connection pool
+    await close_pool()
+
+
+app = FastAPI(
+    title="BotC Import API",
+    description="API для импорта партий Blood on the Clocktower",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+
+# ============================================================
+#  Health check
+# ============================================================
+
+@app.get("/health", response_model=HealthResponse)
+async def health():
+    """Проверка работоспособности сервиса."""
+    db_ok = await check_db_connection()
+    return HealthResponse(status="ok" if db_ok else "degraded", db_connected=db_ok)
+
+
+# ============================================================
+#  API endpoints
+# ============================================================
+
+@app.post("/api/import", response_model=ImportStatusResponse)
+async def create_import(
+    data: GameImportRequest,
+    owner: dict = Depends(validate_api_key),
+):
+    """
+    Импортировать партию в базу данных.
+
+    Требует валидный API-ключ в заголовке X-API-Key.
+    """
+    result = await import_game(data, owner)
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result)
+    return result
+
+
+@app.get("/api/roles", response_model=RolesResponse)
+async def list_roles(owner: dict = Depends(validate_api_key)):
+    """
+    Получить список доступных ролей.
+
+    Требует валидный API-ключ в заголовке X-API-Key.
+    """
+    roles = await get_all_roles()
+    return RolesResponse(roles=roles)

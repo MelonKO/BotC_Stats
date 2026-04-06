@@ -27,10 +27,10 @@ REVOKE CREATE ON DATABASE botc_stats FROM PUBLIC;
 
 -- ============================================================
 --  API service role — limited to importing games via API
+--  (Role api_service is created in 02-create-user.sh
+--   with password from API_SERVICE_PASSWORD env variable)
 -- ============================================================
 
--- Create role (password will be overridden by docker-compose env)
-CREATE ROLE api_service WITH LOGIN PASSWORD 'REPLACE_ME_VIA_ENV';
 GRANT CONNECT ON DATABASE botc_stats TO api_service;
 GRANT USAGE ON SCHEMA public TO api_service;
 

@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://api_service:change_me@db:5432/botc_stats"
+    DATABASE_URL: str = "postgresql://api_service:REPLACE_ME_IN_ENV@db:5432/botc_stats"
 
 
 settings = Settings()

@@ -323,4 +323,4 @@ ssh botc-ssh@<SERVER_IP> "docker exec botc-postgres netstat -tlnp | grep 5432"
 
 ## 📄 Лицензия
 
-MIT — используйте, модифицируйте, делитесь.
+GNU GPLv3

@@ -24,7 +24,7 @@ Thumbs.db
 docker-compose.override.yml
 
 # SSL certificates (generated, should not be committed)
-nginx/ssl/*.pem
+nginx/ssl/*
 !nginx/ssl/.gitkeep
 
 # Python cache

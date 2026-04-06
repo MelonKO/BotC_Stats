@@ -23,7 +23,7 @@ API позволяет удалённо импортировать данные 
 Обратитесь к администратору базы данных. Вам будет выдан ключ вида:
 
 ```
-sk-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+sk-EXAMPLE_DO_NOT_USE
 ```
 
 **Важно:**
@@ -179,7 +179,7 @@ X-API-Key: <ваш_ключ>
 import requests
 
 API_URL = "https://<SERVER_IP>/api/import"
-API_KEY = "sk-a1b2c3d4e5f6..."  # Ваш API-ключ
+API_KEY = "sk-EXAMPLE_DO_NOT_USE"  # Ваш API-ключ
 
 data = {
     "game_date": "2026-01-15",
@@ -227,7 +227,7 @@ if result.get('errors'):
 import requests
 
 API_URL = "https://<SERVER_IP>/api/roles"
-API_KEY = "sk-a1b2c3d4e5f6..."
+API_KEY = "sk-EXAMPLE_DO_NOT_USE"
 
 response = requests.get(
     API_URL,
@@ -261,7 +261,7 @@ response = requests.post(
 
 ```bash
 curl -k -X POST "https://<SERVER_IP>/api/import" \
-  -H "X-API-Key: sk-a1b2c3d4e5f6..." \
+  -H "X-API-Key: sk-EXAMPLE_DO_NOT_USE" \
   -H "Content-Type: application/json" \
   -d '{
     "game_date": "2026-01-15",
@@ -318,4 +318,4 @@ https://<SERVER_IP>/redoc     — ReDoc
 
 ## 📄 Лицензия
 
-MIT — используйте, модифицируйте, делитесь.
+GNU GPLv3

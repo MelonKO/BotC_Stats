@@ -1,6 +1,6 @@
-# Blood on the Clocktower — Project
+# Blood on the Clocktower Statistics — Project
 
-**Blood on the Clocktower (BotC)** — система учёта партий настольной игры Blood on the Clocktower с базой данных PostgreSQL, REST API и набором инструментов для импорта и аналитики.
+**Blood on the Clocktower Statistics (BotC Stats)** — система учёта партий настольной игры Blood on the Clocktower с базой данных PostgreSQL, REST API и набором инструментов для импорта и аналитики.
 
 ## Architecture
 
@@ -174,4 +174,4 @@ v4.0.0
 
 ## License
 
-MIT
+GNU GPLv3

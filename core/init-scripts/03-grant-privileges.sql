@@ -30,7 +30,7 @@ REVOKE CREATE ON DATABASE botc_stats FROM PUBLIC;
 -- ============================================================
 
 -- Create role (password will be overridden by docker-compose env)
-CREATE ROLE api_service WITH LOGIN PASSWORD 'api_service_placeholder';
+CREATE ROLE api_service WITH LOGIN PASSWORD 'REPLACE_ME_VIA_ENV';
 GRANT CONNECT ON DATABASE botc_stats TO api_service;
 GRANT USAGE ON SCHEMA public TO api_service;
 

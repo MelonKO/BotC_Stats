@@ -131,25 +131,28 @@ async def import_roles(data: RolesImportRequest) -> dict:
     async with get_connection() as conn:
         for role in data.roles:
             try:
-                # xmax = 0 → новый INSERT, xmax > 0 → UPDATE
-                xmax = await conn.fetchval(
+                existed = await conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM roles WHERE name = $1)",
+                    role.name,
+                )
+
+                await conn.execute(
                     """
                     INSERT INTO roles (name, color, role_type)
                     VALUES ($1, $2, $3)
                     ON CONFLICT (name) DO UPDATE
                         SET color = EXCLUDED.color,
                             role_type = EXCLUDED.role_type
-                    RETURNING xmax
                     """,
                     role.name,
                     role.color,
                     role.role_type,
                 )
 
-                if xmax == 0:
-                    created += 1
-                else:
+                if existed:
                     updated += 1
+                else:
+                    created += 1
 
             except Exception as e:
                 errors.append(f"Роль '{role.name}': {e}")

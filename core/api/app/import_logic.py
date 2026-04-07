@@ -144,9 +144,9 @@ async def import_roles(data: RolesImportRequest) -> dict:
                     role.role_type,
                 )
 
-                if result.endswith("INSERT 1"):
+                if "INSERT" in result:
                     created += 1
-                elif result.endswith("UPDATE 1"):
+                elif "UPDATE" in result:
                     updated += 1
 
             except Exception as e:

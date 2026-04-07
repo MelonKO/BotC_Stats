@@ -39,7 +39,7 @@ GRANT USAGE ON SCHEMA public TO api_service;
 GRANT INSERT, SELECT, DELETE ON games_import_staging TO api_service;
 
 -- 2. Read and manage roles (add new roles, read for validation)
-GRANT SELECT, INSERT ON roles TO api_service;
+GRANT SELECT, INSERT, UPDATE ON roles TO api_service;
 
 -- 3. Read reference data, create players if missing
 GRANT SELECT, INSERT ON players TO api_service;

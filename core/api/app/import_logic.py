@@ -1,5 +1,5 @@
 import asyncpg
-from app.schemas import GameImportRequest
+from app.schemas import GameImportRequest, RolesImportRequest
 from app.db import get_connection
 
 
@@ -113,3 +113,56 @@ async def check_db_connection() -> bool:
         return True
     except Exception:
         return False
+
+
+async def import_roles(data: RolesImportRequest) -> dict:
+    """
+    Импортирует (upsert) список ролей в БД.
+
+    INSERT ... ON CONFLICT (name) DO UPDATE — существующие роли обновляются.
+
+    Returns:
+        dict со статусом, количеством созданных/обновлённых ролей и ошибками.
+    """
+    created = 0
+    updated = 0
+    errors = []
+
+    async with get_connection() as conn:
+        for role in data.roles:
+            try:
+                result = await conn.execute(
+                    """
+                    INSERT INTO roles (name, color, role_type)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (name) DO UPDATE
+                        SET color = EXCLUDED.color,
+                            role_type = EXCLUDED.role_type
+                    """,
+                    role.name,
+                    role.color,
+                    role.role_type,
+                )
+
+                if result.endswith("INSERT 1"):
+                    created += 1
+                elif result.endswith("UPDATE 1"):
+                    updated += 1
+
+            except Exception as e:
+                errors.append(f"Роль '{role.name}': {e}")
+
+    if errors:
+        return {
+            "status": "error",
+            "roles_created": created,
+            "roles_updated": updated,
+            "errors": errors,
+        }
+
+    return {
+        "status": "ok",
+        "roles_created": created,
+        "roles_updated": updated,
+        "errors": [],
+    }

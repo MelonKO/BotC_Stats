@@ -41,6 +41,29 @@ class RolesResponse(BaseModel):
     roles: list[dict]
 
 
+# ============================================================
+#  Roles import
+# ============================================================
+
+class RoleImportItem(BaseModel):
+    """Одна роль в запросе импорта."""
+    name: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
+    color: str = Field(..., pattern="^(синий|красный|нейтральный)$", examples=["синий"])
+    role_type: str = Field(..., pattern="^(Горожанин|Изгой|Приспешник|Демон|Странник)$", examples=["Горожанин"])
+
+
+class RolesImportRequest(BaseModel):
+    """Полный запрос импорта списка ролей."""
+    roles: list[RoleImportItem] = Field(..., min_length=1, max_length=200)
+
+
+class RolesImportResponse(BaseModel):
+    status: str
+    roles_created: int = 0
+    roles_updated: int = 0
+    errors: list[str] = []
+
+
 class ApiKeyInfo(BaseModel):
     """Информация о владельце API-ключа (для внутренних нужд)."""
     key_hash: str

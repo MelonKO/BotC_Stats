@@ -6,10 +6,12 @@ from app.schemas import (
     GameImportRequest,
     ImportStatusResponse,
     RolesResponse,
+    RolesImportRequest,
+    RolesImportResponse,
     HealthResponse,
 )
 from app.auth import validate_api_key
-from app.import_logic import import_game, get_all_roles, check_db_connection
+from app.import_logic import import_game, get_all_roles, import_roles, check_db_connection
 from app.db import get_pool, close_pool
 
 
@@ -92,3 +94,21 @@ async def list_roles(owner: dict = Depends(validate_api_key)):
     """
     roles = await get_all_roles()
     return RolesResponse(roles=roles)
+
+
+@app.post("/api/roles/import", response_model=RolesImportResponse)
+async def create_roles_import(
+    data: RolesImportRequest,
+    owner: dict = Depends(validate_api_key),
+):
+    """
+    Импортировать (upsert) список ролей в базу данных.
+
+    Существующие роли обновляются, новые — создаются.
+
+    Требует валидный API-ключ в заголовке X-API-Key.
+    """
+    result = await import_roles(data)
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result)
+    return result

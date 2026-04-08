@@ -53,12 +53,16 @@ CREATE TABLE games (
     game_date       DATE NOT NULL DEFAULT CURRENT_DATE,
     scenario_name   TEXT NOT NULL,
     storyteller_id  UUID NOT NULL REFERENCES players (id),
-    color_win       TEXT NOT NULL CHECK (color_win IN ('синий', 'красный'))
+    color_win       TEXT NOT NULL CHECK (color_win IN ('синий', 'красный')),
+    location        TEXT NOT NULL,
+    game_number     INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE INDEX idx_games_date        ON games (game_date DESC);
 CREATE INDEX idx_games_scenario    ON games (scenario_name);
 CREATE INDEX idx_games_storyteller ON games (storyteller_id);
+CREATE UNIQUE INDEX uq_games_date_scenario_storyteller_num
+    ON games (game_date, scenario_name, storyteller_id, game_number);
 
 -- Game participants: junction table linking players to games with role assignment
 CREATE TABLE game_players (
@@ -110,6 +114,8 @@ CREATE TABLE games_import_staging (
     scenario_name   TEXT NOT NULL,
     storyteller_name TEXT NOT NULL,
     color_win       TEXT NOT NULL CHECK (color_win IN ('синий', 'красный')),
+    location        TEXT NOT NULL,
+    game_number     INTEGER NOT NULL,
     player_name     TEXT NOT NULL,
     role_start_name TEXT NOT NULL,
     role_end_name   TEXT NOT NULL,
@@ -166,7 +172,7 @@ BEGIN
     -- Step 2: Process each unique game session from staging
     FOR rec IN
         SELECT DISTINCT
-            game_date, scenario_name, storyteller_name, color_win
+            game_date, scenario_name, storyteller_name, color_win, location, game_number
         FROM games_import_staging
     LOOP
         -- Resolve or auto-create storyteller player record
@@ -178,9 +184,9 @@ BEGIN
 
         -- Create the game session record
         INSERT INTO games (
-            game_date, scenario_name, storyteller_id, color_win
+            game_date, scenario_name, storyteller_id, color_win, location, game_number
         ) VALUES (
-            rec.game_date, rec.scenario_name, v_storyteller_id, rec.color_win
+            rec.game_date, rec.scenario_name, v_storyteller_id, rec.color_win, rec.location, rec.game_number
         ) RETURNING id INTO v_game_id;
 
         v_games_count := v_games_count + 1;
@@ -195,8 +201,10 @@ BEGIN
             s.scenario_name = rec.scenario_name AND
             s.storyteller_name = rec.storyteller_name AND
             s.color_win = rec.color_win AND
+            s.location = rec.location AND
+            s.game_number = rec.game_number AND
             s.player_name NOT IN (SELECT name FROM players);
-        
+
         -- Count newly created players for this game
         GET DIAGNOSTICS v_new_player_count = ROW_COUNT;
         v_players_count := v_players_count + v_new_player_count;
@@ -218,7 +226,9 @@ BEGIN
             s.game_date = rec.game_date AND
             s.scenario_name = rec.scenario_name AND
             s.storyteller_name = rec.storyteller_name AND
-            s.color_win = rec.color_win;
+            s.color_win = rec.color_win AND
+            s.location = rec.location AND
+            s.game_number = rec.game_number;
     END LOOP;
 
     -- Step 3: Clear staging table after successful processing
@@ -291,7 +301,9 @@ CREATE VIEW v_game_summary AS
 SELECT
     g.id                                                                AS game_uuid,
     g.game_date,
+    g.game_number,
     g.scenario_name,
+    g.location,
     st.name                                                             AS storyteller,
     g.color_win,
     COUNT(gp.id)                                                        AS players,
@@ -304,7 +316,7 @@ SELECT
 FROM games g
 JOIN players       st ON st.id = g.storyteller_id
 LEFT JOIN game_players gp ON gp.game_id = g.id
-GROUP BY g.id, g.game_date, g.scenario_name, st.name, g.color_win;
+GROUP BY g.id, g.game_date, g.game_number, g.scenario_name, g.location, st.name, g.color_win;
 
 -- Role type effectiveness: aggregated win rates by role category and team
 CREATE VIEW v_role_type_stats AS

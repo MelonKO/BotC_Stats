@@ -23,6 +23,8 @@ class GameImportRequest(BaseModel):
     scenario_name: str = Field(..., min_length=1, max_length=300, examples=["Вселенная зла"])
     storyteller_name: str = Field(..., min_length=1, max_length=200, examples=["МелонКО"])
     color_win: str = Field(..., pattern="^(синий|красный)$", examples=["синий"])
+    location: str = Field(..., min_length=1, max_length=300, examples=["Москва, Антикафе на Арбате"])
+    game_number: int = Field(..., ge=1, examples=[1])
     players: list[PlayerImportRequest] = Field(..., min_length=1, max_length=30)
 
 

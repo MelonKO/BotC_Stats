@@ -45,14 +45,17 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
                 """
                 INSERT INTO games_import_staging (
                     game_date, scenario_name, storyteller_name, color_win,
+                    location, game_number,
                     player_name, role_start_name, role_end_name,
                     color_end, is_alive
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 """,
                 data.game_date,
                 data.scenario_name,
                 data.storyteller_name,
                 data.color_win,
+                data.location,
+                data.game_number,
                 p.name,
                 p.role_start,
                 p.role_end,

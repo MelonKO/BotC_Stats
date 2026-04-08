@@ -78,6 +78,8 @@ def parse_csv(csv_path: Path) -> list[dict]:
         "scenario_name": None,
         "storyteller_name": None,
         "color_win": None,
+        "location": None,
+        "game_number": None,
         "players": [],
     })
 
@@ -91,6 +93,8 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 row["scenario_name"].strip(),
                 row["storyteller_name"].strip(),
                 row["color_win"].strip(),
+                row["location"].strip(),
+                row["game_number"].strip(),
             )
 
             game = games_dict[game_key]
@@ -98,6 +102,8 @@ def parse_csv(csv_path: Path) -> list[dict]:
             game["scenario_name"] = row["scenario_name"].strip()
             game["storyteller_name"] = row["storyteller_name"].strip()
             game["color_win"] = row["color_win"].strip()
+            game["location"] = row["location"].strip()
+            game["game_number"] = int(row["game_number"].strip())
 
             # Добавляем игрока
             game["players"].append({

@@ -1,7 +1,22 @@
 import asyncpg
+from datetime import timedelta
 from asyncpg.exceptions import UniqueViolationError
 from app.schemas import GameImportRequest, RolesImportRequest
 from app.db import get_connection
+
+
+def _parse_interval(value: str | None) -> timedelta | None:
+    """Convert 'HH:MM:SS' or 'D HH:MM:SS' string to timedelta."""
+    if not value:
+        return None
+    parts = value.strip().split()
+    if len(parts) == 1:
+        h, m, s = parts[0].split(":")
+        return timedelta(hours=int(h), minutes=int(m), seconds=int(s))
+    else:
+        d = int(parts[0])
+        h, m, s = parts[1].split(":")
+        return timedelta(days=d, hours=int(h), minutes=int(m), seconds=int(s))
 
 
 async def import_game(data: GameImportRequest, owner: dict) -> dict:
@@ -57,7 +72,7 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
                 data.color_win,
                 data.location,
                 data.game_number,
-                data.duration,
+                _parse_interval(data.duration),
                 data.notes,
                 p.name,
                 p.role_start,

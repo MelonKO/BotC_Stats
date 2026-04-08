@@ -188,7 +188,7 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
     """
     Парсинг CSV файла ролей.
 
-    Ожидаемые колонки: name, color, role_type
+    Ожидаемые колонки: name, color, role_type (description — опционально)
 
     Returns:
         Список словарей с валидированными ролями.
@@ -206,10 +206,13 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
             print(f"Найдены: {', '.join(reader.fieldnames or [])}")
             sys.exit(1)
 
+        has_description = "description" in (reader.fieldnames or [])
+
         for line_num, row in enumerate(reader, start=2):
             name = row["name"].strip()
             color = row["color"].strip()
             role_type = row["role_type"].strip()
+            description = row.get("description", "").strip() if has_description else None
 
             if not name:
                 errors.append(f"Строка {line_num}: пустое имя роли")
@@ -223,7 +226,11 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
                 errors.append(f"Строка {line_num} ({name}): неверный тип '{role_type}'. Допустимы: {', '.join(sorted(VALID_ROLE_TYPES))}")
                 continue
 
-            roles.append({"name": name, "color": color, "role_type": role_type})
+            role_data = {"name": name, "color": color, "role_type": role_type}
+            if description is not None:
+                role_data["description"] = description if description else None
+
+            roles.append(role_data)
 
     if errors:
         print("⚠️  Ошибки валидации ролей:")

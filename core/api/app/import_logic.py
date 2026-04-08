@@ -171,15 +171,17 @@ async def import_roles(data: RolesImportRequest) -> dict:
 
                 await conn.execute(
                     """
-                    INSERT INTO roles (name, color, role_type)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO roles (name, color, role_type, description)
+                    VALUES ($1, $2, $3, $4)
                     ON CONFLICT (name) DO UPDATE
                         SET color = EXCLUDED.color,
-                            role_type = EXCLUDED.role_type
+                            role_type = EXCLUDED.role_type,
+                            description = EXCLUDED.description
                     """,
                     role.name,
                     role.color,
                     role.role_type,
+                    role.description,
                 )
 
                 if existed:

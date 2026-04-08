@@ -55,6 +55,7 @@ class RoleImportItem(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
     color: str = Field(..., pattern="^(синий|красный|нейтральный)$", examples=["синий"])
     role_type: str = Field(..., pattern="^(Горожанин|Изгой|Приспешник|Демон|Странник)$", examples=["Горожанин"])
+    description: str | None = Field(None, max_length=2000, examples=["Проста, но не безобидна"])
 
 
 class RolesImportRequest(BaseModel):

@@ -37,7 +37,8 @@ CREATE TABLE roles (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT NOT NULL UNIQUE,
     color       TEXT CHECK (color IN ('синий', 'красный', 'нейтральный')),
-    role_type   role_type NOT NULL
+    role_type   role_type NOT NULL,
+    description TEXT
 );
 
 CREATE INDEX idx_roles_color     ON roles (color);

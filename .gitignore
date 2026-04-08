@@ -4,6 +4,9 @@
 # AI assistant context (local developer preference)
 QWEN.md
 
+# Temporary commit message file (Windows workaround)
+.git_commit_msg.tmp
+
 # Python
 __pycache__/
 *.pyc

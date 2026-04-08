@@ -25,6 +25,8 @@ class GameImportRequest(BaseModel):
     color_win: str = Field(..., pattern="^(синий|красный)$", examples=["синий"])
     location: str = Field(..., min_length=1, max_length=300, examples=["Москва, Антикафе на Арбате"])
     game_number: int = Field(..., ge=1, examples=[1])
+    duration: str | None = Field(None, examples=["01:30:00", "00:40:00"])
+    notes: str | None = Field(None, max_length=2000, examples=["Отличная партия, все получили удовольствие"])
     players: list[PlayerImportRequest] = Field(..., min_length=1, max_length=30)
 
 

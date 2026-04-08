@@ -80,6 +80,8 @@ def parse_csv(csv_path: Path) -> list[dict]:
         "color_win": None,
         "location": None,
         "game_number": None,
+        "duration": None,
+        "notes": None,
         "players": [],
     })
 
@@ -87,6 +89,10 @@ def parse_csv(csv_path: Path) -> list[dict]:
         reader = csv.DictReader(f)
 
         for row in reader:
+            # Опциональные поля
+            duration_val = row.get("duration", "").strip() or None
+            notes_val = row.get("notes", "").strip() or None
+
             # Ключ группировки: уникальная партия
             game_key = (
                 row["game_date"].strip(),
@@ -104,6 +110,8 @@ def parse_csv(csv_path: Path) -> list[dict]:
             game["color_win"] = row["color_win"].strip()
             game["location"] = row["location"].strip()
             game["game_number"] = int(row["game_number"].strip())
+            game["duration"] = duration_val
+            game["notes"] = notes_val
 
             # Добавляем игрока
             game["players"].append({

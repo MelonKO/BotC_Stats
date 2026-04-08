@@ -55,7 +55,9 @@ CREATE TABLE games (
     storyteller_id  UUID NOT NULL REFERENCES players (id),
     color_win       TEXT NOT NULL CHECK (color_win IN ('синий', 'красный')),
     location        TEXT NOT NULL,
-    game_number     INTEGER NOT NULL DEFAULT 1
+    game_number     INTEGER NOT NULL DEFAULT 1,
+    duration        INTERVAL,
+    notes           TEXT
 );
 
 CREATE INDEX idx_games_date        ON games (game_date DESC);
@@ -94,6 +96,8 @@ CREATE TABLE games_import_staging (
     color_win       TEXT NOT NULL CHECK (color_win IN ('синий', 'красный')),
     location        TEXT NOT NULL,
     game_number     INTEGER NOT NULL,
+    duration        INTERVAL,
+    notes           TEXT,
     player_name     TEXT NOT NULL,
     role_start_name TEXT NOT NULL,
     role_end_name   TEXT NOT NULL,
@@ -150,7 +154,7 @@ BEGIN
     -- Step 2: Process each unique game session from staging
     FOR rec IN
         SELECT DISTINCT
-            game_date, scenario_name, storyteller_name, color_win, location, game_number
+            game_date, scenario_name, storyteller_name, color_win, location, game_number, duration, notes
         FROM games_import_staging
     LOOP
         -- Resolve or auto-create storyteller player record
@@ -173,9 +177,9 @@ BEGIN
 
         -- Create the game session record
         INSERT INTO games (
-            game_date, scenario_name, storyteller_id, color_win, location, game_number
+            game_date, scenario_name, storyteller_id, color_win, location, game_number, duration, notes
         ) VALUES (
-            rec.game_date, rec.scenario_name, v_storyteller_id, rec.color_win, rec.location, rec.game_number
+            rec.game_date, rec.scenario_name, v_storyteller_id, rec.color_win, rec.location, rec.game_number, rec.duration, rec.notes
         ) RETURNING id INTO v_game_id;
 
         v_games_count := v_games_count + 1;
@@ -293,6 +297,8 @@ SELECT
     g.game_number,
     g.scenario_name,
     g.location,
+    g.duration,
+    g.notes,
     st.name                                                             AS storyteller,
     g.color_win,
     COUNT(gp.id)                                                        AS players,
@@ -305,7 +311,7 @@ SELECT
 FROM games g
 JOIN players       st ON st.id = g.storyteller_id
 LEFT JOIN game_players gp ON gp.game_id = g.id
-GROUP BY g.id, g.game_date, g.game_number, g.scenario_name, g.location, st.name, g.color_win;
+GROUP BY g.id, g.game_date, g.game_number, g.scenario_name, g.location, g.duration, g.notes, st.name, g.color_win;
 
 -- Role type effectiveness: aggregated win rates by role category and team
 CREATE VIEW v_role_type_stats AS

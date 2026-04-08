@@ -90,11 +90,12 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
         game_row = await conn.fetchrow(
             """
             SELECT id::text FROM games
-            WHERE game_date = $1 AND scenario_name = $2
+            WHERE game_date = $1 AND scenario_name = $2 AND game_number = $3
             ORDER BY id DESC LIMIT 1
             """,
             data.game_date,
             data.scenario_name,
+            data.game_number,
         )
 
         return {

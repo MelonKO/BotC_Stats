@@ -322,7 +322,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
---  Section 8: Seed data — languages, translations, example roles (English names)
+--  Section 8: Seed data — languages, translations
 -- ============================================================
 
 -- Supported languages
@@ -352,60 +352,8 @@ INSERT INTO alignment_translations (alignment_en, lang_code, name) VALUES
     ('evil',      'ru', 'зло'),
     ('neutral',   'ru', 'нейтральный');
 
--- Roles (English names)
-INSERT INTO roles (name, alignment, role_type) VALUES
-    ('Chambermaid',     'good',   'Outsider'),
-    ('Gambler',         'good',   'Townsfolk'),
-    ('Assassin',        'evil',   'Minion'),
-    ('Amnesiac',        'good',   'Townsfolk'),
-    ('Politician',      'good',   'Outsider'),
-    ('Pukka',           'evil',   'Demon'),
-    ('Washerwoman',     'good',   'Townsfolk'),
-    ('Librarian',       'good',   'Townsfolk'),
-    ('Investigator',    'good',   'Townsfolk'),
-    ('Cook',            'good',   'Townsfolk'),
-    ('Pacifist',        'good',   'Townsfolk'),
-    ('Blue Executioner','evil',   'Outsider'),
-    ('Red Widow',       'evil',   'Outsider'),
-    ('Poisoner',        'evil',   'Minion'),
-    ('Spy',             'evil',   'Minion'),
-    ('Baron',           'evil',   'Minion'),
-    ('Widow',           'evil',   'Minion'),
-    ('Imp',             'evil',   'Demon'),
-    ('Vigormortis',     'evil',   'Demon'),
-    ('Leviathan',       'evil',   'Demon'),
-    ('Queen',           'neutral','Traveller'),
-    ('Jester',          'neutral','Traveller');
-
--- Role name translations (English — auto-fill from roles)
-INSERT INTO role_translations (role_id, lang_code, name, description)
-SELECT r.id, 'en', r.name, NULL
-FROM roles r;
-
--- Role name translations (Russian)
-INSERT INTO role_translations (role_id, lang_code, name, description) VALUES
-    ((SELECT id FROM roles WHERE name = 'Chambermaid'),      'ru', 'Дамочка', NULL),
-    ((SELECT id FROM roles WHERE name = 'Gambler'),          'ru', 'Азартный игрок', NULL),
-    ((SELECT id FROM roles WHERE name = 'Assassin'),         'ru', 'Убийца', NULL),
-    ((SELECT id FROM roles WHERE name = 'Amnesiac'),         'ru', 'Амнезиак', NULL),
-    ((SELECT id FROM roles WHERE name = 'Politician'),       'ru', 'Политик', NULL),
-    ((SELECT id FROM roles WHERE name = 'Pukka'),            'ru', 'Пукка', NULL),
-    ((SELECT id FROM roles WHERE name = 'Washerwoman'),      'ru', 'Прачка', NULL),
-    ((SELECT id FROM roles WHERE name = 'Librarian'),        'ru', 'Библиотекарь', NULL),
-    ((SELECT id FROM roles WHERE name = 'Investigator'),     'ru', 'Исследователь', NULL),
-    ((SELECT id FROM roles WHERE name = 'Cook'),             'ru', 'Повар', NULL),
-    ((SELECT id FROM roles WHERE name = 'Pacifist'),         'ru', 'Миротворец', NULL),
-    ((SELECT id FROM roles WHERE name = 'Blue Executioner'), 'ru', 'Синий Палач', NULL),
-    ((SELECT id FROM roles WHERE name = 'Red Widow'),        'ru', 'Красная Вдова', NULL),
-    ((SELECT id FROM roles WHERE name = 'Poisoner'),         'ru', 'Отравитель', NULL),
-    ((SELECT id FROM roles WHERE name = 'Spy'),              'ru', 'Шпион', NULL),
-    ((SELECT id FROM roles WHERE name = 'Baron'),            'ru', 'Барон', NULL),
-    ((SELECT id FROM roles WHERE name = 'Widow'),            'ru', 'Ворон', NULL),
-    ((SELECT id FROM roles WHERE name = 'Imp'),              'ru', 'Имп', NULL),
-    ((SELECT id FROM roles WHERE name = 'Vigormortis'),      'ru', 'Виверна', NULL),
-    ((SELECT id FROM roles WHERE name = 'Leviathan'),        'ru', 'Левиафан', NULL),
-    ((SELECT id FROM roles WHERE name = 'Queen'),            'ru', 'Королева', NULL),
-    ((SELECT id FROM roles WHERE name = 'Jester'),           'ru', 'Шут', NULL);
+-- Roles and role translations are populated via the API roles import endpoint.
+-- See: POST /api/roles/import
 
 -- ============================================================
 --  Section 9: Analytics views (localized)

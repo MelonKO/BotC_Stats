@@ -51,27 +51,34 @@ Content-Type: application/json
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
     "storyteller_name": "МелонКО",
-    "color_win": "синий",
+    "alignment_win": "добро",
+    "location": "Москва, Антикафе на Арбате",
+    "game_number": 1,
+    "duration": "01:30:00",
+    "notes": "Отличная партия, все получили удовольствие",
     "players": [
         {
             "name": "Анна Никитина",
+            "seat_number": 1,
             "role_start": "Дамочка",
             "role_end": "Дамочка",
-            "color_end": "синий",
+            "alignment_end": "добро",
             "is_alive": true
         },
         {
             "name": "Борис Петров",
+            "seat_number": 2,
             "role_start": "Азартный игрок",
             "role_end": "Азартный игрок",
-            "color_end": "синий",
+            "alignment_end": "добро",
             "is_alive": true
         },
         {
             "name": "Виктор Сидоров",
+            "seat_number": 3,
             "role_start": "Убийца",
             "role_end": "Убийца",
-            "color_end": "красный",
+            "alignment_end": "зло",
             "is_alive": false
         }
     ]
@@ -85,15 +92,20 @@ Content-Type: application/json
 | `game_date` | string (date) | ✅ | Дата партии (YYYY-MM-DD) |
 | `scenario_name` | string | ✅ | Название сценария |
 | `storyteller_name` | string | ✅ | Имя рассказчика |
-| `color_win` | string | ✅ | Победившая команда: `синий` или `красный` |
+| `alignment_win` | string | ✅ | Победивший alignment: `добро` или `зло` |
+| `location` | string | ✅ | Место проведения |
+| `game_number` | int | ✅ | Номер партии в рамках встречи |
+| `duration` | string | | Длительность (HH:MM:SS) |
+| `notes` | string | | Заметки к партии |
 | `players` | array | ✅ | Список игроков (мин. 1, макс. 30) |
 
 | Поле (в `players[]`) | Тип | Обязательное | Описание |
 |----------------------|-----|--------------|----------|
 | `name` | string | ✅ | Имя игрока |
-| `role_start` | string | ✅ | Начальная роль |
-| `role_end` | string | ✅ | Конечная роль (может совпадать с начальной) |
-| `color_end` | string | ✅ | Команда в конце: `синий` или `красный` |
+| `seat_number` | int | | Номер места |
+| `role_start` | string | ✅ | Начальная роль (русское название) |
+| `role_end` | string | ✅ | Конечная роль (русское название) |
+| `alignment_end` | string | ✅ | Конечный alignment: `добро`, `зло` или `нейтральный` |
 | `is_alive` | boolean | ✅ | Выжил ли игрок |
 
 **Ответ (успех, 200):**
@@ -145,12 +157,13 @@ X-API-Key: <ваш_ключ>
 ```json
 {
     "roles": [
-        {"name": "Азартный игрок", "color": "синий", "role_type": "Горожанин"},
-        {"name": "Амнезиак", "color": "синий", "role_type": "Горожанин"},
-        {"name": "Дамочка", "color": "синий", "role_type": "Изгой"},
-        {"name": "Политик", "color": "синий", "role_type": "Изгой"},
-        {"name": "Пукка", "color": "красный", "role_type": "Демон"},
-        {"name": "Убийца", "color": "красный", "role_type": "Приспешник"}
+        {"name": "Gambler", "alignment": "good", "role_type": "Townsfolk"},
+        {"name": "Amnesiac", "alignment": "good", "role_type": "Townsfolk"},
+        {"name": "Chambermaid", "alignment": "good", "role_type": "Townsfolk"},
+        {"name": "Librarian", "alignment": "good", "role_type": "Townsfolk"},
+        {"name": "Investigator", "alignment": "good", "role_type": "Townsfolk"},
+        {"name": "Pukka", "alignment": "evil", "role_type": "Demon"},
+        {"name": "Slayer", "alignment": "evil", "role_type": "Minion"}
     ]
 }
 ```
@@ -185,20 +198,24 @@ data = {
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
     "storyteller_name": "МелонКО",
-    "color_win": "синий",
+    "alignment_win": "добро",
+    "location": "Москва, Антикафе на Арбате",
+    "game_number": 1,
     "players": [
         {
             "name": "Анна",
+            "seat_number": 1,
             "role_start": "Дамочка",
             "role_end": "Дамочка",
-            "color_end": "синий",
+            "alignment_end": "добро",
             "is_alive": True
         },
         {
             "name": "Борис",
+            "seat_number": 2,
             "role_start": "Убийца",
             "role_end": "Убийца",
-            "color_end": "красный",
+            "alignment_end": "зло",
             "is_alive": False
         }
     ]
@@ -237,7 +254,7 @@ response = requests.get(
 
 roles = response.json()["roles"]
 for role in roles:
-    print(f"{role['name']} — {role['color']} ({role['role_type']})")
+    print(f"{role['name']} — {role['alignment']} ({role['role_type']})")
 ```
 
 ### Python — отключение предупреждения InsecureRequestWarning
@@ -267,13 +284,16 @@ curl -k -X POST "https://<SERVER_IP>/api/import" \
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
     "storyteller_name": "МелонКО",
-    "color_win": "синий",
+    "alignment_win": "добро",
+    "location": "Москва, Антикафе на Арбате",
+    "game_number": 1,
     "players": [
       {
         "name": "Анна",
+        "seat_number": 1,
         "role_start": "Дамочка",
         "role_end": "Дамочка",
-        "color_end": "синий",
+        "alignment_end": "добро",
         "is_alive": true
       }
     ]

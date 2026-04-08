@@ -1,4 +1,5 @@
 import asyncpg
+from asyncpg.exceptions import UniqueViolationError
 from app.schemas import GameImportRequest, RolesImportRequest
 from app.db import get_connection
 
@@ -64,7 +65,16 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
             )
 
         # Шаг 3: Вызываем process_games_import()
-        row = await conn.fetchrow("SELECT * FROM process_games_import()")
+        try:
+            row = await conn.fetchrow("SELECT * FROM process_games_import()")
+        except UniqueViolationError:
+            return {
+                "status": "error",
+                "errors": [
+                    f"Партия {data.scenario_name} ({data.game_date}, №{data.game_number}) "
+                    f"рассказчик {data.storyteller_name} уже существует в базе данных."
+                ],
+            }
 
         games_created = row["games_created"]
         players_created = row["players_created"]

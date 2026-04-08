@@ -33,14 +33,14 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
         dict со статусом, game_id, количеством созданных игроков и ошибками
     """
     async with get_connection() as conn:
-        # Шаг 1: Валидация ролей на сервере (двойная проверка)
+        # Шаг 1: Валидация ролей на сервере (через русские переводы)
         role_names = set()
         for p in data.players:
             role_names.add(p.role_start)
             role_names.add(p.role_end)
 
         existing_roles = await conn.fetch(
-            "SELECT name FROM roles WHERE name = ANY($1)",
+            "SELECT name FROM role_translations WHERE lang_code = 'ru' AND name = ANY($1)",
             list(role_names),
         )
         existing_role_names = {r["name"] for r in existing_roles}
@@ -55,22 +55,22 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
                 ],
             }
 
-        # Шаг 2: Вставляем в staging
+        # Шаг 2: Вставляем в staging (русские значения)
         for p in data.players:
             await conn.execute(
                 """
                 INSERT INTO games_import_staging (
-                    game_date, scenario_name, storyteller_name, color_win,
+                    game_date, scenario_name, storyteller_name, alignment_win_ru,
                     location, game_number, duration, notes,
                     player_name, seat_number,
-                    role_start_name, role_end_name,
-                    color_end, is_alive
+                    role_start_name_ru, role_end_name_ru,
+                    alignment_end_ru, is_alive
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 """,
                 data.game_date,
                 data.scenario_name,
                 data.storyteller_name,
-                data.color_win,
+                data.alignment_win,
                 data.location,
                 data.game_number,
                 _parse_interval(data.duration),
@@ -79,7 +79,7 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
                 p.seat_number,
                 p.role_start,
                 p.role_end,
-                p.color_end,
+                p.alignment_end,
                 p.is_alive,
             )
 
@@ -130,7 +130,7 @@ async def get_all_roles() -> list[dict]:
     async with get_connection() as conn:
         rows = await conn.fetch(
             """
-            SELECT name, color, role_type
+            SELECT name, alignment, role_type
             FROM roles
             ORDER BY role_type, name
             """
@@ -171,15 +171,15 @@ async def import_roles(data: RolesImportRequest) -> dict:
 
                 await conn.execute(
                     """
-                    INSERT INTO roles (name, color, role_type, description)
+                    INSERT INTO roles (name, alignment, role_type, description)
                     VALUES ($1, $2, $3, $4)
                     ON CONFLICT (name) DO UPDATE
-                        SET color = EXCLUDED.color,
+                        SET alignment = EXCLUDED.alignment,
                             role_type = EXCLUDED.role_type,
                             description = EXCLUDED.description
                     """,
                     role.name,
-                    role.color,
+                    role.alignment,
                     role.role_type,
                     role.description,
                 )

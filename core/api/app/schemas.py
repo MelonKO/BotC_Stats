@@ -14,7 +14,7 @@ class PlayerImportRequest(BaseModel):
     seat_number: int | None = Field(None, ge=1, examples=[1])
     role_start: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
     role_end: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
-    color_end: str = Field(..., pattern="^(синий|красный)$", examples=["синий"])
+    alignment_end: str = Field(..., pattern="^(добро|зло|нейтральный)$", examples=["добро"])
     is_alive: bool = Field(..., examples=[True])
 
 
@@ -23,7 +23,7 @@ class GameImportRequest(BaseModel):
     game_date: date = Field(..., examples=["2026-01-15"])
     scenario_name: str = Field(..., min_length=1, max_length=300, examples=["Вселенная зла"])
     storyteller_name: str = Field(..., min_length=1, max_length=200, examples=["МелонКО"])
-    color_win: str = Field(..., pattern="^(синий|красный)$", examples=["синий"])
+    alignment_win: str = Field(..., pattern="^(добро|зло)$", examples=["добро"])
     location: str = Field(..., min_length=1, max_length=300, examples=["Москва, Антикафе на Арбате"])
     game_number: int = Field(..., ge=1, examples=[1])
     duration: str | None = Field(None, examples=["01:30:00", "00:40:00"])
@@ -52,10 +52,10 @@ class RolesResponse(BaseModel):
 
 class RoleImportItem(BaseModel):
     """Одна роль в запросе импорта."""
-    name: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
-    color: str = Field(..., pattern="^(синий|красный|нейтральный)$", examples=["синий"])
-    role_type: str = Field(..., pattern="^(Горожанин|Изгой|Приспешник|Демон|Странник)$", examples=["Горожанин"])
-    description: str | None = Field(None, max_length=2000, examples=["Проста, но не безобидна"])
+    name: str = Field(..., min_length=1, max_length=200, examples=["Chambermaid"])
+    alignment: str = Field(..., pattern="^(good|evil|neutral)$", examples=["good"])
+    role_type: str = Field(..., pattern="^(Townsfolk|Outsider|Minion|Demon|Traveller)$", examples=["Outsider"])
+    description: str | None = Field(None, max_length=2000, examples=["Simple, but not harmless"])
 
 
 class RolesImportRequest(BaseModel):

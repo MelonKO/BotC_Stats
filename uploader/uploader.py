@@ -180,15 +180,16 @@ def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -
 #  Roles import
 # ============================================================
 
-VALID_COLORS = {"синий", "красный", "нейтральный"}
-VALID_ROLE_TYPES = {"Горожанин", "Изгой", "Приспешник", "Демон", "Странник"}
+VALID_ALIGNMENT = {"good", "evil", "neutral"}
+VALID_ROLE_TYPES = {"Townsfolk", "Outsider", "Minion", "Demon", "Traveller"}
 
 
 def parse_roles_csv(csv_path: Path) -> list[dict]:
     """
     Парсинг CSV файла ролей.
 
-    Ожидаемые колонки: name, color, role_type (description — опционально)
+    Ожидаемые колонки: name, alignment, role_type (description — опционально)
+    Все значения должны быть на английском.
 
     Returns:
         Список словарей с валидированными ролями.
@@ -200,7 +201,7 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
         reader = csv.DictReader(f)
 
         # Проверка заголовков
-        expected = {"name", "color", "role_type"}
+        expected = {"name", "alignment", "role_type"}
         if not expected.issubset(set(reader.fieldnames or [])):
             print(f"Ошибка: CSV должен содержать колонки: {', '.join(sorted(expected))}")
             print(f"Найдены: {', '.join(reader.fieldnames or [])}")
@@ -210,7 +211,7 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
 
         for line_num, row in enumerate(reader, start=2):
             name = row["name"].strip()
-            color = row["color"].strip()
+            alignment = row["alignment"].strip()
             role_type = row["role_type"].strip()
             description = row.get("description", "").strip() if has_description else None
 
@@ -218,15 +219,15 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
                 errors.append(f"Строка {line_num}: пустое имя роли")
                 continue
 
-            if color not in VALID_COLORS:
-                errors.append(f"Строка {line_num} ({name}): неверный цвет '{color}'. Допустимы: {', '.join(sorted(VALID_COLORS))}")
+            if alignment not in VALID_ALIGNMENT:
+                errors.append(f"Строка {line_num} ({name}): неверный alignment '{alignment}'. Допустимы: {', '.join(sorted(VALID_ALIGNMENT))}")
                 continue
 
             if role_type not in VALID_ROLE_TYPES:
                 errors.append(f"Строка {line_num} ({name}): неверный тип '{role_type}'. Допустимы: {', '.join(sorted(VALID_ROLE_TYPES))}")
                 continue
 
-            role_data = {"name": name, "color": color, "role_type": role_type}
+            role_data = {"name": name, "alignment": alignment, "role_type": role_type}
             if description is not None:
                 role_data["description"] = description if description else None
 

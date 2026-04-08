@@ -153,6 +153,7 @@ async def import_roles(data: RolesImportRequest) -> dict:
     Импортирует (upsert) список ролей в БД.
 
     INSERT ... ON CONFLICT (name) DO UPDATE — существующие роли обновляются.
+    Если у роли есть translations — upsert в role_translations для каждого языка.
 
     Returns:
         dict со статусом, количеством созданных/обновлённых ролей и ошибками.
@@ -189,8 +190,28 @@ async def import_roles(data: RolesImportRequest) -> dict:
                 else:
                     created += 1
 
+                # Upsert translations (if provided)
+                if role.translations:
+                    for lang_code, tr in role.translations.items():
+                        await conn.execute(
+                            """
+                            INSERT INTO role_translations (role_id, lang_code, name, description)
+                            VALUES (
+                                (SELECT id FROM roles WHERE name = $1),
+                                $2, $3, $4
+                            )
+                            ON CONFLICT (role_id, lang_code) DO UPDATE
+                                SET name = EXCLUDED.name,
+                                    description = EXCLUDED.description
+                            """,
+                            role.name,
+                            lang_code,
+                            tr.name,
+                            tr.description,
+                        )
+
             except Exception as e:
-                errors.append(f"Роль '{role.name}': {e}")
+                errors.append(f"Role '{role.name}': {e}")
 
     if errors:
         return {

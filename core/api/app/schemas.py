@@ -50,12 +50,22 @@ class RolesResponse(BaseModel):
 #  Roles import
 # ============================================================
 
+class RoleTranslation(BaseModel):
+    """Перевод одной роли на один язык."""
+    name: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
+    description: str | None = Field(None, max_length=2000, examples=["Служанка, которая следит за гостями"])
+
+
 class RoleImportItem(BaseModel):
     """Одна роль в запросе импорта."""
     name: str = Field(..., min_length=1, max_length=200, examples=["Chambermaid"])
     alignment: str = Field(..., pattern="^(good|evil|neutral)$", examples=["good"])
     role_type: str = Field(..., pattern="^(Townsfolk|Outsider|Minion|Demon|Traveller)$", examples=["Outsider"])
     description: str | None = Field(None, max_length=2000, examples=["Simple, but not harmless"])
+    translations: dict[str, RoleTranslation] | None = Field(
+        None,
+        examples=[{"ru": {"name": "Дамочка", "description": "Служанка, которая следит за гостями"}}],
+    )
 
 
 class RolesImportRequest(BaseModel):

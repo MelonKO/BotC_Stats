@@ -11,6 +11,7 @@ from typing import Optional
 class PlayerImportRequest(BaseModel):
     """Один игрок в запросе импорта."""
     name: str = Field(..., min_length=1, max_length=200, examples=["Анна Никитина"])
+    seat_number: int | None = Field(None, ge=1, examples=[1])
     role_start: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
     role_end: str = Field(..., min_length=1, max_length=200, examples=["Дамочка"])
     color_end: str = Field(..., pattern="^(синий|красный)$", examples=["синий"])

@@ -114,8 +114,10 @@ def parse_csv(csv_path: Path) -> list[dict]:
             game["notes"] = notes_val
 
             # Добавляем игрока
+            seat_val = row.get("seat_number", "").strip()
             game["players"].append({
                 "name": row["player_name"].strip(),
+                "seat_number": int(seat_val) if seat_val else None,
                 "role_start": row["role_start_name"].strip(),
                 "role_end": row["role_end_name"].strip(),
                 "color_end": row["color_end"].strip(),

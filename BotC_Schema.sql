@@ -75,6 +75,7 @@ CREATE TABLE game_players (
     role_end_id     UUID NOT NULL REFERENCES roles (id),
     color_end       TEXT NOT NULL CHECK (color_end IN ('синий', 'красный')),
     is_alive        BOOLEAN NOT NULL,
+    seat_number     INTEGER,
     UNIQUE (game_id, player_id)
 );
 
@@ -99,6 +100,7 @@ CREATE TABLE games_import_staging (
     duration        INTERVAL,
     notes           TEXT,
     player_name     TEXT NOT NULL,
+    seat_number     INTEGER,
     role_start_name TEXT NOT NULL,
     role_end_name   TEXT NOT NULL,
     color_end       TEXT NOT NULL CHECK (color_end IN ('синий', 'красный')),
@@ -204,7 +206,7 @@ BEGIN
 
         -- Then insert game players with resolved player IDs
         INSERT INTO game_players (
-            game_id, player_id, role_start_id, role_end_id, color_end, is_alive
+            game_id, player_id, role_start_id, role_end_id, color_end, is_alive, seat_number
         )
         SELECT
             v_game_id,
@@ -212,7 +214,8 @@ BEGIN
             (SELECT id FROM roles WHERE name = s.role_start_name),
             (SELECT id FROM roles WHERE name = s.role_end_name),
             s.color_end,
-            s.is_alive
+            s.is_alive,
+            s.seat_number
         FROM games_import_staging s
         JOIN players p ON p.name = s.player_name
         WHERE

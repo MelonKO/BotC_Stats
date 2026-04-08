@@ -182,6 +182,17 @@ BEGIN
             v_players_count := v_players_count + 1;
         END IF;
 
+        -- Skip if this game session already exists
+        IF EXISTS (
+            SELECT 1 FROM games
+            WHERE game_date = rec.game_date
+              AND scenario_name = rec.scenario_name
+              AND storyteller_id = v_storyteller_id
+              AND game_number = rec.game_number
+        ) THEN
+            CONTINUE;
+        END IF;
+
         -- Create the game session record
         INSERT INTO games (
             game_date, scenario_name, storyteller_id, color_win, location, game_number

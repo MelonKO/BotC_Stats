@@ -454,7 +454,7 @@ FROM roles r
 LEFT JOIN game_players gp ON gp.role_start_id = r.id
 LEFT JOIN games         g  ON g.id              = gp.game_id
 LEFT JOIN role_translations rt ON rt.role_id = r.id AND rt.lang_code = 'ru'
-LEFT JOIN role_type_translations rtt ON rtt.role_type_en = r.role_type AND rtt.lang_code = 'ru'
+LEFT JOIN role_type_translations rtt ON rtt.role_type_en = r.role_type::TEXT AND rtt.lang_code = 'ru'
 LEFT JOIN alignment_translations at ON at.alignment_en = r.alignment AND at.lang_code = 'ru';
 
 -- Game session summary: high-level overview per game
@@ -498,7 +498,7 @@ SELECT
 FROM game_players gp
 JOIN roles r ON r.id  = gp.role_start_id
 JOIN games g ON g.id  = gp.game_id
-LEFT JOIN role_type_translations rtt ON rtt.role_type_en = r.role_type AND rtt.lang_code = 'ru'
+LEFT JOIN role_type_translations rtt ON rtt.role_type_en = r.role_type::TEXT AND rtt.lang_code = 'ru'
 LEFT JOIN alignment_translations at ON at.alignment_en = r.alignment AND at.lang_code = 'ru'
 GROUP BY r.role_type, r.alignment, rtt.name, at.name
 ORDER BY r.alignment, r.role_type;

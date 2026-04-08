@@ -66,16 +66,20 @@ CREATE TABLE role_translations (
 
 -- Role type translations
 CREATE TABLE role_type_translations (
-    role_type_en  TEXT PRIMARY KEY,
+    role_type_en  TEXT NOT NULL,
     lang_code     TEXT NOT NULL REFERENCES languages(code),
-    name          TEXT NOT NULL
+    name          TEXT NOT NULL,
+
+    PRIMARY KEY (role_type_en, lang_code)
 );
 
 -- Alignment translations
 CREATE TABLE alignment_translations (
-    alignment_en  TEXT PRIMARY KEY,
+    alignment_en  TEXT NOT NULL,
     lang_code     TEXT NOT NULL REFERENCES languages(code),
-    name          TEXT NOT NULL
+    name          TEXT NOT NULL,
+
+    PRIMARY KEY (alignment_en, lang_code)
 );
 
 -- ============================================================

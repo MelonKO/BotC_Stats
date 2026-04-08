@@ -77,7 +77,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
         "game_date": None,
         "scenario_name": None,
         "storyteller_name": None,
-        "color_win": None,
+        "alignment_win": None,
         "location": None,
         "game_number": None,
         "duration": None,
@@ -98,7 +98,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 row["game_date"].strip(),
                 row["scenario_name"].strip(),
                 row["storyteller_name"].strip(),
-                row["color_win"].strip(),
+                row["alignment_win"].strip(),
                 row["location"].strip(),
                 row["game_number"].strip(),
             )
@@ -107,7 +107,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
             game["game_date"] = row["game_date"].strip()
             game["scenario_name"] = row["scenario_name"].strip()
             game["storyteller_name"] = row["storyteller_name"].strip()
-            game["color_win"] = row["color_win"].strip()
+            game["alignment_win"] = row["alignment_win"].strip()
             game["location"] = row["location"].strip()
             game["game_number"] = int(row["game_number"].strip())
             game["duration"] = duration_val
@@ -120,7 +120,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 "seat_number": int(seat_val) if seat_val else None,
                 "role_start": row["role_start_name"].strip(),
                 "role_end": row["role_end_name"].strip(),
-                "color_end": row["color_end"].strip(),
+                "alignment_end": row["alignment_end"].strip(),
                 "is_alive": row["is_alive"].strip().lower() in ("true", "1", "yes", "да"),
             })
 

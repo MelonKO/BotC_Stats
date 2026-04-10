@@ -68,6 +68,28 @@ docker-compose down        # stop
 docker-compose down -v     # stop + remove data
 ```
 
+## Running Tests
+
+```bash
+# Перейти в директорию API
+cd api
+
+# Установить зависимости (включая pytest, pytest-asyncio, httpx)
+pip install -r requirements.txt
+
+# Запустить все тесты
+python -m pytest tests/ -v
+
+# Краткий вывод
+python -m pytest tests/ -v --tb=short
+
+# С отчётом о покрытии (нужен pytest-cov)
+pip install pytest-cov
+python -m pytest tests/ -v --cov=app --cov-report=term-missing
+```
+
+Тесты покрывают: эндпоинты, аутентификацию, логику импорта, Pydantic-схемы и работу с БД (asyncpg.Pool).
+
 ## Backup
 
 ```bash

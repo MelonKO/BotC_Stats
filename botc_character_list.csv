@@ -1,136 +1,136 @@
-name,alignment,role_type,description 
-Flowergirl,good,Townsfolk,"Each night*, you learn if a Demon voted today."
-Dreamer,good,Townsfolk,"Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct."
-Acrobat,good,Townsfolk,"Each night*, choose a player: if they are or become drunk or poisoned tonight, you die."
-Alchemist,good,Townsfolk,"You have a Minion ability. When using this, the Storyteller may prompt you to choose differently."
-Grandmother,good,Townsfolk,"You start knowing a good player & their character. If the Demon kills them, you die too."
-Fisherman,good,Townsfolk,"Once per game, during the day, visit the Storyteller for some advice to help your team win."
-Choirboy,good,Townsfolk,"If the Demon kills the King, you learn which player is the Demon. [+the King]"
-Gossip,good,Townsfolk,"Each day, you may make a public statement. Tonight, if it was true, a player dies."
-Gambler,good,Townsfolk,"Each night*, choose a player & guess their character: if you guess wrong, you die."
-Atheist,good,Townsfolk,"The Storyteller can break the game rules, and if executed, good wins, even if you are dead. [No evil characters]"
-Empath,good,Townsfolk,"Each night, you learn how many of your 2 alive neighbors are evil."
-Chef,good,Townsfolk,You start knowing how many pairs of evil players there are.
-Farmer,good,Townsfolk,"When you die at night, an alive good player becomes a Farmer."
-Chambermaid,good,Townsfolk,"Each night, choose 2 alive players (not yourself): you learn how many woke tonight due to their ability."
-Fool,good,Townsfolk,"The 1st time you die, you don't."
-Banshee,good,Townsfolk,"If the Demon kills you, all players learn this. From now on, you may nominate twice per day and vote twice per nomination."
-General,good,Townsfolk,"Each night, you learn which alignment the Storyteller believes is winning: good, evil, or neither."
-Courtier,good,Townsfolk,"Once per game, at night, choose a character: they are drunk for 3 nights & 3 days."
-Exorcist,good,Townsfolk,"Each night*, choose a player (different to last night): the Demon, if chosen, learns who you are then doesn't wake tonight."
-Cult Leader,good,Townsfolk,"Each night, you become the alignment of an alive neighbor. If all good players choose to join your cult, your team wins."
-Cannibal,good,Townsfolk,"You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution."
-Innkeeper,good,Townsfolk,"Each night*, choose 2 players: they can't die tonight, but 1 is drunk until dusk."
-Balloonist,good,Townsfolk,"Each night, you learn a player of a different character type than last night. [+0 or +1 Outsider]"
-Fortune Teller,good,Townsfolk,"Each night, choose 2 players: you learn if either is a Demon. There is a good player that registers as a Demon to you."
-Artist,good,Townsfolk,"Once per game, during the day, privately ask the Storyteller any yes/no question."
-Clockmaker,good,Townsfolk,You start knowing how many steps from the Demon to its nearest Minion.
-Huntsman,good,Townsfolk,"Once per game, at night, choose a living player: the Damsel, if chosen, becomes a not-in-play Townsfolk. [+the Damsel]"
-Juggler,good,Townsfolk,"On your 1st day, publicly guess up to 5 players' characters. That night, you learn how many you got correct."
-King,good,Townsfolk,"Each night, if the dead equal or outnumber the living, you learn 1 alive character. The Demon knows you are the King."
-Investigator,good,Townsfolk,You start knowing that 1 of 2 players is a particular Minion.
-Engineer,good,Townsfolk,"Once per game, at night, choose which Minions or which Demon is in play."
-Knight,good,Townsfolk,You start knowing 2 players that are not the Demon.
-Amnesiac,good,Townsfolk,"You do not know what your ability is. Each day, privately guess what it is: you learn how accurate you are."
-Lycanthrope,good,Townsfolk,"Each night*, choose an alive player. If good, they die & the Demon doesn’t kill tonight. One good player registers as evil."
-Alsaahir,good,Townsfolk,"Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins."
-Magician,good,Townsfolk,The Demon thinks you are a Minion. Minions think you are a Demon.
-Mathematician,good,Townsfolk,"Each night, you learn how many players' abilities worked abnormally (since dawn) due to another character's ability."
-Minstrel,good,Townsfolk,"When a Minion dies by execution, all other players (except Travellers) are drunk until dusk tomorrow."
-Librarian,good,Townsfolk,You start knowing that 1 of 2 players is a particular Outsider. (Or that zero are in play.)
-Monk,good,Townsfolk,"Each night*, choose a player (not yourself): they are safe from the Demon tonight."
-Nightwatchman,good,Townsfolk,"Once per game, at night, choose a player: they learn you are the Nightwatchman."
-Bounty Hunter,good,Townsfolk,"You start knowing 1 evil player. If the player you know dies, you learn another evil player tonight. [1 Townsfolk is evil]"
-Oracle,good,Townsfolk,"Each night*, you learn how many dead players are evil."
-Noble,good,Townsfolk,"You start knowing 3 players, 1 and only 1 of which is evil."
-Pacifist,good,Townsfolk,Executed good players might not die.
-High Priestess,good,Townsfolk,"Each night, learn which player the Storyteller believes you should talk to most."
-Philosopher,good,Townsfolk,"Once per game, at night, choose a good character: gain that ability. If this character is in play, they are drunk."
-Pixie,good,Townsfolk,"You start knowing 1 in-play Townsfolk. If you were mad that you were this character, you gain their ability when they die."
-Professor,good,Townsfolk,"Once per game, at night*, choose a dead player: if they are a Townsfolk, they are resurrected."
-Ravenkeeper,good,Townsfolk,"If you die at night, you are woken to choose a player: you learn their character."
-Mayor,good,Townsfolk,"If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead."
-Sage,good,Townsfolk,"If the Demon kills you, you learn that it is 1 of 2 players."
-Sailor,good,Townsfolk,"Each night, choose an alive player: either you or they are drunk until dusk. You can't die."
-Savant,good,Townsfolk,"Each day, you may visit the Storyteller to learn 2 things in private: 1 is true & 1 is false."
-Shugenja,good,Townsfolk,"You start knowing if your closest evil player is clockwise or anti-clockwise. If equidistant, this info is arbitrary."
-Slayer,good,Townsfolk,"Once per game, during the day, publicly choose a player: if they are the Demon, they die."
-Soldier,good,Townsfolk,You are safe from the Demon.
-Steward,good,Townsfolk,You start knowing 1 good player.
-Undertaker,good,Townsfolk,"Each night*, you learn which character died by execution today."
-Poppy Grower,good,Townsfolk,"Minions & Demons do not know each other. If you die, they learn who each other are that night."
-Washerwoman,good,Townsfolk,You start knowing that 1 of 2 players is a particular Townsfolk.
-Barber,good,Outsider,"If you died today or tonight, the Demon may choose 2 players (not another Demon) to swap characters."
-Preacher,good,Townsfolk,"Each night, choose a player: a Minion, if chosen, learns this. All chosen Minions have no ability."
-Damsel,good,Outsider,"All Minions know a Damsel is in play. If a Minion publicly guesses you (once), your team loses."
-Seamstress,good,Townsfolk,"Once per game, at night, choose 2 players (not yourself): you learn if they are the same alignment."
-Goon,good,Outsider,"Each night, the 1st player to choose you with their ability is drunk until dusk. You become their alignment."
-Drunk,good,Outsider,"You do not know you are the Drunk. You think you are a Townsfolk character, but you are not."
-Hatter,good,Outsider,"If you died today or tonight, the Minion & Demon players may choose new Minion & Demon characters to be."
-Butler,good,Outsider,"Each night, choose a player (not yourself): tomorrow, you may only vote if they are voting too."
-Golem,good,Outsider,"You may only nominate once per game. When you do, if the nominee is not the Demon, they die."
-Town Crier,good,Townsfolk,"Each night*, you learn if a Minion nominated today."
-Tea Lady,good,Townsfolk,"If both your alive neighbors are good, they can't die."
-Heretic,good,Outsider,"Whoever wins, loses & whoever loses, wins, even if you are dead."
-Moonchild,good,Outsider,"When you learn that you died, publicly choose 1 alive player. Tonight, if it was a good player, they die."
-Village Idiot,good,Townsfolk,"Each night, choose a player: you learn their alignment. [+0 to +2 Village Idiots. 1 of the extras is drunk]"
-Mutant,good,Outsider,"If you are mad about being an Outsider, you might be executed."
-Ogre,good,Outsider,"On your 1st night, choose a player (not yourself): you become their alignment (you don't know which) even if drunk or poisoned."
-Politician,good,Outsider,"If you were the player most responsible for your team losing, you change alignment & win, even if dead."
-Puzzlemaster,good,Outsider,"1 player is drunk, even if you die. If you guess (once) who it is, learn the Demon player, but guess wrong & get false info."
-Recluse,good,Outsider,"You might register as evil & as a Minion or Demon, even if dead."
-Saint,good,Outsider,"If you die by execution, your team loses."
-Sweetheart,good,Outsider,"When you die, 1 player is drunk from now on."
-Lunatic,good,Outsider,"You think you are a Demon, but you are not. The Demon knows who you are & who you choose at night."
-Tinker,good,Outsider,You might die at any time.
-Assassin,evil,Minion,"Once per game, at night*, choose a player: they die, even if for some reason they could not."
-Snake Charmer,good,Townsfolk,"Each night, choose an alive player: a chosen Demon swaps characters & alignments with you & is then poisoned."
-Zealot,good,Outsider,"If there are 5 or more players alive, you must vote for every nomination."
-Klutz,good,Outsider,"When you learn that you died, publicly choose 1 alive player: if they are evil, your team loses."
-Baron,evil,Minion,There are extra Outsiders in play. [+2 Outsiders]
-Boffin,evil,Minion,The Demon (even if drunk or poisoned) has a not-in-play good character's ability. You both know which.
-Boomdandy,evil,Minion,"If you are executed, all but 3 players die. After a 10 to 1 countdown, the player with the most players pointing at them, dies."
-Virgin,good,Townsfolk,"The 1st time you are nominated, if the nominator is a Townsfolk, they are executed immediately."
-Cerenovus,evil,Minion,"Each night, choose a player & a good character: they are mad they are this character tomorrow, or might be executed."
-Snitch,good,Outsider,Each Minion gets 3 bluffs.
-Plague Doctor,good,Outsider,"When you die, the Storyteller gains a Minion ability."
-Fearmonger,evil,Minion,"Each night, choose a player: if you nominate & execute them, their team loses. All players know if you choose a new player."
-Godfather,evil,Minion,"You start knowing which Outsiders are in play. If 1 died today, choose a player tonight: they die. [-1 or +1 Outsider]"
-Harpy,evil,Minion,"Each night, choose 2 players: tomorrow, the 1st player is mad that the 2nd is evil, or one or both might die."
-Goblin,evil,Minion,"If you publicly claim to be the Goblin when nominated & are executed that day, your team wins."
-Marionette,evil,Minion,"You think you are a good character, but you are not. The Demon knows who you are. [You neighbor the Demon]"
-Mastermind,evil,Minion,"If the Demon dies by execution (ending the game), play for 1 more day. If a player is then executed, their team loses."
-Mezepheles,evil,Minion,You start knowing a secret word. The 1st good player to say this word becomes evil that night.
-Pit-Hag,evil,Minion,"Each night*, choose a player & a character they become (if not in play). If a Demon is made, deaths tonight are arbitrary."
-Poisoner,evil,Minion,"Each night, choose a player: they are poisoned tonight and tomorrow day."
-Spy,evil,Minion,"Each night, you see the Grimoire. You might register as good & as a Townsfolk or Outsider, even if dead."
-Summoner,evil,Minion,"You get 3 bluffs. On the 3rd night, choose a player: they become an evil Demon of your choice. [No Demon]"
-Devil's Advocate,evil,Minion,"Each night, choose a living player (different to last night): if executed tomorrow, they don't die."
-Widow,evil,Minion,"On your first night, look at the Grimoire & choose a player: they are poisoned. 1 good player knows a Widow is in play."
-Vizier,evil,Minion,"All players know you are the Vizier. You cannot die during the day. If good voted, you may choose to execute immediately."
-Witch,evil,Minion,"Each night, choose a player: if they nominate tomorrow, they die. If just 3 players live, you lose this ability."
-Wizard,evil,Minion,"Once per game, choose to make a wish. If granted, it might have a price & leave a clue as to its nature."
-Psychopath,evil,Minion,"Each day, before nominations, you may publicly choose a player: they die. If executed, you only die if you lose roshambo."
-Xaan,evil,Minion,"On night X, all Townsfolk are poisoned until dusk. [X Outsiders]"
-Al-Hadikhia,evil,Demon,"Each night*, you may choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die."
-Imp,evil,Demon,"Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp."
-Organ Grinder,evil,Minion,"All players keep their eyes closed when voting and the vote tally is secret. Each night, choose if you are drunk until dusk."
-Lleech,evil,Demon,"Each night*, choose a player: they die. You start by choosing a player: they are poisoned. You die if & only if they are dead. "
-Leviathan,evil,Demon,"If more than 1 good player is executed, evil wins. All players know you are in play. After day 5, evil wins."
-Legion,evil,Demon,"Each night*, a player might die. Executions fail if only evil voted. You register as a Minion too. [Most players are Legion]"
-Kazali,evil,Demon,"Each night*, choose a player: they die. [You choose which players are which Minions. -? to +? Outsiders]"
-Scarlet Woman,evil,Minion,"If there are 5 or more players alive & the Demon dies, you become the Demon. (Travellers don't count)"
-Pukka,evil,Demon,"Each night, choose a player: they are poisoned. The previously poisoned player dies then becomes healthy."
-Ojo,evil,Demon,"Each night*, choose a character: they die. If they are not in play, the Storyteller chooses who dies."
-Po,evil,Demon,"Each night*, you may choose a player: they die. If your last choice was no-one, choose 3 players tonight."
-Evil Twin,evil,Minion,"You & an opposing player know each other. If the good player is executed, evil wins. Good can't win if you both live."
-Shabaloth,evil,Demon,"Each night*, choose 2 players: they die. A dead player you chose last night might be regurgitated."
-Vigormortis,evil,Demon,"Each night*, choose a player: they die. Minions you kill keep their ability & poison 1 Townsfolk neighbor. [-1 Outsider]"
-Vortox,evil,Demon,"Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins."
-Fang Gu,evil,Demon,"Each night*, choose a player: they die. The 1st Outsider this kills becomes an evil Fang Gu & you die instead. [+1 Outsider]"
-Yaggababble,evil,Demon,"You start knowing a secret phrase. For each time you said it publicly today, a player might die."
-Zombuul,evil,Demon,"Each night*, if no-one died today, choose a player: they die. The 1st time you die, you live but register as dead."
-Lil' Monsta,evil,Demon,"Each night, Minions choose who babysits Lil' Monsta & 'is the Demon'. Each night*, a player might die. [+1 Minion]"
-Lord of Typhon,evil,Demon,"Each night*, choose a player: they die. [Evil characters are in a line. You are in the middle. +1 Minion. -? to +? Outsiders]"
-No Dashii,evil,Demon,"Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned."
-Riot,evil,Demon,"On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen."
+name,alignment,role_type,"description ",ru_name,ru_description
+Flowergirl,good,Townsfolk,"Each night*, you learn if a Demon voted today.",Цветочница,
+Dreamer,good,Townsfolk,"Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.",Сновидец,
+Acrobat,good,Townsfolk,"Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.",Акробат,
+Alchemist,good,Townsfolk,"You have a Minion ability. When using this, the Storyteller may prompt you to choose differently.",Алхимик,
+Grandmother,good,Townsfolk,"You start knowing a good player & their character. If the Demon kills them, you die too.",Бабушка,
+Fisherman,good,Townsfolk,"Once per game, during the day, visit the Storyteller for some advice to help your team win.",Рыбак,
+Choirboy,good,Townsfolk,"If the Demon kills the King, you learn which player is the Demon. [+the King]",Хорист,
+Gossip,good,Townsfolk,"Each day, you may make a public statement. Tonight, if it was true, a player dies.",Сплетница,
+Gambler,good,Townsfolk,"Each night*, choose a player & guess their character: if you guess wrong, you die.",Азартный игрок,
+Atheist,good,Townsfolk,"The Storyteller can break the game rules, and if executed, good wins, even if you are dead. [No evil characters]",Атеист,
+Empath,good,Townsfolk,"Each night, you learn how many of your 2 alive neighbors are evil.",Эмпат,
+Chef,good,Townsfolk,You start knowing how many pairs of evil players there are.,Повар,
+Farmer,good,Townsfolk,"When you die at night, an alive good player becomes a Farmer.",Фермер,
+Chambermaid,good,Townsfolk,"Each night, choose 2 alive players (not yourself): you learn how many woke tonight due to their ability.",Горничная,
+Fool,good,Townsfolk,"The 1st time you die, you don't.",Шут,
+Banshee,good,Townsfolk,"If the Demon kills you, all players learn this. From now on, you may nominate twice per day and vote twice per nomination.",Банши,
+General,good,Townsfolk,"Each night, you learn which alignment the Storyteller believes is winning: good, evil, or neither.",Генерал,
+Courtier,good,Townsfolk,"Once per game, at night, choose a character: they are drunk for 3 nights & 3 days.",Придворный,
+Exorcist,good,Townsfolk,"Each night*, choose a player (different to last night): the Demon, if chosen, learns who you are then doesn't wake tonight.",Экзорцист,
+Cult Leader,good,Townsfolk,"Each night, you become the alignment of an alive neighbor. If all good players choose to join your cult, your team wins.",Лидер культа,
+Cannibal,good,Townsfolk,"You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.",Каннибал,
+Innkeeper,good,Townsfolk,"Each night*, choose 2 players: they can't die tonight, but 1 is drunk until dusk.",Трактирщик,
+Balloonist,good,Townsfolk,"Each night, you learn a player of a different character type than last night. [+0 or +1 Outsider]",Аэронавт,
+Fortune Teller,good,Townsfolk,"Each night, choose 2 players: you learn if either is a Demon. There is a good player that registers as a Demon to you.",Гадалка,
+Artist,good,Townsfolk,"Once per game, during the day, privately ask the Storyteller any yes/no question.",Художник,
+Clockmaker,good,Townsfolk,You start knowing how many steps from the Demon to its nearest Minion.,Часовщик,
+Huntsman,good,Townsfolk,"Once per game, at night, choose a living player: the Damsel, if chosen, becomes a not-in-play Townsfolk. [+the Damsel]",Егерь,
+Juggler,good,Townsfolk,"On your 1st day, publicly guess up to 5 players' characters. That night, you learn how many you got correct.",Жонглёр,
+King,good,Townsfolk,"Each night, if the dead equal or outnumber the living, you learn 1 alive character. The Demon knows you are the King.",Король,
+Investigator,good,Townsfolk,You start knowing that 1 of 2 players is a particular Minion.,Сыщик,
+Engineer,good,Townsfolk,"Once per game, at night, choose which Minions or which Demon is in play.",Инженер,
+Knight,good,Townsfolk,You start knowing 2 players that are not the Demon.,Рыцарь,
+Amnesiac,good,Townsfolk,"You do not know what your ability is. Each day, privately guess what it is: you learn how accurate you are.",Амнезиак,
+Lycanthrope,good,Townsfolk,"Each night*, choose an alive player. If good, they die & the Demon doesn’t kill tonight. One good player registers as evil.",Оборотень,
+Alsaahir,good,Townsfolk,"Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins.",Альсахер,
+Magician,good,Townsfolk,The Demon thinks you are a Minion. Minions think you are a Demon.,Фокусник,
+Mathematician,good,Townsfolk,"Each night, you learn how many players' abilities worked abnormally (since dawn) due to another character's ability.",Математик,
+Minstrel,good,Townsfolk,"When a Minion dies by execution, all other players (except Travellers) are drunk until dusk tomorrow.",Менестрель,
+Librarian,good,Townsfolk,You start knowing that 1 of 2 players is a particular Outsider. (Or that zero are in play.),Библиотекарь,
+Monk,good,Townsfolk,"Each night*, choose a player (not yourself): they are safe from the Demon tonight.",Монах,
+Nightwatchman,good,Townsfolk,"Once per game, at night, choose a player: they learn you are the Nightwatchman.",Стражник,
+Bounty Hunter,good,Townsfolk,"You start knowing 1 evil player. If the player you know dies, you learn another evil player tonight. [1 Townsfolk is evil]",Охотник за головами,
+Oracle,good,Townsfolk,"Each night*, you learn how many dead players are evil.",Пророк,
+Noble,good,Townsfolk,"You start knowing 3 players, 1 and only 1 of which is evil.",Аристократ,
+Pacifist,good,Townsfolk,Executed good players might not die.,Пацифист,
+High Priestess,good,Townsfolk,"Each night, learn which player the Storyteller believes you should talk to most.",Верховная жрица,
+Philosopher,good,Townsfolk,"Once per game, at night, choose a good character: gain that ability. If this character is in play, they are drunk.",Философ,
+Pixie,good,Townsfolk,"You start knowing 1 in-play Townsfolk. If you were mad that you were this character, you gain their ability when they die.",Пикси,
+Professor,good,Townsfolk,"Once per game, at night*, choose a dead player: if they are a Townsfolk, they are resurrected.",Профессор,
+Ravenkeeper,good,Townsfolk,"If you die at night, you are woken to choose a player: you learn their character.",Смотритель воронов,
+Mayor,good,Townsfolk,"If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead.",Мэр,
+Sage,good,Townsfolk,"If the Demon kills you, you learn that it is 1 of 2 players.",Мудрец,
+Sailor,good,Townsfolk,"Each night, choose an alive player: either you or they are drunk until dusk. You can't die.",Моряк,
+Savant,good,Townsfolk,"Each day, you may visit the Storyteller to learn 2 things in private: 1 is true & 1 is false.",Савант,
+Shugenja,good,Townsfolk,"You start knowing if your closest evil player is clockwise or anti-clockwise. If equidistant, this info is arbitrary.",Сюгендзи,
+Slayer,good,Townsfolk,"Once per game, during the day, publicly choose a player: if they are the Demon, they die.",Истребитель,
+Soldier,good,Townsfolk,You are safe from the Demon.,Солдат,
+Steward,good,Townsfolk,You start knowing 1 good player.,Управляющий,
+Undertaker,good,Townsfolk,"Each night*, you learn which character died by execution today.",Гробовщик,
+Poppy Grower,good,Townsfolk,"Minions & Demons do not know each other. If you die, they learn who each other are that night.",Дурманщик,
+Washerwoman,good,Townsfolk,You start knowing that 1 of 2 players is a particular Townsfolk.,Прачка,
+Barber,good,Outsider,"If you died today or tonight, the Demon may choose 2 players (not another Demon) to swap characters.",Парикмахер,
+Preacher,good,Townsfolk,"Each night, choose a player: a Minion, if chosen, learns this. All chosen Minions have no ability.",Проповедник,
+Damsel,good,Outsider,"All Minions know a Damsel is in play. If a Minion publicly guesses you (once), your team loses.",Дамочка,
+Seamstress,good,Townsfolk,"Once per game, at night, choose 2 players (not yourself): you learn if they are the same alignment.",Швея,
+Goon,good,Outsider,"Each night, the 1st player to choose you with their ability is drunk until dusk. You become their alignment.",Наёмник,
+Drunk,good,Outsider,"You do not know you are the Drunk. You think you are a Townsfolk character, but you are not.",Пьяница,
+Hatter,good,Outsider,"If you died today or tonight, the Minion & Demon players may choose new Minion & Demon characters to be.",Шляпник,
+Butler,good,Outsider,"Each night, choose a player (not yourself): tomorrow, you may only vote if they are voting too.",Дворецкий,
+Golem,good,Outsider,"You may only nominate once per game. When you do, if the nominee is not the Demon, they die.",Голем,
+Town Crier,good,Townsfolk,"Each night*, you learn if a Minion nominated today.",Глашатай,
+Tea Lady,good,Townsfolk,"If both your alive neighbors are good, they can't die.",Травница,
+Heretic,good,Outsider,"Whoever wins, loses & whoever loses, wins, even if you are dead.",Еретик,
+Moonchild,good,Outsider,"When you learn that you died, publicly choose 1 alive player. Tonight, if it was a good player, they die.",Лунное дитя,
+Village Idiot,good,Townsfolk,"Each night, choose a player: you learn their alignment. [+0 to +2 Village Idiots. 1 of the extras is drunk]",Дурачок,
+Mutant,good,Outsider,"If you are mad about being an Outsider, you might be executed.",Уродец,
+Ogre,good,Outsider,"On your 1st night, choose a player (not yourself): you become their alignment (you don't know which) even if drunk or poisoned.",Огр,
+Politician,good,Outsider,"If you were the player most responsible for your team losing, you change alignment & win, even if dead.",Политик,
+Puzzlemaster,good,Outsider,"1 player is drunk, even if you die. If you guess (once) who it is, learn the Demon player, but guess wrong & get false info.",Головоломщик,
+Recluse,good,Outsider,"You might register as evil & as a Minion or Demon, even if dead.",Затворник,
+Saint,good,Outsider,"If you die by execution, your team loses.",Святой,
+Sweetheart,good,Outsider,"When you die, 1 player is drunk from now on.",Душечка,
+Lunatic,good,Outsider,"You think you are a Demon, but you are not. The Demon knows who you are & who you choose at night.",Безумец,
+Tinker,good,Outsider,You might die at any time.,Механик,
+Assassin,evil,Minion,"Once per game, at night*, choose a player: they die, even if for some reason they could not.",Убийца,
+Snake Charmer,good,Townsfolk,"Each night, choose an alive player: a chosen Demon swaps characters & alignments with you & is then poisoned.",Заклинатель змей,
+Zealot,good,Outsider,"If there are 5 or more players alive, you must vote for every nomination.",Фанатик,
+Klutz,good,Outsider,"When you learn that you died, publicly choose 1 alive player: if they are evil, your team loses.",Растяпа,
+Baron,evil,Minion,There are extra Outsiders in play. [+2 Outsiders],Барон,
+Boffin,evil,Minion,The Demon (even if drunk or poisoned) has a not-in-play good character's ability. You both know which.,Умник,
+Boomdandy,evil,Minion,"If you are executed, all but 3 players die. After a 10 to 1 countdown, the player with the most players pointing at them, dies.",Подрывник,
+Virgin,good,Townsfolk,"The 1st time you are nominated, if the nominator is a Townsfolk, they are executed immediately.",Девственница,
+Cerenovus,evil,Minion,"Each night, choose a player & a good character: they are mad they are this character tomorrow, or might be executed.",Гипнотизёр,
+Snitch,good,Outsider,Each Minion gets 3 bluffs.,Болтун,
+Plague Doctor,good,Outsider,"When you die, the Storyteller gains a Minion ability.",Чумной доктор,
+Fearmonger,evil,Minion,"Each night, choose a player: if you nominate & execute them, their team loses. All players know if you choose a new player.",Страшила,
+Godfather,evil,Minion,"You start knowing which Outsiders are in play. If 1 died today, choose a player tonight: they die. [-1 or +1 Outsider]",Крёстный отец,
+Harpy,evil,Minion,"Each night, choose 2 players: tomorrow, the 1st player is mad that the 2nd is evil, or one or both might die.",Гарпия,
+Goblin,evil,Minion,"If you publicly claim to be the Goblin when nominated & are executed that day, your team wins.",Гоблин,
+Marionette,evil,Minion,"You think you are a good character, but you are not. The Demon knows who you are. [You neighbor the Demon]",Марионетка,
+Mastermind,evil,Minion,"If the Demon dies by execution (ending the game), play for 1 more day. If a player is then executed, their team loses.",Кукловод,
+Mezepheles,evil,Minion,You start knowing a secret word. The 1st good player to say this word becomes evil that night.,Мецефель,
+Pit-Hag,evil,Minion,"Each night*, choose a player & a character they become (if not in play). If a Demon is made, deaths tonight are arbitrary.",Яга,
+Poisoner,evil,Minion,"Each night, choose a player: they are poisoned tonight and tomorrow day.",Отравитель,
+Spy,evil,Minion,"Each night, you see the Grimoire. You might register as good & as a Townsfolk or Outsider, even if dead.",Шпион,
+Summoner,evil,Minion,"You get 3 bluffs. On the 3rd night, choose a player: they become an evil Demon of your choice. [No Demon]",Призыватель,
+Devil's Advocate,evil,Minion,"Each night, choose a living player (different to last night): if executed tomorrow, they don't die.",Адвокат дьявола,
+Widow,evil,Minion,"On your first night, look at the Grimoire & choose a player: they are poisoned. 1 good player knows a Widow is in play.",Вдова,
+Vizier,evil,Minion,"All players know you are the Vizier. You cannot die during the day. If good voted, you may choose to execute immediately.",Визирь,
+Witch,evil,Minion,"Each night, choose a player: if they nominate tomorrow, they die. If just 3 players live, you lose this ability.",Ведьма,
+Wizard,evil,Minion,"Once per game, choose to make a wish. If granted, it might have a price & leave a clue as to its nature.",Волшебник,
+Psychopath,evil,Minion,"Each day, before nominations, you may publicly choose a player: they die. If executed, you only die if you lose roshambo.",Психопат,
+Xaan,evil,Minion,"On night X, all Townsfolk are poisoned until dusk. [X Outsiders]",Ксаан,
+Al-Hadikhia,evil,Demon,"Each night*, you may choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.",Аль-Адихия,
+Imp,evil,Demon,"Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp.",Чёрт,
+Organ Grinder,evil,Minion,"All players keep their eyes closed when voting and the vote tally is secret. Each night, choose if you are drunk until dusk.",Шарманщик,
+Lleech,evil,Demon,"Each night*, choose a player: they die. You start by choosing a player: they are poisoned. You die if & only if they are dead. ",Пиявка,
+Leviathan,evil,Demon,"If more than 1 good player is executed, evil wins. All players know you are in play. After day 5, evil wins.",Левиафан,
+Legion,evil,Demon,"Each night*, a player might die. Executions fail if only evil voted. You register as a Minion too. [Most players are Legion]",Легион,
+Kazali,evil,Demon,"Each night*, choose a player: they die. [You choose which players are which Minions. -? to +? Outsiders]",Казали,
+Scarlet Woman,evil,Minion,"If there are 5 or more players alive & the Demon dies, you become the Demon. (Travellers don't count)",Блудница,
+Pukka,evil,Demon,"Each night, choose a player: they are poisoned. The previously poisoned player dies then becomes healthy.",Пукка,
+Ojo,evil,Demon,"Each night*, choose a character: they die. If they are not in play, the Storyteller chooses who dies.",Охо,
+Po,evil,Demon,"Each night*, you may choose a player: they die. If your last choice was no-one, choose 3 players tonight.",По,
+Evil Twin,evil,Minion,"You & an opposing player know each other. If the good player is executed, evil wins. Good can't win if you both live.",Злые близнецы,
+Shabaloth,evil,Demon,"Each night*, choose 2 players: they die. A dead player you chose last night might be regurgitated.",Шабалот,
+Vigormortis,evil,Demon,"Each night*, choose a player: they die. Minions you kill keep their ability & poison 1 Townsfolk neighbor. [-1 Outsider]",Вигормортис,
+Vortox,evil,Demon,"Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins.",Вортекс,
+Fang Gu,evil,Demon,"Each night*, choose a player: they die. The 1st Outsider this kills becomes an evil Fang Gu & you die instead. [+1 Outsider]",Фан'Гу,
+Yaggababble,evil,Demon,"You start knowing a secret phrase. For each time you said it publicly today, a player might die.",Яготрёп,
+Zombuul,evil,Demon,"Each night*, if no-one died today, choose a player: they die. The 1st time you die, you live but register as dead.",Зомбул,
+Lil' Monsta,evil,Demon,"Each night, Minions choose who babysits Lil' Monsta & 'is the Demon'. Each night*, a player might die. [+1 Minion]",Монстрёнок,
+Lord of Typhon,evil,Demon,"Each night*, choose a player: they die. [Evil characters are in a line. You are in the middle. +1 Minion. -? to +? Outsiders]",Владыка Тифон,
+No Dashii,evil,Demon,"Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.",Но'Даши,
+Riot,evil,Demon,"On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.",Мятежник,

@@ -35,6 +35,17 @@ docker-compose up -d
 | `BOTC_USER_PASSWORD` | Пароль приложения (ограниченные права) |
 | `API_SERVICE_PASSWORD` | Пароль API-сервиса |
 
+## API Endpoints
+
+| Endpoint | Описание |
+|----------|----------|
+| `GET /health` | Проверка работоспособности |
+| `POST /api/import` | Импорт партии (роли на русском) |
+| `POST /api/roles/import` | Импорт ролей с переводами |
+| `GET /api/roles` | Список доступных ролей |
+
+Подробная документация: [docs/API-ACCESS.md](docs/API-ACCESS.md)
+
 ## Key Scripts
 
 | Скрипт | Назначение |

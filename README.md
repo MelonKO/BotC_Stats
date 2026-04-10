@@ -59,21 +59,22 @@ python uploader.py path/to/games.csv
 
 ```
 BotC/
-├── .gitattributes          # Git line endings config
+├── .gitattributes              # Git line endings config
 ├── .gitignore
-├── BotC_Schema.sql         # Standalone DB schema (for reference)
-├── README.md               # This file
-├── core/                   # Docker stack (DB + API + Nginx)
+├── README.md                   # This file
+├── botc_character_list.csv     # Полный список ролей (EN + RU переводы)
+├── test_sample.csv             # Пример CSV для импорта партий
+├── test_roles.csv              # Пример CSV для импорта ролей
+├── core/                       # Docker stack (DB + API + Nginx)
 │   ├── docker-compose.yml
 │   ├── init-scripts/
 │   ├── api/
 │   ├── nginx/
 │   ├── scripts/
-│   └── docs/               # SSH and API access documentation
-├── uploader/               # CSV importer CLI
+│   └── docs/                   # SSH and API access documentation
+├── uploader/                   # CSV importer CLI
 │   ├── uploader.py
 │   └── requirements.txt
-└── test_sample.csv         # Sample data for testing
 ```
 
 ## Database Schema
@@ -83,7 +84,11 @@ BotC/
 | Таблица | Назначение |
 |---------|------------|
 | `players` | Реестр игроков (уникальное имя, контакты) |
-| `roles` | Справочник ролей (название, alignment, тип на английском) |
+| `roles` | Справочник ролей (английское название, alignment, тип) |
+| `role_translations` | Переводы имён ролей на разные языки (ru, en, ...) |
+| `role_type_translations` | Переводы типов ролей (Townsfolk → Горожанин и т.д.) |
+| `alignment_translations` | Переводы align-ментов (good → добро и т.д.) |
+| `languages` | Поддерживаемые языки |
 | `games` | Метаданные партий (дата, сценарий, рассказчик, победитель) |
 | `game_players` | Раскладка партии (связь игрок-роль, выживание) |
 | `api_keys` | Хранение хешей API-ключей для аутентификации |
@@ -95,6 +100,25 @@ BotC/
 | `v_player_stats` | Статистика игрока: игры, победы, винрейт, выживаемость |
 | `v_role_stats` | Эффективность ролей: винрейт, выживаемость, частота смены ролей |
 | `v_game_summary` | Сводка по партии: состав, победитель, количество выживших |
+
+### Импорт ролей
+
+Роли и переводы добавляются через `POST /api/roles/import`:
+
+```json
+{
+  "roles": [{
+    "name": "Chambermaid",
+    "alignment": "good",
+    "role_type": "Outsider",
+    "translations": {
+      "ru": {"name": "Горничная", "description": "Просто, но не безобидно"}
+    }
+  }]
+}
+```
+
+Поле `translations` опционально. Без него импортируется только английская роль.
 
 ## Security
 
@@ -114,7 +138,7 @@ BotC/
 |--------------|-------|------------|
 | `postgres` | Суперпользователь | Администрирование |
 | `botc_user` | CRUD (SELECT, INSERT, UPDATE, DELETE) | Приложение |
-| `api_service` | INSERT на игры/players/roles/staging, SELECT на views | API-сервис импорта |
+| `api_service` | INSERT/UPDATE/SELECT на игры/players/roles/staging/role_translations, SELECT на views | API-сервис импорта |
 
 ## Useful Queries
 

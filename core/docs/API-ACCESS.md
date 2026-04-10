@@ -144,6 +144,135 @@ Content-Type: application/json
 
 ---
 
+### `POST /api/roles/import` — Импорт ролей
+
+Импортирует (upsert) список ролей с опциональными переводами на разные языки.
+Существующие роли обновляются, новые — создаются.
+
+**Заголовки:**
+```
+X-API-Key: <ваш_ключ>
+Content-Type: application/json
+```
+
+**Тело запроса:**
+```json
+{
+    "roles": [
+        {
+            "name": "Chambermaid",
+            "alignment": "good",
+            "role_type": "Outsider",
+            "description": "Simple, but not harmless",
+            "translations": {
+                "ru": {
+                    "name": "Горничная",
+                    "description": "Просто, но не безобидно"
+                }
+            }
+        },
+        {
+            "name": "Imp",
+            "alignment": "evil",
+            "role_type": "Demon",
+            "translations": {
+                "ru": {
+                    "name": "Имп",
+                    "description": "Каждую ночь* выбирайте игрока: он умирает"
+                }
+            }
+        }
+    ]
+}
+```
+
+**Поля (каждая роль):**
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|--------------|----------|
+| `name` | string | ✅ | Английское имя роли |
+| `alignment` | string | ✅ | `good`, `evil` или `neutral` |
+| `role_type` | string | ✅ | `Townsfolk`, `Outsider`, `Minion`, `Demon` или `Traveller` |
+| `description` | string | | Описание на английском |
+| `translations` | object | | Словарь переводов по языкам (`"ru"`, `"de"`, ...) |
+| `translations.<lang>.name` | string | ✅ (если перевод указан) | Имя роли на языке |
+| `translations.<lang>.description` | string | | Описание на языке |
+
+**Ответ (успех, 200):**
+```json
+{
+    "status": "ok",
+    "roles_created": 15,
+    "roles_updated": 2,
+    "errors": []
+}
+```
+
+**Ответ (ошибка, 400):**
+```json
+{
+    "detail": {
+        "status": "error",
+        "roles_created": 10,
+        "roles_updated": 0,
+        "errors": ["Role 'FakeRole': invalid input value for enum alignment: \"wrong\""]
+    }
+}
+```
+
+**Пример на Python:**
+```python
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+API_URL = "https://<SERVER_IP>/api/roles/import"
+API_KEY = "sk-EXAMPLE_DO_NOT_USE"
+
+data = {
+    "roles": [
+        {
+            "name": "Chambermaid",
+            "alignment": "good",
+            "role_type": "Outsider",
+            "translations": {
+                "ru": {"name": "Горничная", "description": "Просто, но не безобидно"}
+            }
+        }
+    ]
+}
+
+response = requests.post(
+    API_URL,
+    headers={"X-API-Key": API_KEY, "Content-Type": "application/json"},
+    json=data,
+    verify=False,
+)
+
+result = response.json()
+print(f"Создано: {result['roles_created']}, Обновлено: {result['roles_updated']}")
+```
+
+**Пример cURL:**
+```bash
+curl -k -X POST "https://<SERVER_IP>/api/roles/import" \
+  -H "X-API-Key: sk-EXAMPLE_DO_NOT_USE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roles": [{
+      "name": "Chambermaid",
+      "alignment": "good",
+      "role_type": "Outsider",
+      "translations": {
+        "ru": {"name": "Горничная", "description": "Просто, но не безобидно"}
+      }
+    }]
+  }'
+```
+
+---
+
 ### `GET /api/roles` — Список доступных ролей
 
 Возвращает все роли, которые можно использовать при импорте.

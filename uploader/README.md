@@ -72,6 +72,23 @@ CSV → Parse → Group by game → POST /api/import (X-API-Key) → DB
 CSV (--roles) → Parse → POST /api/roles/import (X-API-Key) → DB
 ```
 
+## Testing
+
+```bash
+# Установить зависимости (включая pytest, pytest-mock)
+pip install -r requirements.txt
+
+# Запустить все тесты
+python -m pytest tests/ -v
+
+# Краткий вывод
+python -m pytest tests/ -v --tb=short
+
+# С отчётом о покрытии (нужен pytest-cov)
+pip install pytest-cov
+python -m pytest tests/ -v --cov=uploader --cov-report=term-missing
+```
+
 ## Troubleshooting
 
 | Проблема | Решение |

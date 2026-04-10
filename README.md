@@ -1,5 +1,7 @@
 # Blood on the Clocktower Statistics — Project
 
+[![CI](https://github.com/MelonKO/BotC_Stats/actions/workflows/ci.yml/badge.svg)](https://github.com/MelonKO/BotC_Stats/actions/workflows/ci.yml)
+
 **Blood on the Clocktower Statistics (BotC Stats)** — система учёта партий настольной игры Blood on the Clocktower с базой данных PostgreSQL, REST API и набором инструментов для импорта и аналитики.
 
 ## Architecture

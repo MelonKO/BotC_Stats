@@ -189,7 +189,8 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
     Парсинг CSV файла ролей.
 
     Ожидаемые колонки: name, alignment, role_type (description — опционально)
-    Все значения должны быть на английском.
+    Колонки переводов: {lang}_name, {lang}_description (например, ru_name, ru_description)
+    Все значения должны быть на английском (кроме переводов).
 
     Returns:
         Список словарей с валидированными ролями.
@@ -208,6 +209,15 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
             sys.exit(1)
 
         has_description = "description" in (reader.fieldnames or [])
+
+        # Определяем языки переводов из заголовков (паттерн: {lang}_name, {lang}_description)
+        fieldnames = set(reader.fieldnames or [])
+        translation_langs = set()
+        for field in fieldnames:
+            if field.endswith("_name") and field != "name":
+                lang = field.rsplit("_", 1)[0]
+                if f"{lang}_description" in fieldnames:
+                    translation_langs.add(lang)
 
         for line_num, row in enumerate(reader, start=2):
             name = row["name"].strip()
@@ -230,6 +240,21 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
             role_data = {"name": name, "alignment": alignment, "role_type": role_type}
             if description is not None:
                 role_data["description"] = description if description else None
+
+            # Собираем переводы
+            translations = {}
+            for lang in sorted(translation_langs):
+                tr_name = row.get(f"{lang}_name", "").strip()
+                tr_description = row.get(f"{lang}_description", "").strip() or None
+
+                if tr_name:
+                    tr_data = {"name": tr_name}
+                    if tr_description:
+                        tr_data["description"] = tr_description
+                    translations[lang] = tr_data
+
+            if translations:
+                role_data["translations"] = translations
 
             roles.append(role_data)
 

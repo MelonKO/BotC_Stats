@@ -41,8 +41,8 @@ GRANT INSERT, SELECT, DELETE ON games_import_staging TO api_service;
 -- 2. Read and manage roles (add new roles, read for validation)
 GRANT SELECT, INSERT, UPDATE ON roles TO api_service;
 
--- 2b. Read translation tables (for validation and lookup)
-GRANT SELECT ON role_translations TO api_service;
+-- 2b. Read/write translation tables (for role import with translations)
+GRANT INSERT, UPDATE, SELECT ON role_translations TO api_service;
 GRANT SELECT ON role_type_translations TO api_service;
 GRANT SELECT ON alignment_translations TO api_service;
 GRANT SELECT ON languages TO api_service;

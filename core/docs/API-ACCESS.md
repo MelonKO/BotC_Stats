@@ -58,7 +58,7 @@ Content-Type: application/json
     "notes": "Отличная партия, все получили удовольствие",
     "players": [
         {
-            "name": "Анна Никитина",
+            "name": "Мая Вишневская",
             "seat_number": 1,
             "role_start": "Дамочка",
             "role_end": "Дамочка",

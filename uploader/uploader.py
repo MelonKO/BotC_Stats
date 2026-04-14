@@ -17,35 +17,58 @@ import os
 import csv
 import argparse
 import warnings
+import logging
 from pathlib import Path
 from collections import defaultdict
+from typing import Dict, List, Any, Optional
 
 import requests
 import urllib3
 from dotenv import load_dotenv
+from tqdm import tqdm
+
+# Настройка logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Подавить предупреждения о self-signed SSL (когда SSL_VERIFY=false)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# Константы
+API_URL_DEFAULT = "https://localhost:443"
+API_IMPORT_ENDPOINT = "/api/import"
+API_ROLES_IMPORT_ENDPOINT = "/api/roles/import"
 
-def load_config() -> dict:
+# Валидация ролей (английские)
+VALID_ALIGNMENT_ROLES = {"good", "evil", "neutral"}
+VALID_ROLE_TYPES = {"Townsfolk", "Outsider", "Minion", "Demon", "Traveller"}
+
+# Валидация игр (русские)
+VALID_ALIGNMENTS_RU = {"добро", "зло", "нейтральный"}
+VALID_ALIGNMENTS_WIN_RU = {"добро", "зло"}
+
+
+def load_config() -> Dict[str, Any]:
     """Загрузка конфигурации из .env файла."""
     env_path = Path(__file__).parent / ".env"
     if not env_path.exists():
-        print(f"Ошибка: Файл .env не найден по пути {env_path}")
-        print("Скопируйте .env.example в .env и настройте параметры API.")
+        logger.error("Файл .env не найден по пути %s", env_path)
+        logger.error("Скопируйте .env.example в .env и настройте параметры API.")
         sys.exit(1)
 
     load_dotenv(env_path)
 
     config = {
-        "api_url": os.getenv("API_URL", "https://localhost:443"),
+        "api_url": os.getenv("API_URL", API_URL_DEFAULT),
         "api_key": os.getenv("API_KEY"),
         "ssl_verify": os.getenv("SSL_VERIFY", "false").lower() == "true",
     }
 
     if not config["api_key"]:
-        print("Ошибка: API_KEY не указан в .env файле")
+        logger.error("API_KEY не указан в .env файле")
         sys.exit(1)
 
     return config
@@ -55,15 +78,15 @@ def validate_csv_file(csv_path: str) -> Path:
     """Проверка существования CSV файла."""
     path = Path(csv_path)
     if not path.exists():
-        print(f"Ошибка: Файл '{csv_path}' не найден")
+        logger.error("Файл '%s' не найден", csv_path)
         sys.exit(1)
     if not path.suffix.lower() == ".csv":
-        print(f"Ошибка: Файл должен иметь расширение .csv")
+        logger.error("Файл должен иметь расширение .csv")
         sys.exit(1)
     return path
 
 
-def parse_csv(csv_path: Path) -> list[dict]:
+def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
     """
     Парсинг CSV файла в список партий.
 
@@ -88,17 +111,43 @@ def parse_csv(csv_path: Path) -> list[dict]:
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
 
+        required_cols = {
+            "game_date", "scenario_name", "location", "game_number",
+            "storyteller_name", "alignment_win", "player_name",
+            "role_start_name", "role_end_name", "alignment_end",
+            "is_alive", "seat_number"
+        }
+        missing = required_cols - set(reader.fieldnames or [])
+        if missing:
+            raise ValueError(f"Отсутствуют обязательные колонки: {', '.join(sorted(missing))}")
+
         for row in reader:
             # Опциональные поля
             duration_val = row.get("duration", "").strip() or None
             notes_val = row.get("notes", "").strip() or None
+
+            # Валидация alignment_win (только "добро" или "зло")
+            alignment_win_val = row["alignment_win"].strip()
+            if alignment_win_val not in VALID_ALIGNMENTS_WIN_RU:
+                raise ValueError(
+                    f"Неверный alignment_win: '{alignment_win_val}'. "
+                    f"Допустимы: {', '.join(sorted(VALID_ALIGNMENTS_WIN_RU))}"
+                )
+
+            # Валидация alignment_end
+            alignment_end_val = row["alignment_end"].strip()
+            if alignment_end_val not in VALID_ALIGNMENTS_RU:
+                raise ValueError(
+                    f"Неверный alignment_end: '{alignment_end_val}'. "
+                    f"Допустимы: {', '.join(sorted(VALID_ALIGNMENTS_RU))}"
+                )
 
             # Ключ группировки: уникальная партия
             game_key = (
                 row["game_date"].strip(),
                 row["scenario_name"].strip(),
                 row["storyteller_name"].strip(),
-                row["alignment_win"].strip(),
+                alignment_win_val,
                 row["location"].strip(),
                 row["game_number"].strip(),
             )
@@ -107,9 +156,10 @@ def parse_csv(csv_path: Path) -> list[dict]:
             game["game_date"] = row["game_date"].strip()
             game["scenario_name"] = row["scenario_name"].strip()
             game["storyteller_name"] = row["storyteller_name"].strip()
-            game["alignment_win"] = row["alignment_win"].strip()
+            game["alignment_win"] = alignment_win_val
             game["location"] = row["location"].strip()
-            game["game_number"] = int(row["game_number"].strip())
+            game_number_val = row["game_number"].strip()
+            game["game_number"] = int(game_number_val) if game_number_val else None
             game["duration"] = duration_val
             game["notes"] = notes_val
 
@@ -120,14 +170,14 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 "seat_number": int(seat_val) if seat_val else None,
                 "role_start": row["role_start_name"].strip(),
                 "role_end": row["role_end_name"].strip(),
-                "alignment_end": row["alignment_end"].strip(),
+                "alignment_end": alignment_end_val,
                 "is_alive": row["is_alive"].strip().lower() in ("true", "1", "yes", "да"),
             })
 
     return list(games_dict.values())
 
 
-def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -> dict:
+def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -> Dict[str, Any]:
     """
     Отправка одной партии на импорт через API.
 
@@ -161,30 +211,30 @@ def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -
                 return {"status": "error", "errors": errors}
             return {"status": "error", "errors": [str(error_msg)]}
         except Exception:
-            return {"status": "error", "errors": [f"HTTP ошибка: {e}"]}
+            return {"status": "error", "errors": [f"HTTP error: {e}"]}
 
     except requests.exceptions.ConnectionError:
         return {
             "status": "error",
-            "errors": [f"Не удалось подключиться к API по адресу {url}. Проверьте, что контейнер запущен."],
+            "errors": ["Connection failed. Check if container is running."],
         }
 
     except requests.exceptions.Timeout:
-        return {"status": "error", "errors": ["Превышено время ожидания ответа от API"]}
+        return {"status": "error", "errors": ["Request timeout - API not responding"]}
 
     except requests.exceptions.RequestException as e:
-        return {"status": "error", "errors": [f"Ошибка запроса: {e}"]}
+        return {"status": "error", "errors": [f"Request error: {e}"]}
 
 
 # ============================================================
 #  Roles import
 # ============================================================
 
-VALID_ALIGNMENT = {"good", "evil", "neutral"}
+VALID_ALIGNMENT_ROLES = {"good", "evil", "neutral"}
 VALID_ROLE_TYPES = {"Townsfolk", "Outsider", "Minion", "Demon", "Traveller"}
 
 
-def parse_roles_csv(csv_path: Path) -> list[dict]:
+def parse_roles_csv(csv_path: Path) -> List[Dict[str, Any]]:
     """
     Парсинг CSV файла ролей.
 
@@ -204,8 +254,8 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
         # Проверка заголовков
         expected = {"name", "alignment", "role_type"}
         if not expected.issubset(set(reader.fieldnames or [])):
-            print(f"Ошибка: CSV должен содержать колонки: {', '.join(sorted(expected))}")
-            print(f"Найдены: {', '.join(reader.fieldnames or [])}")
+            logger.error("CSV должен содержать колонки: %s", ", ".join(sorted(expected)))
+            logger.info("Найдены: %s", ", ".join(reader.fieldnames or []))
             sys.exit(1)
 
         has_description = "description" in (reader.fieldnames or [])
@@ -229,8 +279,8 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
                 errors.append(f"Строка {line_num}: пустое имя роли")
                 continue
 
-            if alignment not in VALID_ALIGNMENT:
-                errors.append(f"Строка {line_num} ({name}): неверный alignment '{alignment}'. Допустимы: {', '.join(sorted(VALID_ALIGNMENT))}")
+            if alignment not in VALID_ALIGNMENT_ROLES:
+                errors.append(f"Строка {line_num} ({name}): неверный alignment '{alignment}'. Допустимы: {', '.join(sorted(VALID_ALIGNMENT_ROLES))}")
                 continue
 
             if role_type not in VALID_ROLE_TYPES:
@@ -259,17 +309,17 @@ def parse_roles_csv(csv_path: Path) -> list[dict]:
             roles.append(role_data)
 
     if errors:
-        print("⚠️  Ошибки валидации ролей:")
+        logger.warning("Ошибки валидации ролей:")
         for err in errors:
-            print(f"     - {err}")
+            logger.warning("     - %s", err)
         if not roles:
-            print("Нет валидных ролей для импорта.")
+            logger.error("Нет валидных ролей для импорта.")
             sys.exit(1)
 
     return roles
 
 
-def send_roles_import(api_url: str, api_key: str, ssl_verify: bool, roles: list[dict]) -> dict:
+def send_roles_import(api_url: str, api_key: str, ssl_verify: bool, roles: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Отправка списка ролей на импорт через API.
 
@@ -302,22 +352,22 @@ def send_roles_import(api_url: str, api_key: str, ssl_verify: bool, roles: list[
                 return {"status": "error", "errors": errors}
             return {"status": "error", "errors": [str(error_msg)]}
         except Exception:
-            return {"status": "error", "errors": [f"HTTP ошибка: {e}"]}
+            return {"status": "error", "errors": [f"HTTP error: {e}"]}
 
     except requests.exceptions.ConnectionError:
         return {
             "status": "error",
-            "errors": [f"Не удалось подключиться к API по адресу {url}. Проверьте, что контейнер запущен."],
+            "errors": ["Connection failed. Check if container is running."],
         }
 
     except requests.exceptions.Timeout:
-        return {"status": "error", "errors": ["Превышено время ожидания ответа от API"]}
+        return {"status": "error", "errors": ["Request timeout - API not responding"]}
 
     except requests.exceptions.RequestException as e:
-        return {"status": "error", "errors": [f"Ошибка запроса: {e}"]}
+        return {"status": "error", "errors": [f"Request error: {e}"]}
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="BotC CSV Uploader — импорт партий и ролей",
     )
@@ -330,25 +380,25 @@ def main():
     args = parser.parse_args()
 
     # Загрузка конфигурации
-    print("Загрузка конфигурации...")
+    logger.info("Загрузка конфигурации...")
     config = load_config()
 
     # Проверка CSV файла
     csv_file = validate_csv_file(args.csv_file)
-    print(f"Файл для загрузки: {csv_file}")
+    logger.info("Файл для загрузки: %s", csv_file)
 
     if args.roles:
         # === Импорт ролей ===
-        print("Парсинг CSV ролей...")
+        logger.info("Парсинг CSV ролей...")
         try:
             roles = parse_roles_csv(csv_file)
         except Exception as e:
-            print(f"Ошибка парсинга CSV: {e}")
+            logger.error("Ошибка парсинга CSV: %s", e)
             sys.exit(1)
 
-        print(f"Найдено ролей: {len(roles)}")
+        logger.info("Найдено ролей: %d", len(roles))
 
-        print(f"Отправка {len(roles)} ролей на импорт...")
+        logger.info("Отправка %d ролей на импорт...", len(roles))
         result = send_roles_import(
             config["api_url"],
             config["api_key"],
@@ -357,38 +407,38 @@ def main():
         )
 
         if result["status"] == "ok":
-            print("\n✅ Импорт ролей успешно завершён!")
-            print(f"   Создано: {result.get('roles_created', 0)}")
-            print(f"   Обновлено: {result.get('roles_updated', 0)}")
+            logger.info("Импорт ролей успешно завершён!")
+            logger.info("   Создано: %d", result.get("roles_created", 0))
+            logger.info("   Обновлено: %d", result.get("roles_updated", 0))
         else:
-            print("\n❌ Импорт ролей завершён с ошибками!")
-            print(f"   Создано: {result.get('roles_created', 0)}")
-            print(f"   Обновлено: {result.get('roles_updated', 0)}")
+            logger.error("Импорт ролей завершён с ошибками!")
+            logger.info("   Создано: %d", result.get("roles_created", 0))
+            logger.info("   Обновлено: %d", result.get("roles_updated", 0))
             for err in result.get("errors", []):
-                print(f"     - {err}")
+                logger.error("     - %s", err)
             sys.exit(1)
 
     else:
         # === Импорт партий ===
-        print("Парсинг CSV файла...")
+        logger.info("Парсинг CSV файла...")
         try:
             games = parse_csv(csv_file)
         except Exception as e:
-            print(f"Ошибка парсинга CSV: {e}")
+            logger.error("Ошибка парсинга CSV: %s", e)
             sys.exit(1)
 
-        print(f"Найдено партий: {len(games)}")
+        logger.info("Найдено партий: %d", len(games))
 
         # Отправка каждой партии на импорт
         total_games = 0
         total_players = 0
         has_errors = False
 
-        for i, game in enumerate(games, 1):
+        for i, game in enumerate(tqdm(games, desc="Импорт партий", unit="партия"), 1):
             scenario = game["scenario_name"]
             date = game["game_date"]
             player_count = len(game["players"])
-            print(f"\n[{i}/{len(games)}] Импорт партии: {scenario} ({date}, {player_count} игроков)...")
+            logger.info("[%d/%d] Импорт партии: %s (%s, %d игроков)...", i, len(games), scenario, date, player_count)
 
             result = send_import(
                 config["api_url"],
@@ -401,27 +451,27 @@ def main():
                 total_games += 1
                 players_created = result.get("players_created", 0)
                 total_players += players_created
-                print(f"  ✅ Успешно! Создано новых игроков: {players_created}")
+                logger.info("  Успешно! Создано новых игроков: %d", players_created)
                 if result.get("game_id"):
-                    print(f"  🆔 ID партии: {result['game_id']}")
+                    logger.info("  ID партии: %s", result["game_id"])
             else:
                 has_errors = True
                 errors = result.get("errors", ["Неизвестная ошибка"])
-                print(f"  ❌ Ошибка импорта:")
+                logger.error("  Ошибка импорта:")
                 for error in errors:
-                    print(f"     - {error}")
+                    logger.error("     - %s", error)
 
         # Итоговый отчёт
-        print("\n" + "=" * 60)
+        logger.info("=" * 60)
         if has_errors:
-            print("⚠️  Импорт завершён с ошибками!")
-            print(f"   Успешно импортировано: {total_games} партий")
-            print(f"   Создано игроков: {total_players}")
+            logger.warning("Импорт завершён с ошибками!")
+            logger.info("   Успешно импортировано: %d партий", total_games)
+            logger.info("   Создано игроков: %d", total_players)
             sys.exit(1)
         else:
-            print("✅ Импорт успешно завершён!")
-            print(f"   Импортировано партий: {total_games}")
-            print(f"   Создано игроков: {total_players}")
+            logger.info("Импорт успешно завершён!")
+            logger.info("   Импортировано партий: %d", total_games)
+            logger.info("   Создано игроков: %d", total_players)
 
 
 if __name__ == "__main__":

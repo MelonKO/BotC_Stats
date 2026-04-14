@@ -90,7 +90,7 @@ class TestSendImport:
             result = send_import("https://localhost:443", "sk-key", True, {})
 
         assert result["status"] == "error"
-        assert any("время ожидания" in e.lower() for e in result["errors"])
+        assert any("timeout" in e.lower() for e in result["errors"])
 
     def test_connection_error(self):
         """ConnectionError returns error dict with helpful message."""
@@ -98,7 +98,7 @@ class TestSendImport:
             result = send_import("https://localhost:443", "sk-key", True, {})
 
         assert result["status"] == "error"
-        assert any("подключиться" in e.lower() for e in result["errors"])
+        assert any("connection" in e.lower() for e in result["errors"])
 
     def test_http_error_with_json_detail(self):
         """HTTP error with JSON detail extracts errors."""
@@ -220,7 +220,7 @@ class TestSendRolesImport:
             result = send_roles_import("https://localhost:443", "sk-key", True, [])
 
         assert result["status"] == "error"
-        assert any("время ожидания" in e.lower() for e in result["errors"])
+        assert any("timeout" in e.lower() for e in result["errors"])
 
     def test_connection_error(self):
         """ConnectionError returns error dict."""
@@ -228,7 +228,7 @@ class TestSendRolesImport:
             result = send_roles_import("https://localhost:443", "sk-key", True, [])
 
         assert result["status"] == "error"
-        assert any("подключиться" in e.lower() for e in result["errors"])
+        assert any("connection" in e.lower() for e in result["errors"])
 
     def test_http_error_with_json_detail(self):
         """HTTP error with JSON detail extracts errors."""

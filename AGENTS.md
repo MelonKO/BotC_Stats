@@ -46,13 +46,19 @@ python uploader.py --roles path/to/roles.csv
 
 ### Run tests
 ```bash
-# Uploader tests
+# Uploader tests (from repo root)
 cd uploader && venv\Scripts\activate  # Windows
 cd uploader && source venv/bin/activate  # Linux/macOS
-pytest tests/ -v
+python -m pytest tests/ -v
 
 # Core API tests
-cd core/api && pytest app/tests/ -v
+cd core/api && venv\Scripts\activate  # Windows
+cd core/api && source venv/bin/activate  # Linux/macOS
+python -m pytest app/tests/ -v
+
+# From CI (ubuntu/windows):
+#   uploader:   python -m pytest tests/ -v
+#   core/api:   python -m pytest app/tests/ -v
 ```
 
 ## Critical Conventions
@@ -70,8 +76,8 @@ cd core/api && pytest app/tests/ -v
 6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `uploader/`.
 
 7. **Test fixtures**: 
-   - Uploader tests use temp CSV files (see `uploader/tests/conftest.py`)
-   - Core API tests mock asyncpg pool (see `core/api/app/tests/conftest.py`)
+   - Uploader: temp CSV files in `uploader/tests/test_*.py` (see `conftest.py`)
+   - Core API: mocked asyncpg pool in `core/api/app/tests/test_*.py` (see `conftest.py`)
 
 ## Common Pitfalls
 

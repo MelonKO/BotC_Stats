@@ -69,7 +69,7 @@ async def health():
 #  API endpoints
 # ============================================================
 
-@app.post("/api/import", response_model=ImportStatusResponse)
+@app.post("/api/games/import", response_model=ImportStatusResponse)
 async def create_import(
     data: GameImportRequest,
     owner: dict = Depends(validate_api_key),

@@ -38,7 +38,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Константы
 API_URL_DEFAULT = "https://localhost:443"
-API_IMPORT_ENDPOINT = "/api/import"
+API_IMPORT_ENDPOINT = "/api/games/import"
 API_ROLES_IMPORT_ENDPOINT = "/api/roles/import"
 
 # Валидация ролей (английские)
@@ -185,7 +185,7 @@ def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -
     Returns:
         Словарь с результатом импорта.
     """
-    url = f"{api_url.rstrip('/')}/api/import"
+    url = f"{api_url.rstrip('/')}/api/games/import"
     headers = {
         "X-API-Key": api_key,
         "Content-Type": "application/json",

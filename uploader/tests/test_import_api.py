@@ -32,7 +32,7 @@ class TestSendImport:
 
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        assert call_args[1] is None or call_args[0][0] == "https://localhost:443/api/import"
+        assert call_args[1] is None or call_args[0][0] == "https://localhost:443/api/games/import"
 
     def test_url_without_trailing_slash(self, mock_success_response):
         """URL without trailing slash works correctly."""
@@ -40,7 +40,7 @@ class TestSendImport:
             send_import("https://localhost:443", "sk-key", True, {})
 
         call_url = mock_post.call_args[0][0]
-        assert call_url == "https://localhost:443/api/import"
+        assert call_url == "https://localhost:443/api/games/import"
 
     def test_url_with_trailing_slash(self, mock_success_response):
         """URL with trailing slash has duplicate removed."""
@@ -48,7 +48,7 @@ class TestSendImport:
             send_import("https://localhost:443/", "sk-key", True, {})
 
         call_url = mock_post.call_args[0][0]
-        assert call_url == "https://localhost:443/api/import"
+        assert call_url == "https://localhost:443/api/games/import"
 
     def test_correct_headers(self, mock_success_response):
         """Correct headers are sent."""

@@ -131,7 +131,7 @@ class TestGameImportEndpoint:
         client, conn = app_client_with_auth
 
         response = await client.post(
-            "/api/import", json=valid_game_payload,
+            "/api/games/import", json=valid_game_payload,
             headers=auth_headers("sk-test-key-123"),
         )
 
@@ -145,7 +145,7 @@ class TestGameImportEndpoint:
     async def test_missing_api_key(self, app_client_with_auth, valid_game_payload):
         client, conn = app_client_with_auth
 
-        response = await client.post("/api/import", json=valid_game_payload)
+        response = await client.post("/api/games/import", json=valid_game_payload)
 
         assert response.status_code == 422
 
@@ -155,7 +155,7 @@ class TestGameImportEndpoint:
         conn.fetchrow = AsyncMock(return_value=None)
 
         response = await client.post(
-            "/api/import", json=valid_game_payload,
+            "/api/games/import", json=valid_game_payload,
             headers=auth_headers("sk-wrong-key"),
         )
 
@@ -167,7 +167,7 @@ class TestGameImportEndpoint:
         client = app_client_revoked_key
 
         response = await client.post(
-            "/api/import", json=valid_game_payload,
+            "/api/games/import", json=valid_game_payload,
             headers=auth_headers("sk-revoked-key"),
         )
 
@@ -191,7 +191,7 @@ class TestGameImportEndpoint:
         }
 
         response = await client.post(
-            "/api/import", json=payload,
+            "/api/games/import", json=payload,
             headers=auth_headers("sk-test-key-123"),
         )
 
@@ -210,7 +210,7 @@ class TestGameImportEndpoint:
         }
 
         response = await client.post(
-            "/api/import", json=payload,
+            "/api/games/import", json=payload,
             headers=auth_headers("sk-test-key-123"),
         )
 

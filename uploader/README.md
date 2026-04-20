@@ -68,7 +68,7 @@ Imp,evil,Demon,"Each night*, choose a player: they die",Имп,"Каждую н�
 ## Architecture
 
 ```
-CSV → Parse → Group by game → POST /api/import (X-API-Key) → DB
+CSV → Parse → Group by game → POST /api/games/import (X-API-Key) → DB
 CSV (--roles) → Parse → POST /api/roles/import (X-API-Key) → DB
 ```
 

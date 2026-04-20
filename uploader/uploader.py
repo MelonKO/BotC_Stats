@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BotC CSV Uploader — загрузка данных игр и ролей в базу данных Blood on the Clocktower через REST API.
+BotC CSV Uploader — загрузка данных игр и ролей в базу данных Blood on the clocktower через REST API.
 
 Использование:
     python uploader.py <путь_к_csv_файлу>           # Импорт партии (по умолчанию)
@@ -16,11 +16,10 @@ import sys
 import os
 import csv
 import argparse
-import warnings
 import logging
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 import requests
 import urllib3
@@ -121,10 +120,11 @@ def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
         if missing:
             raise ValueError(f"Отсутствуют обязательные колонки: {', '.join(sorted(missing))}")
 
+        row: dict[str | Any, str | Any]
         for row in reader:
             # Опциональные поля
             duration_val = row.get("duration", "").strip() or None
-            notes_val = row.get("notes", "").strip() or None
+            notes_val: str | None = row.get("notes", "").strip() or None
 
             # Валидация alignment_win (только "добро" или "зло")
             alignment_win_val = row["alignment_win"].strip()
@@ -230,10 +230,6 @@ def send_import(api_url: str, api_key: str, ssl_verify: bool, game_data: dict) -
 #  Roles import
 # ============================================================
 
-VALID_ALIGNMENT_ROLES = {"good", "evil", "neutral"}
-VALID_ROLE_TYPES = {"Townsfolk", "Outsider", "Minion", "Demon", "Traveller"}
-
-
 def parse_roles_csv(csv_path: Path) -> List[Dict[str, Any]]:
     """
     Парсинг CSV файла ролей.
@@ -280,11 +276,13 @@ def parse_roles_csv(csv_path: Path) -> List[Dict[str, Any]]:
                 continue
 
             if alignment not in VALID_ALIGNMENT_ROLES:
-                errors.append(f"Строка {line_num} ({name}): неверный alignment '{alignment}'. Допустимы: {', '.join(sorted(VALID_ALIGNMENT_ROLES))}")
+                errors.append(
+                    f"Строка {line_num} ({name}): неверный alignment '{alignment}'. Допустимы: {', '.join(sorted(VALID_ALIGNMENT_ROLES))}")
                 continue
 
             if role_type not in VALID_ROLE_TYPES:
-                errors.append(f"Строка {line_num} ({name}): неверный тип '{role_type}'. Допустимы: {', '.join(sorted(VALID_ROLE_TYPES))}")
+                errors.append(
+                    f"Строка {line_num} ({name}): неверный тип '{role_type}'. Допустимы: {', '.join(sorted(VALID_ROLE_TYPES))}")
                 continue
 
             role_data = {"name": name, "alignment": alignment, "role_type": role_type}

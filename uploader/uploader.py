@@ -109,6 +109,7 @@ def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
 
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
 
         required_cols = {
             "game_date", "scenario_name", "location", "game_number",
@@ -246,6 +247,7 @@ def parse_roles_csv(csv_path: Path) -> List[Dict[str, Any]]:
 
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
 
         # Проверка заголовков
         expected = {"name", "alignment", "role_type"}

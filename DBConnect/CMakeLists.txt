@@ -23,6 +23,8 @@ add_executable(DBConnect src/main.cpp
         src/api/models/RolesImportResponse.h
         src/config/ConfigManager.cpp
         src/config/ConfigManager.h
+        src/utils/Iniparser.h
+        src/utils/IniParser.cpp
 )
 
 # Link Qt6 libraries to the target

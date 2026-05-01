@@ -14,13 +14,19 @@ namespace botc::config
             return &_instance;
         };
 
-        [[nodiscard]] QVector<QString> loadConfig();
-        [[nodiscard]] bool saveConfig();
+        [[nodiscard]] bool loadConfig();
+
+        const QString& getApiUrl() const { return m_apiUrl; }
+        const QString& getApiKey() const { return m_apiKey; }
+        bool getSslVerify() const { return m_bSslVerify; }
+
+    private:
+        bool ParseConfig();
 
     private:
         QString m_apiUrl = "https://localhost:443";
         QString m_apiKey;
         bool m_bSslVerify = false;
-        QString m_iniPath = ".env";
+        QString m_iniPath = "config.ini";
     };
 }

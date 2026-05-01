@@ -28,8 +28,8 @@ namespace botc::api
         Q_OBJECT
 
     public:
-        explicit BotCApiClient(const QString& baseUrl, const QString& apiKey, bool bSslVerify = false,
-                               QObject* parent                                                = nullptr);
+        BotCApiClient(const QString& baseUrl, const QString& apiKey,
+                      bool bSslVerify = false, QObject* parent = nullptr);
 
         // config
 

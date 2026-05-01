@@ -1,11 +1,7 @@
 #include <QFile>
 #include "ConfigManager.h"
 
-#include <iostream>
-
-extern "C" {
-#include "iniparser.h"
-}
+#include "../utils/IniParser.h"
 
 // TODO:: use iniParser
 namespace botc::config
@@ -22,15 +18,16 @@ namespace botc::config
 
     bool ConfigManager::ParseConfig()
     {
-        const dictionary* config = iniparser_load(m_iniPath.toStdString().c_str());
-        if (config == nullptr)
+        using namespace botc::utils;
+        IniParser parser{m_iniPath};
+        if (!parser.IsValid())
         {
             return false;
         }
 
-        m_apiUrl     = iniparser_getstring(config, "connection:api_url", nullptr);
-        m_apiKey     = iniparser_getstring(config, "connection:api_key", nullptr);
-        m_bSslVerify = iniparser_getboolean(config, "connection:ssl_verify", false);
+        m_apiUrl     = parser.GetString(u"connection:api_url", nullptr);
+        m_apiKey     = parser.GetString(u"connection:api_key", nullptr);
+        m_bSslVerify = parser.GetBool(u"connection:ssl_verify", false);
 
         return true;
     }

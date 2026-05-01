@@ -3,10 +3,10 @@
   "version-string" : "1.0.0",
   "builtin-baseline" : "d46283cf33cf5de7bd88e12156ce03882be1f179",
   "dependencies" : [ {
-    "name" : "qt",
-    "version>=" : "6.9.1"
-  }, {
     "name" : "iniparser",
     "version>=" : "4.2.6"
+  }, {
+    "name" : "qtbase",
+    "version>=" : "6.10.2"
   } ]
 }

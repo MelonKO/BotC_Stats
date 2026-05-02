@@ -76,12 +76,16 @@
                     <property name="visible">
                         <bool>false</bool>
                     </property>
+                    <!-- Запрещаем растягиваться по вертикали -->
+                    <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                            <horstretch>0</horstretch>
+                            <verstretch>0</verstretch>
+                        </sizepolicy>
+                    </property>
                     <layout class="QVBoxLayout">
                         <item>
                             <widget class="QListWidget" name="errorsWidget">
-                                <property name="maximumHeight">
-                                    <number>100</number>
-                                </property>
                             </widget>
                         </item>
                     </layout>

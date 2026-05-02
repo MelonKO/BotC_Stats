@@ -2,6 +2,7 @@
 
 #include <QMessageBox>
 
+#include "ImportGamesWidget.h"
 #include "ImportRolesWidget.h"
 #include "SettingsWidget.h"
 #include "ui_MainWindow.h"
@@ -21,8 +22,7 @@ namespace botc::ui
         tabs->addTab(RolesImportWidget, tr("Roles import"));
 
         connect(RolesImportWidget, &ImportRolesWidget::rolesImported, this, &MainWindow::onRolesImportClicked);
-        /*tabs->addTab(new ImportGamesWidget(this), tr("Games import"));
-        */
+        tabs->addTab(new ImportGamesWidget(this), tr("Games import"));\
         tabs->addTab(new SettingsWidget(this), tr("Settings"));
 
         setCentralWidget(tabs);

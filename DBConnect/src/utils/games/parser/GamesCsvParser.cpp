@@ -7,11 +7,11 @@
 namespace botc::utils::games
 {
     const QStringList GamesCsvParser::VALID_ALIGNMENTS = {
-        "good", "evil"
+        "добро", "зло"
     };
 
     const QStringList GamesCsvParser::VALID_ALIGNMENT_WINS = {
-        "good", "evil"
+        "добро", "зло"
     };
 
     // ─── parse ───────────────────────────────────────────────────

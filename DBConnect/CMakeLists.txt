@@ -4,8 +4,6 @@ project(DBConnect)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(iniparser CONFIG REQUIRED)
-
 # Find Qt6 packages via vcpkg toolchain (Core and Widgets are sufficient for basic GUI)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 # Apply Qt6 default project settings (enables AUTOMOC, AUTOUIC, AUTORCC automatically)
@@ -23,16 +21,19 @@ add_executable(DBConnect src/main.cpp
         src/api/models/RolesImportResponse.h
         src/config/ConfigManager.cpp
         src/config/ConfigManager.h
-        src/utils/Iniparser.h
-        src/utils/IniParser.cpp
+        src/ui/MainWindow.cpp
+        src/ui/MainWindow.h
+        src/ui/MainWindow.ui
+        src/ui/SettingsWidget.cpp
+        src/ui/SettingsWidget.h
+        src/ui/SettingsWidget.ui
 )
 
 # Link Qt6 libraries to the target
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Qt6::Core
         Qt6::Widgets
-        Qt6::Network
-        iniparser-static)
+        Qt6::Network)
 
 # ######### Copy files ##########
 # Since we vcpkg qt we need to tell Qt where to find qml plugins and files

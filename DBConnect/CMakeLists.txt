@@ -27,6 +27,11 @@ add_executable(DBConnect src/main.cpp
         src/ui/SettingsWidget.cpp
         src/ui/SettingsWidget.h
         src/ui/SettingsWidget.ui
+        src/ui/ImportRolesWidget.cpp
+        src/ui/ImportRolesWidget.h
+        src/ui/ImportRolesWidget.ui
+        src/utils/roles/parser/RolesCsvParser.cpp
+        src/utils/roles/parser/RolesCsvParser.h
 )
 
 # Link Qt6 libraries to the target

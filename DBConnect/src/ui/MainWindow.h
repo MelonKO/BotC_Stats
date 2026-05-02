@@ -2,6 +2,13 @@
 
 #include <QMainWindow>
 
+#include "../api/BotCApiClient.h"
+
+namespace botc::utils
+{
+    struct RoleRecord;
+}
+
 namespace botc::ui
 {
     QT_BEGIN_NAMESPACE
@@ -22,6 +29,15 @@ namespace botc::ui
         ~MainWindow() override;
 
     private:
+        void initApiClient();
+
+    private slots:
+        void onRolesImportClicked(const QList<utils::RoleRecord>& in_records);
+        void onRolesImportFinished(bool in_bSuccess, const api::models::roles::RolesImportResponse& in_response);
+
+    private:
         Ui::MainWindow* ui;
+
+        api::BotCApiClient* m_apiClient;
     };
 } // botc::ui

@@ -81,7 +81,7 @@ namespace botc::api
     {
         const QNetworkRequest netRequest = initRequest(ENDPOINT_GAME_IMPORT);
         const QJsonDocument jsonDoc      = serializeGameRequest(request);
-        QNetworkReply* reply             = m_networkManager->get(netRequest, jsonDoc.toJson());
+        QNetworkReply* reply             = m_networkManager->post(netRequest, jsonDoc.toJson());
         connect(reply, &QNetworkReply::finished, this, [this, reply]()
         {
             handleGameImportReply(reply);
@@ -100,9 +100,9 @@ namespace botc::api
 
     void BotCApiClient::importRoles(const models::roles::RolesImportRequest& request)
     {
-        const QNetworkRequest netRequest = initRequest(ENDPOINT_ROLES_IMPORT);
-        const QJsonDocument jsonDoc      = serializeRolesRequest(request);
-        QNetworkReply* reply             = m_networkManager->get(netRequest, jsonDoc.toJson());
+        QNetworkRequest netRequest  = initRequest(ENDPOINT_ROLES_IMPORT);
+        const QJsonDocument jsonDoc = serializeRolesRequest(request);
+        QNetworkReply* reply        = m_networkManager->post(netRequest, jsonDoc.toJson());
         connect(reply, &QNetworkReply::finished, this, [this, reply]()
         {
             handleRolesImportReply(reply);

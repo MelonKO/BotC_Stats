@@ -24,7 +24,7 @@ namespace botc::utils::games
         int gameNumber = 0;
         QString storytellerName;
         QString alignmentWin; // "good" | "evil" | "neutral" | "draw"
-        int duration = 0;     // в минутах
+        QTime duration;
         QString notes;
 
         QList<PlayerRecord> players;

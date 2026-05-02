@@ -115,7 +115,7 @@ namespace botc::utils::games
             game_record.gameNumber      = cell("game_number").toInt();
             game_record.storytellerName = cell("storyteller_name");
             game_record.alignmentWin    = cell("alignment_win").toLower();
-            game_record.duration        = cell("duration").toInt();
+            game_record.duration        = QTime::fromString(cell("duration"), "hh:mm:ss");
             game_record.notes           = cell("notes");
 
             // Валидация полей партии
@@ -233,7 +233,7 @@ namespace botc::utils::games
     }
 
     QStringList GamesCsvParser::validatePlayer(const PlayerRecord& p,
-                                                 int row, int playerIdx)
+                                               int row, int playerIdx)
     {
         QStringList errors;
         auto err = [&](const QString& msg)

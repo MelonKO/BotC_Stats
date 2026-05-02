@@ -127,7 +127,7 @@ namespace botc::ui
                 QString::number(p.gameNumber),
                 p.storytellerName,
                 p.alignmentWin,
-                p.duration > 0 ? QString::number(p.duration) : "—",
+                p.duration.isValid() ? p.duration.toString("hh:mm:ss") : "—",
                 QString::number(p.players.size())
             };
 

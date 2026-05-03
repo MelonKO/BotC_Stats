@@ -1,8 +1,14 @@
 #include "ImportRolesWidget.h"
 
 #include <QFileDialog>
+#include <QMessageBox>
+#include <QProgressDialog>
 
 #include "ui_ImportRolesWidget.h"
+#include "../api/BotCApiClient.h"
+#include "../api/models/RolesImportRequest.h"
+#include "../api/models/RolesImportResponse.h"
+#include "../config/ConfigManager.h"
 
 namespace botc::ui
 {
@@ -22,6 +28,8 @@ namespace botc::ui
 
         setImportEnabled(false);
         ui->statusLabel->clear();
+
+        initApiClient();
     }
 
     ImportRolesWidget::~ImportRolesWidget()
@@ -52,8 +60,47 @@ namespace botc::ui
     void ImportRolesWidget::onImportClicked()
     {
         if (m_lastResult.records.isEmpty()) return;
+        m_importRolesProgressDial = new QProgressDialog("Импортирование ролей",
+                                                        "Отмена",
+                                                        0,
+                                                        static_cast<int>(m_lastResult.records.size()) + 1, this);
+        m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
+        m_importRolesProgressDial->show();
 
-        emit rolesImported(m_lastResult.records);
+        QVector<api::models::roles::RoleImportItem> roles;
+        for (const auto& record : m_lastResult.records)
+        {
+            m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
+            if (m_importRolesProgressDial->wasCanceled())
+            {
+                QMessageBox::information(this,
+                                         "Импортирование ролей",
+                                         "Импортирование ролей было отменено");
+                return;
+            }
+
+            QMap<QString, api::models::roles::RoleTranslation> translations;
+
+            for (auto it = record.translations.constBegin(); it != record.translations.constEnd(); ++it)
+            {
+                translations.insert(it.key(),
+                                    api::models::roles::RoleTranslation{
+                                        .name        = it.value().first,
+                                        .description = it.value().second
+                                    });
+            }
+
+            roles.push_back(api::models::roles::RoleImportItem{
+                .name         = record.name,
+                .alignment    = record.alignment,
+                .roleType     = record.roleType,
+                .description  = record.description,
+                .translations = translations
+            });
+        }
+
+        connect(m_apiClient, &api::BotCApiClient::rolesImportFinished, this, &ImportRolesWidget::onRolesImportFinished);
+        m_apiClient->importRoles(api::models::roles::RolesImportRequest{std::move(roles)});
 
         ui->statusLabel->setText(
             QString("✔ Импортировано записей: %1").arg(m_lastResult.records.size())
@@ -73,6 +120,32 @@ namespace botc::ui
     {
         ui->filePathEdit->clear();
         clearAll();
+    }
+
+    void ImportRolesWidget::onRolesImportFinished(const bool in_bSuccess,
+                                                  const api::models::roles::RolesImportResponse& in_response)
+    {
+        m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
+        disconnect(m_apiClient, &api::BotCApiClient::rolesImportFinished, this,
+                   &ImportRolesWidget::onRolesImportFinished);
+        if (in_bSuccess)
+        {
+            QString message = "Импорт ролей прошёл успешно.";
+
+            message += "\nStatus: " + in_response.status;
+            message += "\n Roles created: " + std::to_string(in_response.rolesCreated);
+            message += "\n Roles updated: " + std::to_string(in_response.rolesUpdated);
+
+            QMessageBox::information(this, "Импорт ролей", message);
+        }
+        else
+        {
+            QString message = "Импорт ролей произошёл с ошибкой";
+            message         += "\nStatus: " + in_response.status;
+            QMessageBox::warning(this,
+                                 "Импорт ролей",
+                                 message);
+        }
     }
 
     void ImportRolesWidget::showPreview(const utils::ParseResult& result)
@@ -170,7 +243,7 @@ namespace botc::ui
         ui->previewTable->resizeColumnsToContents();
     }
 
-    void ImportRolesWidget::showErrors(const QStringList& errors)
+    void ImportRolesWidget::showErrors(const QStringList& errors) const
     {
         ui->errorsWidget->clear();
         for (const QString& err : errors)
@@ -192,15 +265,22 @@ namespace botc::ui
         setImportEnabled(false);
     }
 
-    void ImportRolesWidget::setImportEnabled(bool enabled)
+    void ImportRolesWidget::setImportEnabled(const bool enabled) const
     {
         ui->importButton->setEnabled(enabled);
     }
 
-    QString ImportRolesWidget::statusStyle(bool ok)
+    QString ImportRolesWidget::statusStyle(const bool ok)
     {
         return ok
                    ? "color: green; font-weight: bold;"
                    : "color: orange; font-weight: bold;";
+    }
+
+    void ImportRolesWidget::initApiClient()
+    {
+        const auto ConfigManager = config::ConfigManager::instance();
+        m_apiClient              = new api::BotCApiClient(ConfigManager->getApiUrl(), ConfigManager->getApiKey(),
+                                             ConfigManager->getSslVerify(), this);
     }
 } // botc::ui

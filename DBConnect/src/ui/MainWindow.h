@@ -29,15 +29,7 @@ namespace botc::ui
         ~MainWindow() override;
 
     private:
-        void initApiClient();
-
-    private slots:
-        void onRolesImportClicked(const QList<utils::RoleRecord>& in_records);
-        void onRolesImportFinished(bool in_bSuccess, const api::models::roles::RolesImportResponse& in_response);
-
-    private:
         Ui::MainWindow* ui;
-
-        api::BotCApiClient* m_apiClient;
+        api::BotCApiClient* m_apiClient = nullptr;
     };
 } // botc::ui

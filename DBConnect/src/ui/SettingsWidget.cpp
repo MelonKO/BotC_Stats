@@ -1,8 +1,11 @@
 #include "SettingsWidget.h"
-#include "ui_SettingsWidget.h"
-#include <QSettings>
-#include <QMessageBox>
 
+#include <QMessageBox>
+#include <QProgressDialog>
+
+#include "ui_SettingsWidget.h"
+#include "../api/BotCApiClient.h"
+#include "../api/models/HealthResponse.h"
 #include "../config/ConfigManager.h"
 
 namespace botc::ui
@@ -18,8 +21,11 @@ namespace botc::ui
                 this, &SettingsWidget::onResetClicked);
         connect(ui->toggleKeyButton, &QPushButton::toggled,
                 this, &SettingsWidget::onToggleApiKeyVisibility);
+        connect(ui->TestConnectionBtn, &QPushButton::clicked,
+                this, &SettingsWidget::onTestConnectionClicked);
 
         loadSettings();
+        creatApiClient();
     }
 
     SettingsWidget::~SettingsWidget()
@@ -47,7 +53,7 @@ namespace botc::ui
 
     void SettingsWidget::onResetClicked()
     {
-        auto btn = QMessageBox::question(
+        const auto btn = QMessageBox::question(
             this, "Сброс настроек",
             "Сбросить все настройки к значениям по умолчанию?"
         );
@@ -63,7 +69,7 @@ namespace botc::ui
         }
     }
 
-    void SettingsWidget::onToggleApiKeyVisibility(const bool checked)
+    void SettingsWidget::onToggleApiKeyVisibility(const bool checked) const
     {
         ui->apiKeyEdit->setEchoMode(
             checked ? QLineEdit::Normal : QLineEdit::Password
@@ -71,19 +77,66 @@ namespace botc::ui
         ui->toggleKeyButton->setText(checked ? "Скрыть" : "Показать");
     }
 
-    void SettingsWidget::loadSettings()
+    void SettingsWidget::onTestConnectionClicked()
     {
-        auto ConfigManager = botc::config::ConfigManager::instance();
+        testConnectionDialog = new QProgressDialog("Проверка подключения...", "", 0, 0, this);
+        testConnectionDialog->setWindowModality(Qt::WindowModal);
+        testConnectionDialog->setCancelButton(nullptr);
+        testConnectionDialog->show();
+
+        m_apiClient->setBaseUrl(ui->apiUrlEdit->text().trimmed());
+        m_apiClient->setApiKey(ui->apiKeyEdit->text().trimmed());
+        m_apiClient->setSslVerify(ui->sslVerifyCheckBox->isChecked());
+
+        connect(m_apiClient, &api::BotCApiClient::healthCheckFinished,
+                this, &SettingsWidget::onTestConnectionFinished);
+        m_apiClient->healthCheck();
+    }
+
+    void SettingsWidget::onTestConnectionFinished(const bool in_bSuccess,
+                                                  const api::models::HealthResponse& in_response)
+    {
+        disconnect(m_apiClient, &api::BotCApiClient::healthCheckFinished,
+                   this, &SettingsWidget::onTestConnectionFinished);
+        if (testConnectionDialog) { testConnectionDialog->close(); }
+
+        QString messageText;
+        if (in_bSuccess)
+        {
+            messageText = "Подключение успешно установлено.";
+        }
+        else
+        {
+            messageText = "Ошибка подключения: \n" + in_response.status;
+        }
+
+        QMessageBox::information(
+            this,
+            "Проверка подключения",
+            messageText
+        );
+    }
+
+    void SettingsWidget::loadSettings() const
+    {
+        const auto ConfigManager = config::ConfigManager::instance();
         ui->apiUrlEdit->setText(ConfigManager->getApiUrl());
         ui->apiKeyEdit->setText(ConfigManager->getApiKey());
         ui->sslVerifyCheckBox->setChecked(ConfigManager->getSslVerify());
     }
 
-    void SettingsWidget::saveSettings()
+    void SettingsWidget::saveSettings() const
     {
-        auto ConfigManager = botc::config::ConfigManager::instance();
+        const auto ConfigManager = config::ConfigManager::instance();
         ConfigManager->setApiUrl(ui->apiUrlEdit->text().trimmed());
         ConfigManager->setApiKey(ui->apiKeyEdit->text().trimmed());
         ConfigManager->setSslVerify(ui->sslVerifyCheckBox->isChecked());
+    }
+
+    void SettingsWidget::creatApiClient()
+    {
+        const auto ConfigManager = config::ConfigManager::instance();
+        m_apiClient              = new api::BotCApiClient(ConfigManager->getApiUrl(), ConfigManager->getApiKey(),
+                                             ConfigManager->getSslVerify());
     }
 } // botc::ui

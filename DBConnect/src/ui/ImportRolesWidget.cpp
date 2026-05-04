@@ -50,9 +50,8 @@ namespace botc::ui
         ui->filePathEdit->setText(path);
         clearAll();
 
-        // Парсим и сразу показываем предпросмотр
-        utils::RolesCsvParser parser;
-        m_lastResult = parser.parse(path);
+        // Parse and display the preview immediately
+        m_lastResult = utils::RolesCsvParser::parse(path);
 
         showPreview(m_lastResult);
     }

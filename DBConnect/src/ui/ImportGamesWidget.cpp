@@ -47,8 +47,7 @@ namespace botc::ui
         ui->filePathEdit->setText(path);
         clearAll();
 
-        utils::games::GamesCsvParser parser;
-        m_lastResult = parser.parse(path);
+        m_lastResult = utils::games::GamesCsvParser::parse(path);
         showPreview(m_lastResult);
     }
 

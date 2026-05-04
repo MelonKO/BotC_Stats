@@ -1,8 +1,8 @@
 #include "GamesCsvParser.h"
 
-#include <QFile>
 #include <QMap>
-#include <QTextStream>
+
+#include "../../csv/CsvParser.h"
 
 namespace botc::utils::games
 {
@@ -20,127 +20,114 @@ namespace botc::utils::games
     {
         GamesParseResult result;
 
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        CsvParser parser(filePath);
+        if (auto [bSuccess, errors] = parser.openFile(); !bSuccess)
         {
-            result.errors << QString("Не удалось открыть файл: %1").arg(filePath);
+            result.errors = errors;
             return result;
         }
 
-        QTextStream stream(&file);
-        stream.setEncoding(QStringConverter::Utf8);
+        // Header
+        const QStringList headers                 = parser.parseNextLine();
+        result.headers                            = headers;
+        const QMap<QString, int> headerToIndexMap = mapHeaders(headers);
 
-        if (stream.atEnd())
+        auto createCellReader = [&headerToIndexMap](QStringList in_row) -> auto
         {
-            result.errors << "Файл пустой.";
-            return result;
-        }
+            return [&headerToIndexMap, &in_row](const QString& col) -> QString
+            {
+                const int idx = headerToIndexMap.value(col, -1);
+                if (idx < 0 || idx >= in_row.size()) return {};
+                return in_row[idx].trimmed();
+            };
+        };
 
-        // Заголовок
-        const QStringList headers    = parseCsvLine(stream.readLine());
-        result.headers               = headers;
-        const QMap<QString, int> col = mapHeaders(headers);
-
-        // Проверяем обязательные колонки
+        // Check required columns
         const QStringList required = {
             "game_date", "scenario_name", "location", "game_number",
             "storyteller_name", "alignment_win", "player_name",
             "role_start_name", "role_end_name", "alignment_end",
-            "is_alive", "seat_number"
+            "is_alive"
         };
         for (const QString& c : required)
         {
-            if (!col.contains(c))
+            if (!headerToIndexMap.contains(c))
                 result.errors << QString("Отсутствует обязательная колонка: '%1'").arg(c);
         }
         if (!result.errors.isEmpty()) return result;
 
-        // CSV может содержать несколько строк на одну партию (по одной на каждого игрока).
-        // Группируем строки по ключу: game_date + game_number + storyteller_name
+        // CSV can contain multiple rows per game (one for each player).
+        // Group the rows by key:
+        // game_date + scenario_name + storyteller_name + alignment_win + location + game_number.
         struct RawRow
         {
             QStringList cells;
             int lineNumber;
         };
         QMap<QString, QList<RawRow>> groups;
-        QList<QString> groupOrder; // сохраняем порядок появления партий
+        QList<QString> groupOrder; // Keep the order in which the games appear.
 
         int lineNumber = 2;
-        while (!stream.atEnd())
+        while (parser.isCanReadNext())
         {
-            const QString line = stream.readLine();
-            if (line.trimmed().isEmpty())
+            QStringList row = parser.parseNextLine();
+            if (row.isEmpty())
             {
                 ++lineNumber;
                 continue;
             }
 
-            QStringList cells = parseCsvLine(line);
+            auto readRow = createCellReader(row);
 
-            auto cell = [&](const QString& name) -> QString
-            {
-                int idx = col.value(name, -1);
-                if (idx < 0 || idx >= cells.size()) return {};
-                return cells[idx].trimmed();
-            };
-
-            // Ключ группировки
-            const QString key = cell("game_date") + "|"
-                + cell("game_number") + "|"
-                + cell("storyteller_name");
+            // The grouping key
+            // game_date + scenario_name + storyteller_name + alignment_win + location + game_number
+            const QString key = readRow("game_date") + "|"
+                + readRow("scenario_name") + "|"
+                + readRow("storyteller_name") + "|"
+                + readRow("alignment_win") + "|"
+                + readRow("location") + "|"
+                + readRow("game_number");
 
             if (!groups.contains(key)) groupOrder << key;
-            groups[key].append({cells, lineNumber});
+            groups[key].append({row, lineNumber});
             ++lineNumber;
         }
 
-        // Собираем PartyRecord из каждой группы
+        // Collect a GameRecord from each group
         for (const QString& key : groupOrder)
         {
-            const QList<RawRow>& rows     = groups[key];
-            const QStringList& firstCells = rows.first().cells;
-            const int firstLine           = rows.first().lineNumber;
+            const QList<RawRow>& rows    = groups[key];
+            const QStringList& firstRow  = rows.first().cells;
+            const int firstRowLineNumber = rows.first().lineNumber;
 
-            auto cell = [&](const QString& name) -> QString
-            {
-                int idx = col.value(name, -1);
-                if (idx < 0 || idx >= firstCells.size()) return {};
-                return firstCells[idx].trimmed();
-            };
+            auto readFirstRow = createCellReader(firstRow);
 
             GameRecord game_record;
-            game_record.gameDate        = QDate::fromString(cell("game_date"), Qt::ISODate);
-            game_record.scenarioName    = cell("scenario_name");
-            game_record.location        = cell("location");
-            game_record.gameNumber      = cell("game_number").toInt();
-            game_record.storytellerName = cell("storyteller_name");
-            game_record.alignmentWin    = cell("alignment_win").toLower();
-            game_record.duration        = QTime::fromString(cell("duration"), "hh:mm:ss");
-            game_record.notes           = cell("notes");
+            game_record.gameDate        = QDate::fromString(readFirstRow("game_date"), Qt::ISODate);
+            game_record.scenarioName    = readFirstRow("scenario_name");
+            game_record.location        = readFirstRow("location");
+            game_record.gameNumber      = readFirstRow("game_number").toInt();
+            game_record.storytellerName = readFirstRow("storyteller_name");
+            game_record.alignmentWin    = readFirstRow("alignment_win").toLower();
+            game_record.duration        = QTime::fromString(readFirstRow("duration"), "hh:mm:ss");
+            game_record.notes           = readFirstRow("notes");
 
-            // Валидация полей партии
-            result.errors << validateParty(game_record, firstLine);
+            // Validation of game fields
+            result.errors << validateGame(game_record, firstRowLineNumber);
 
-            // Игроки — по одному из каждой строки группы
+            // Players — one from each row of the group
             int playerIdx = 1;
             for (const RawRow& row : rows)
             {
-                const QStringList& c = row.cells;
-                auto rcell           = [&](const QString& name) -> QString
-                {
-                    int idx = col.value(name, -1);
-                    if (idx < 0 || idx >= c.size()) return {};
-                    return c[idx].trimmed();
-                };
+                auto readPlayerRow = createCellReader(row.cells);
 
                 PlayerRecord player;
-                player.playerName    = rcell("player_name");
-                player.roleStartName = rcell("role_start_name");
-                player.roleEndName   = rcell("role_end_name");
-                player.alignmentEnd  = rcell("alignment_end").toLower();
-                player.isAlive       = (rcell("is_alive").toLower() == "true"
-                    || rcell("is_alive") == "1");
-                player.seatNumber = rcell("seat_number").toInt();
+                player.playerName = readPlayerRow("player_name");
+                player.roleStartName = readPlayerRow("role_start_name");
+                player.roleEndName = readPlayerRow("role_end_name");
+                player.alignmentEnd = readPlayerRow("alignment_end").toLower();
+                player.isAlive = readPlayerRow("is_alive").toLower() == "true" || readPlayerRow("is_alive") == "1";
+                player.seatNumber = readPlayerRow("seat_number").toInt();
 
                 result.errors << validatePlayer(player, row.lineNumber, playerIdx);
                 game_record.players << player;
@@ -154,50 +141,7 @@ namespace botc::utils::games
         return result;
     }
 
-    // ─── Вспомогательные ─────────────────────────────────────────
-
-    QStringList GamesCsvParser::parseCsvLine(const QString& line)
-    {
-        QStringList fields;
-        QString current;
-        bool inQuotes = false;
-
-        for (int i = 0; i < line.size(); ++i)
-        {
-            QChar c = line[i];
-            if (inQuotes)
-            {
-                if (c == '"')
-                {
-                    if (i + 1 < line.size() && line[i + 1] == '"')
-                    {
-                        current += '"';
-                        ++i;
-                    }
-                    else
-                    {
-                        inQuotes = false;
-                    }
-                }
-                else
-                {
-                    current += c;
-                }
-            }
-            else
-            {
-                if (c == '"') inQuotes = true;
-                else if (c == ',')
-                {
-                    fields << current;
-                    current.clear();
-                }
-                else current += c;
-            }
-        }
-        fields << current;
-        return fields;
-    }
+    // ─── Helpers ─────────────────────────────────────────
 
     QMap<QString, int> GamesCsvParser::mapHeaders(const QStringList& headers)
     {
@@ -207,51 +151,49 @@ namespace botc::utils::games
         return index;
     }
 
-    QStringList GamesCsvParser::validateParty(const GameRecord& p, int row)
+    QStringList GamesCsvParser::validateGame(const GameRecord& in_gameRecord, const int in_rowIndex)
     {
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Строка %1: %2").arg(row).arg(msg);
+            errors << QString("Line %1: %2").arg(in_rowIndex).arg(msg);
         };
 
-        if (!p.gameDate.isValid())
-            err("некорректный формат game_date (ожидается YYYY-MM-DD).");
-        if (p.scenarioName.isEmpty())
-            err("поле 'scenario_name' не может быть пустым.");
-        if (p.location.isEmpty())
-            err("поле 'location' не может быть пустым.");
-        if (p.gameNumber <= 0)
-            err("поле 'game_number' должно быть положительным числом.");
-        if (p.storytellerName.isEmpty())
-            err("поле 'storyteller_name' не может быть пустым.");
-        if (!VALID_ALIGNMENT_WINS.contains(p.alignmentWin))
-            err(QString("недопустимое значение alignment_win='%1'. Допустимые: %2")
-                .arg(p.alignmentWin, VALID_ALIGNMENT_WINS.join(", ")));
+        if (!in_gameRecord.gameDate.isValid())
+            err("Incorrect format of game_date (expected YYYY-MM-DD).");
+        if (in_gameRecord.scenarioName.isEmpty())
+            err("The \"scenario_name\" field cannot be empty.");
+        if (in_gameRecord.location.isEmpty())
+            err("The \"location\" field cannot be empty.");
+        if (in_gameRecord.gameNumber <= 0)
+            err("The 'game_number' field must be a positive number.");
+        if (in_gameRecord.storytellerName.isEmpty())
+            err("The 'storyteller_name' field cannot be empty.");
+        if (!VALID_ALIGNMENT_WINS.contains(in_gameRecord.alignmentWin))
+            err(QString("Invalid value for the \"alignment_win\" field='%1'. Valid values: %2")
+                .arg(in_gameRecord.alignmentWin, VALID_ALIGNMENT_WINS.join(", ")));
 
         return errors;
     }
 
-    QStringList GamesCsvParser::validatePlayer(const PlayerRecord& p,
-                                               int row, int playerIdx)
+    QStringList GamesCsvParser::validatePlayer(const PlayerRecord& in_player,
+                                               const int in_rowIndex, const int in_playerIndex)
     {
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Строка %1 (игрок %2): %3").arg(row).arg(playerIdx).arg(msg);
+            errors << QString("Line %1 (player %2): %3").arg(in_rowIndex).arg(in_playerIndex).arg(msg);
         };
 
-        if (p.playerName.isEmpty())
-            err("поле 'player_name' не может быть пустым.");
-        if (p.roleStartName.isEmpty())
-            err("поле 'role_start_name' не может быть пустым.");
-        if (p.roleEndName.isEmpty())
-            err("поле 'role_end_name' не может быть пустым.");
-        if (!VALID_ALIGNMENTS.contains(p.alignmentEnd))
-            err(QString("недопустимое значение alignment_end='%1'. Допустимые: %2")
-                .arg(p.alignmentEnd, VALID_ALIGNMENTS.join(", ")));
-        if (p.seatNumber <= 0)
-            err("поле 'seat_number' должно быть положительным числом.");
+        if (in_player.playerName.isEmpty())
+            err("The \"player_name\" field cannot be empty.");
+        if (in_player.roleStartName.isEmpty())
+            err("The \"role_start_name\" field cannot be empty.");
+        if (in_player.roleEndName.isEmpty())
+            err("The \"role_end_name\" field cannot be empty.");
+        if (!VALID_ALIGNMENTS.contains(in_player.alignmentEnd))
+            err(QString("Invalid value for the \"alignment_end\" field='%1'. Valid values: %2")
+                .arg(in_player.alignmentEnd, VALID_ALIGNMENTS.join(", ")));
 
         return errors;
     }

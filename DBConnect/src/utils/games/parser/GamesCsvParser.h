@@ -44,13 +44,12 @@ namespace botc::utils::games
         static const QStringList VALID_ALIGNMENTS;
         static const QStringList VALID_ALIGNMENT_WINS;
 
-        GamesParseResult parse(const QString& filePath);
+        static GamesParseResult parse(const QString& filePath);
 
     private:
-        QStringList parseCsvLine(const QString& line);
-        QMap<QString, int> mapHeaders(const QStringList& headers);
-        QStringList validateParty(const GameRecord& party, int rowIndex);
-        QStringList validatePlayer(const PlayerRecord& player,
-                                   int rowIndex, int playerIndex);
+        static QMap<QString, int> mapHeaders(const QStringList& headers);
+        static QStringList validateGame(const GameRecord& in_gameRecord, int in_rowIndex);
+        static QStringList validatePlayer(const PlayerRecord& in_player,
+                                          int in_rowIndex, int in_playerIndex);
     };
 }

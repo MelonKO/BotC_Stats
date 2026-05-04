@@ -1,9 +1,9 @@
 #include "RolesCsvParser.h"
 
-#include <QFile>
 #include <QRegularExpression>
 #include <QSet>
-#include <qtextstream.h>
+
+#include "../../csv/CsvParser.h"
 
 namespace botc::utils
 {
@@ -19,72 +19,64 @@ namespace botc::utils
     {
         ParseResult result;
 
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        CsvParser parser(filePath);
+        if (auto [bSuccess, errors] = parser.openFile(); !bSuccess)
         {
-            result.errors << QString("Не удалось открыть файл: %1").arg(filePath);
+            result.errors = errors;
             return result;
         }
 
-        QTextStream stream(&file);
-        stream.setEncoding(QStringConverter::Utf8);
-
-        // Читаем заголовок
-        if (stream.atEnd())
-        {
-            result.errors << "Файл пустой.";
-            return result;
-        }
-
-        const QStringList headers = parseCsvLine(stream.readLine());
+        const QStringList headers = parser.parseNextLine();
         result.headers            = headers;
 
         QStringList detectedLanguages;
-        const QMap<QString, int> colIndex = mapHeaders(headers, detectedLanguages);
-        result.languages                  = detectedLanguages;
+        const QMap<QString, int> headerToIndexMap = mapHeaders(headers, detectedLanguages);
+        result.languages                          = detectedLanguages;
 
-        // Проверяем обязательные колонки
-        const QStringList required = {"name", "alignment", "role_type", "description"};
-        for (const QString& col : required)
+        auto createCellReader = [&headerToIndexMap](QStringList in_row) -> auto
         {
-            if (!colIndex.contains(col))
+            return [&headerToIndexMap, &in_row](const QString& col) -> QString
             {
-                result.errors << QString("Отсутствует обязательная колонка: '%1'").arg(col);
+                const int idx = headerToIndexMap.value(col, -1);
+                if (idx < 0 || idx >= in_row.size()) return {};
+                return in_row[idx].trimmed();
+            };
+        };
+
+        // Check required columns
+        for (const QString& col : {"name", "alignment", "role_type", "description"})
+        {
+            if (!headerToIndexMap.contains(col))
+            {
+                result.errors << QString("A required column is missing: '%1'").arg(col);
             }
         }
         if (!result.errors.isEmpty()) return result;
 
         // Читаем строки
         int rowIndex = 2; // нумерация с 1, первая строка — заголовок
-        while (!stream.atEnd())
+        while (parser.isCanReadNext())
         {
-            const QString line = stream.readLine();
-            if (line.trimmed().isEmpty())
+            QStringList row = parser.parseNextLine();
+            if (row.isEmpty())
             {
                 ++rowIndex;
                 continue;
             }
 
-            const QStringList cells = parseCsvLine(line);
-
             RoleRecord record;
-            auto cell = [&](const QString& col) -> QString
-            {
-                int idx = colIndex.value(col, -1);
-                if (idx < 0 || idx >= cells.size()) return {};
-                return cells[idx].trimmed();
-            };
+            auto readCell = createCellReader(row);
 
-            record.name        = cell("name");
-            record.alignment   = cell("alignment");
-            record.roleType    = cell("role_type");
-            record.description = cell("description");
+            record.name        = readCell("name");
+            record.alignment   = readCell("alignment");
+            record.roleType    = readCell("role_type");
+            record.description = readCell("description");
 
             // Переводы: ищем колонки вида "<lang>_name", "<lang>_description"
             for (const QString& lang : detectedLanguages)
             {
-                record.translations[lang].first  = cell(lang + "_name");
-                record.translations[lang].second = cell(lang + "_description");
+                record.translations[lang].first  = readCell(lang + "_name");
+                record.translations[lang].second = readCell(lang + "_description");
             }
 
             // Валидация
@@ -97,57 +89,6 @@ namespace botc::utils
 
         result.success = result.errors.isEmpty();
         return result;
-    }
-
-    QStringList RolesCsvParser::parseCsvLine(const QString& line)
-    {
-        QStringList fields;
-        QString current;
-        bool inQuotes = false;
-
-        for (int i = 0; i < line.size(); ++i)
-        {
-            QChar c = line[i];
-
-            if (inQuotes)
-            {
-                if (c == '"')
-                {
-                    // Экранированная кавычка "" внутри поля
-                    if (i + 1 < line.size() && line[i + 1] == '"')
-                    {
-                        current += '"';
-                        ++i;
-                    }
-                    else
-                    {
-                        inQuotes = false;
-                    }
-                }
-                else
-                {
-                    current += c;
-                }
-            }
-            else
-            {
-                if (c == '"')
-                {
-                    inQuotes = true;
-                }
-                else if (c == ',')
-                {
-                    fields << current;
-                    current.clear();
-                }
-                else
-                {
-                    current += c;
-                }
-            }
-        }
-        fields << current;
-        return fields;
     }
 
     QMap<QString, int> RolesCsvParser::mapHeaders(const QStringList& headers, QStringList& outLanguages)
@@ -175,27 +116,27 @@ namespace botc::utils
         return index;
     }
 
-    QStringList RolesCsvParser::validateRecord(const RoleRecord& record, int rowIndex)
+    QStringList RolesCsvParser::validateRecord(const RoleRecord& record, const int rowIndex)
     {
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Строка %1: %2").arg(rowIndex).arg(msg);
+            errors << QString("Line %1: %2").arg(rowIndex).arg(msg);
         };
 
         if (record.name.isEmpty())
-            err("поле 'name' не может быть пустым.");
+            err("The 'name' field cannot be empty.");
 
         if (!VALID_ALIGNMENTS.contains(record.alignment))
-            err(QString("недопустимое значение alignment='%1'. "
-                "Допустимые: %2").arg(record.alignment, VALID_ALIGNMENTS.join(", ")));
+            err(QString("Invalid \"alignment\" value ='%1'. "
+                "Valid values: %2").arg(record.alignment, VALID_ALIGNMENTS.join(", ")));
 
         if (!VALID_ROLE_TYPES.contains(record.roleType))
-            err(QString("недопустимое значение role_type='%1'. "
-                "Допустимые: %2").arg(record.roleType, VALID_ROLE_TYPES.join(", ")));
+            err(QString("Invalid \"role_type\" value ='%1'. "
+                "Valid values: %2").arg(record.roleType, VALID_ROLE_TYPES.join(", ")));
 
         if (record.description.isEmpty())
-            err("поле 'description' не может быть пустым.");
+            err("Field 'description' cannot be empty.");
 
         return errors;
     }

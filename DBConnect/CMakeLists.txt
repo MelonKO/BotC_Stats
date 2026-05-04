@@ -37,6 +37,8 @@ add_executable(DBConnect src/main.cpp
         src/ui/ImportGamesWidget.cpp
         src/ui/ImportGamesWidget.h
         src/ui/ImportGamesWidget.ui
+        src/utils/csv/CsvParser.cpp
+        src/utils/csv/CsvParser.h
 )
 
 # Link Qt6 libraries to the target

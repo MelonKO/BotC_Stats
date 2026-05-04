@@ -31,11 +31,10 @@ namespace botc::utils
         static const QStringList VALID_ALIGNMENTS;
         static const QStringList VALID_ROLE_TYPES;
 
-        ParseResult parse(const QString& filePath);
+        static ParseResult parse(const QString& filePath);
 
     private:
-        QStringList parseCsvLine(const QString& line);
-        QMap<QString, int> mapHeaders(const QStringList& headers, QStringList& outLanguages);
-        QStringList validateRecord(const RoleRecord& record, int rowIndex);
+        static QMap<QString, int> mapHeaders(const QStringList& headers, QStringList& outLanguages);
+        static QStringList validateRecord(const RoleRecord& record, int rowIndex);
     };
 } // botc::utils

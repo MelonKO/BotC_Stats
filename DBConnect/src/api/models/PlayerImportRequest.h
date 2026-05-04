@@ -7,7 +7,7 @@ namespace botc::api::models::games
     struct PlayerImportRequest
     {
         QString name;
-        std::optional<int> seatNumber;
+        std::optional<uint8_t> seatNumber;
         QString roleStart;
         QString roleEnd;
         QString alignmentEnd;

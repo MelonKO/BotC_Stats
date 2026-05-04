@@ -11,9 +11,9 @@ namespace botc::utils::games
         QString playerName;
         QString roleStartName;
         QString roleEndName;
-        QString alignmentEnd; // "good" | "evil" | "neutral"
-        bool isAlive   = false;
-        int seatNumber = 0;
+        QString alignmentEnd; // "good" | "evil"
+        bool isAlive                      = false;
+        std::optional<uint8_t> seatNumber = 0;
     };
 
     struct GameRecord
@@ -23,7 +23,7 @@ namespace botc::utils::games
         QString location;
         int gameNumber = 0;
         QString storytellerName;
-        QString alignmentWin; // "good" | "evil" | "neutral" | "draw"
+        QString alignmentWin; // "good" | "evil"
         QTime duration;
         QString notes;
 

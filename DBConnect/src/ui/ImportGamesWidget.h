@@ -2,6 +2,21 @@
 
 #include <QWidget>
 #include "../utils/games/parser/GamesCsvParser.h"
+#include "../api/models/GameImportResponse.h"
+#include "../api/models/GameImportRequest.h"
+
+class QProgressDialog;
+
+namespace botc::api
+{
+    class BotCApiClient;
+}
+
+namespace botc::api::models::games
+{
+    struct GameImportRequest;
+    struct GameImportResponse;
+}
 
 namespace botc::utils::games
 {
@@ -26,8 +41,6 @@ namespace botc::ui
     public:
         explicit ImportGamesWidget(QWidget* parent = nullptr);
         ~ImportGamesWidget() override;
-    signals:
-        void partiesImported(const QList<utils::games::GameRecord>& records);
 
     private slots:
         void onBrowseClicked();
@@ -36,18 +49,25 @@ namespace botc::ui
         void onGameSelected(int row);
 
     private:
+        void initApiClient();
         void showPreview(const utils::games::GamesParseResult& result);
-        void populatePartiesTable();
+        void populateGamesTable();
         void populatePlayersTable(int partyIndex);
-        void showErrors(const QStringList& errors);
+        void showErrors(const QStringList& errors) const;
         void clearAll();
-        void setImportEnabled(bool enabled);
-        QString statusStyle(bool ok);
+        void setImportEnabled(bool enabled) const;
+        static QString statusStyle(bool ok);
 
-        QSet<int> errorRowsFor(const QStringList& errors, const QString& prefix);
+        void onGamesImportFinished(bool in_bSuccess, const api::models::games::GameImportResponse& in_response);
 
     private:
         Ui::ImportGamesWidget* ui;
         utils::games::GamesParseResult m_lastResult;
+        api::BotCApiClient* m_apiClient            = nullptr;
+        QProgressDialog* m_importRolesProgressDial = nullptr;
+        // TODO:: add batch game import and remove
+        uint m_importCount = 0;
+        // TODO:: add batch game import and remove
+        QVector<api::models::games::GameImportResponse> responses;
     };
 } // botc::ui

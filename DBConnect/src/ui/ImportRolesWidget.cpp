@@ -102,10 +102,6 @@ namespace botc::ui
         connect(m_apiClient, &api::BotCApiClient::rolesImportFinished, this, &ImportRolesWidget::onRolesImportFinished);
         m_apiClient->importRoles(api::models::roles::RolesImportRequest{std::move(roles)});
 
-        ui->statusLabel->setText(
-            QString("✔ Импортировано записей: %1").arg(m_lastResult.records.size())
-        );
-        ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         setImportEnabled(false);
     }
 
@@ -137,6 +133,11 @@ namespace botc::ui
             message += "\n Roles updated: " + std::to_string(in_response.rolesUpdated);
 
             QMessageBox::information(this, "Импорт ролей", message);
+            ui->statusLabel->setText(
+                QString("✔ Импортировано записей: %1; Обновлено записей %2").arg(
+                    in_response.rolesCreated, in_response.rolesUpdated)
+            );
+            ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         }
         else
         {
@@ -145,6 +146,11 @@ namespace botc::ui
             QMessageBox::warning(this,
                                  "Импорт ролей",
                                  message);
+
+            ui->statusLabel->setText(
+                QString("Импорт завершён с ошибкой: %1").arg(m_lastResult.records.size())
+            );
+            ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
     }
 

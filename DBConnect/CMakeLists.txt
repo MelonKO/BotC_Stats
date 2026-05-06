@@ -1,15 +1,19 @@
-cmake_minimum_required(VERSION 4.0.3)
+cmake_minimum_required(VERSION 3.11)
 
-project(DBConnect)
+project(DBConnect VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ─── Qt6 ──────────────────────────────────────────────────────────────────────
 # Find Qt6 packages via vcpkg toolchain (Core and Widgets are sufficient for basic GUI)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 # Apply Qt6 default project settings (enables AUTOMOC, AUTOUIC, AUTORCC automatically)
 qt_standard_project_setup()
 
-add_executable(DBConnect src/main.cpp
+# ─── Sources ──────────────────────────────────────────────────────────────────
+set(SOURCES
+        src/main.cpp
         src/api/BotCApiClient.cpp
         src/api/BotCApiClient.h
         src/api/models/GameImportRequest.h
@@ -41,20 +45,94 @@ add_executable(DBConnect src/main.cpp
         src/utils/csv/CsvParser.h
 )
 
+# WIN32 remove console window in GUI-app
+if (WIN32)
+    set(APP_TYPE WIN32)
+endif ()
+
+add_executable(DBConnect ${APP_TYPE} ${SOURCES})
+target_include_directories(DBConnect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 # Link Qt6 libraries to the target
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(DBConnect PRIVATE
         Qt6::Core
         Qt6::Widgets
         Qt6::Network)
 
-# ######### Copy files ##########
-# Since we vcpkg qt we need to tell Qt where to find qml plugins and files
-# and other paths like where to find the QtWebEngineProcess executable.
-# This is only needed for dev builds
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    configure_file(qt.debug.conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/qt.conf COPYONLY)
+# ─── Определяем путь к vcpkg_installed ────────────────────────────────────────
+# Приоритет: явно заданный VCPKG_INSTALLED_DIR из пресета,
+# иначе ищем рядом с бинарной директорией (старое поведение vcpkg)
+if (DEFINED VCPKG_INSTALLED_DIR AND EXISTS "${VCPKG_INSTALLED_DIR}")
+    set(VCPKG_INST "${VCPKG_INSTALLED_DIR}")
+elseif (EXISTS "${CMAKE_SOURCE_DIR}/vcpkg_installed")
+    set(VCPKG_INST "${CMAKE_SOURCE_DIR}/vcpkg_installed")
 else ()
-    configure_file(qt.conf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/qt.conf COPYONLY)
+    message(FATAL_ERROR "vcpkg_installed not found")
 endif ()
 
+message(STATUS "vcpkg_installed path: ${VCPKG_INST}")
+
+# ─── qt.conf ──────────────────────────────────────────────────────────────────
+# Нужен только для dev-сборок: указывает где искать Qt плагины (platforms/ и т.д.)
+# В финальном дистрибутиве windeployqt сам раскладывает плагины рядом с exe
+if (DEFINED VCPKG_INST)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(QT_PREFIX "${VCPKG_INST}/x64-windows/debug")
+    else ()
+        set(QT_PREFIX "${VCPKG_INST}/x64-windows")
+    endif ()
+
+    configure_file(qt.conf.in "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/qt.conf" @ONLY)
+endif ()
+
+# ─── config.ini ───────────────────────────────────────────────────────────────
 configure_file(config.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.ini COPYONLY)
+
+# ─── Deploy target (только Windows, только Release) ───────────────────────────
+# Запуск: cmake --build . --target deploy
+# Собирает самодостаточную папку dist/ с exe + все Qt DLL + плагины
+if (WIN32)
+    find_program(WINDEPLOYQT windeployqt
+            HINTS
+            "${VCPKG_INST}/x64-windows/tools/Qt6/bin"
+            "${Qt6_DIR}/../../../tools/Qt6/bin"
+            "${Qt6_DIR}/../../../bin"
+    )
+    find_program(WINDEPLOYQT_DEBUG windeployqt.debug.bat
+            HINTS
+            "${VCPKG_INST}/x64-windows/tools/Qt6/bin"
+            "${Qt6_DIR}/../../../tools/Qt6/bin"
+            "${Qt6_DIR}/../../../bin"
+    )
+
+    if (WINDEPLOYQT AND WINDEPLOYQT_DEBUG)
+        message(STATUS "windeployqt found: ${WINDEPLOYQT}")
+        message(STATUS "windeployqt.debug found: ${WINDEPLOYQT_DEBUG}")
+
+        add_custom_target(deploy
+                DEPENDS ${PROJECT_NAME}
+                # Создаём dist/
+                COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${CMAKE_BINARY_DIR}/dist"
+                # Копируем exe
+                COMMAND ${CMAKE_COMMAND} -E copy
+                "$<TARGET_FILE:${PROJECT_NAME}>"
+                "${CMAKE_BINARY_DIR}/dist/"
+                # Копируем config.ini
+                COMMAND ${CMAKE_COMMAND} -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
+                "${CMAKE_BINARY_DIR}/dist/"
+                # windeployqt копирует все Qt DLL и плагины в dist/
+                COMMAND $<IF:$<CONFIG:Debug>,${WINDEPLOYQT_DEBUG},${WINDEPLOYQT}>
+                $<IF:$<CONFIG:Debug>,--debug,--release>
+                --no-translations
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                --dir "${CMAKE_BINARY_DIR}/dist"
+                "${CMAKE_BINARY_DIR}/dist/${PROJECT_NAME}.exe"
+                COMMENT "Packaging into ${CMAKE_BINARY_DIR}/dist/ ..."
+        )
+    else ()
+        message(WARNING "windeployqt not found — 'deploy' target is unavailable")
+    endif ()
+endif ()

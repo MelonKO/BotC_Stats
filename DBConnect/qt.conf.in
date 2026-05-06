@@ -1,5 +1,5 @@
 [DevicePaths]
-Prefix=./vcpkg_installed/x64-windows/debug
+Prefix=@QT_PREFIX@
 Headers=include/Qt6/
 Libraries=lib
 Plugins=Qt6/plugins
@@ -12,7 +12,7 @@ Data=share/Qt6
 Translations=translations/Qt6/
 Examples=share/examples/Qt6/
 [Paths]
-Prefix=./vcpkg_installed/x64-windows/debug
+Prefix=@QT_PREFIX@
 Headers=include/Qt6/
 Libraries=lib
 Plugins=Qt6/plugins
@@ -24,7 +24,7 @@ ArchData=share/Qt6
 Data=share/Qt6
 Translations=translations/Qt6/
 Examples=share/examples/Qt6/
-HostPrefix=./vcpkg_installed/x64-windows/debug
+HostPrefix=./vcpkg_installed/x64-windows
 HostData=share/Qt6
 HostBinaries=bin
 HostLibraries=lib

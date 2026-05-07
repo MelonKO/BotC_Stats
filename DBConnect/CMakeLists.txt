@@ -60,8 +60,8 @@ target_link_libraries(DBConnect PRIVATE
         Qt6::Network)
 
 # ─── Определяем путь к vcpkg_installed ────────────────────────────────────────
-# Приоритет: явно заданный VCPKG_INSTALLED_DIR из пресета,
-# иначе ищем рядом с бинарной директорией (старое поведение vcpkg)
+# Priority: the explicitly set VCPKG_INSTALLED_DIR from the preset.
+# Otherwise, look for it next to the binary directory (old vcpkg behavior).
 if (DEFINED VCPKG_INSTALLED_DIR AND EXISTS "${VCPKG_INSTALLED_DIR}")
     set(VCPKG_INST "${VCPKG_INSTALLED_DIR}")
 elseif (EXISTS "${CMAKE_SOURCE_DIR}/vcpkg_installed")
@@ -73,8 +73,8 @@ endif ()
 message(STATUS "vcpkg_installed path: ${VCPKG_INST}")
 
 # ─── qt.conf ──────────────────────────────────────────────────────────────────
-# Нужен только для dev-сборок: указывает где искать Qt плагины (platforms/ и т.д.)
-# В финальном дистрибутиве windeployqt сам раскладывает плагины рядом с exe
+# Only needed for dev builds: specifies where to look for Qt plugins (platforms/ etc.).
+# In the final distribution, windeployqt places the plugins next to the exe.
 if (DEFINED VCPKG_INST)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(QT_PREFIX "${VCPKG_INST}/x64-windows/debug")
@@ -89,8 +89,8 @@ endif ()
 configure_file(config.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.ini COPYONLY)
 
 # ─── Deploy target (только Windows, только Release) ───────────────────────────
-# Запуск: cmake --build . --target deploy
-# Собирает самодостаточную папку dist/ с exe + все Qt DLL + плагины
+# Launch: cmake --build . --target deploy
+# It collects a self-contained dist/ folder with exe + all Qt DLLs + plugins.
 if (WIN32)
     find_program(WINDEPLOYQT windeployqt
             HINTS
@@ -111,18 +111,18 @@ if (WIN32)
 
         add_custom_target(deploy
                 DEPENDS ${PROJECT_NAME}
-                # Создаём dist/
+                # make dist/
                 COMMAND ${CMAKE_COMMAND} -E make_directory
                 "${CMAKE_BINARY_DIR}/dist"
-                # Копируем exe
+                # Copying .exe
                 COMMAND ${CMAKE_COMMAND} -E copy
                 "$<TARGET_FILE:${PROJECT_NAME}>"
                 "${CMAKE_BINARY_DIR}/dist/"
-                # Копируем config.ini
+                # Copying config.ini
                 COMMAND ${CMAKE_COMMAND} -E copy
                 "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
                 "${CMAKE_BINARY_DIR}/dist/"
-                # windeployqt копирует все Qt DLL и плагины в dist/
+                # windeployqt copy all Qt's DLLs and plugins into dist/
                 COMMAND $<IF:$<CONFIG:Debug>,${WINDEPLOYQT_DEBUG},${WINDEPLOYQT}>
                 $<IF:$<CONFIG:Debug>,--debug,--release>
                 --no-translations

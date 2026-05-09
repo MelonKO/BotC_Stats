@@ -51,5 +51,6 @@ namespace botc::utils::games
         static QStringList validateGame(const GameRecord& in_gameRecord, int in_rowIndex);
         static QStringList validatePlayer(const PlayerRecord& in_player,
                                           int in_rowIndex, int in_playerIndex);
+        static QDate parseDate(const QString& in_date);
     };
 }

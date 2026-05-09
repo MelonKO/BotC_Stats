@@ -103,7 +103,7 @@ namespace botc::utils::games
             auto readFirstRow = createCellReader(firstRow);
 
             GameRecord game_record;
-            game_record.gameDate        = QDate::fromString(readFirstRow("game_date"), Qt::ISODate);
+            game_record.gameDate        = parseDate(readFirstRow("game_date"));
             game_record.scenarioName    = readFirstRow("scenario_name");
             game_record.location        = readFirstRow("location");
             game_record.gameNumber      = readFirstRow("game_number").toInt();
@@ -196,5 +196,14 @@ namespace botc::utils::games
                 .arg(in_player.alignmentEnd, VALID_ALIGNMENTS.join(", ")));
 
         return errors;
+    }
+
+    QDate GamesCsvParser::parseDate(const QString& in_date)
+    {
+        QDate date = QDate::fromString(in_date, Qt::ISODate);
+        if (date.isValid()) { return date; }
+        date = QDate::fromString(in_date, "dd.MM.yyyy");
+        if (date.isValid()) { return date; }
+        return {};
     }
 }

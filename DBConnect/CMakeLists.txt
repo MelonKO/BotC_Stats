@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.20)
 
 project(DBConnect VERSION 1.0.0 LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ─── Qt6 ──────────────────────────────────────────────────────────────────────
 # Find Qt6 packages via vcpkg toolchain (Core and Widgets are sufficient for basic GUI)
@@ -52,6 +49,7 @@ endif ()
 
 add_executable(DBConnect ${APP_TYPE} ${SOURCES})
 target_include_directories(DBConnect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(DBConnect PRIVATE cxx_std_23)
 
 # Link Qt6 libraries to the target
 target_link_libraries(DBConnect PRIVATE

@@ -3,6 +3,7 @@
 #include <QDate>
 #include <QList>
 #include <QString>
+#include <expected>
 
 namespace botc::utils::games
 {
@@ -52,5 +53,6 @@ namespace botc::utils::games
         static QStringList validatePlayer(const PlayerRecord& in_player,
                                           int in_rowIndex, int in_playerIndex);
         static QDate parseDate(const QString& in_date);
+        static std::expected<bool, QString> parseAliveField(const QString& in_field);
     };
 }

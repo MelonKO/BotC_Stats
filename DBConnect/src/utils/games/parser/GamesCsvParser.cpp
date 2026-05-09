@@ -122,11 +122,23 @@ namespace botc::utils::games
                 auto readPlayerRow = createCellReader(row.cells);
 
                 PlayerRecord player;
-                player.playerName = readPlayerRow("player_name");
+                player.playerName    = readPlayerRow("player_name");
                 player.roleStartName = readPlayerRow("role_start_name");
-                player.roleEndName = readPlayerRow("role_end_name");
-                player.alignmentEnd = readPlayerRow("alignment_end").toLower();
-                player.isAlive = readPlayerRow("is_alive").toLower() == "true" || readPlayerRow("is_alive") == "1";
+                player.roleEndName   = readPlayerRow("role_end_name");
+                player.alignmentEnd  = readPlayerRow("alignment_end").toLower();
+                if (std::expected<bool, QString> parsedIsAlive = parseAliveField(readPlayerRow("is_alive"));
+                    parsedIsAlive.has_value())
+                {
+                    player.isAlive = parsedIsAlive.value();
+                }
+                else
+                {
+                    result.errors <<
+                        QString("Line %1 (player %2): %3")
+                        .arg(row.lineNumber)
+                        .arg(playerIdx).
+                        arg(parsedIsAlive.error());
+                }
                 player.seatNumber = readPlayerRow("seat_number").toInt();
 
                 result.errors << validatePlayer(player, row.lineNumber, playerIdx);
@@ -205,5 +217,34 @@ namespace botc::utils::games
         date = QDate::fromString(in_date, "dd.MM.yyyy");
         if (date.isValid()) { return date; }
         return {};
+    }
+
+    std::expected<bool, QString> GamesCsvParser::parseAliveField(const QString& in_field)
+    {
+        // TODO:: remove russian hardcode
+        const QString val = in_field.trimmed().toLower();
+
+        static const QSet<QString> trueValues = {
+            // russian
+            "жив", "да",
+            // english
+            "alive", "yes", "true",
+            // numbers
+            "1"
+        };
+
+        static const QSet<QString> falseValues = {
+            // russian
+            "мертв", "мёртв", "нет",
+            // english
+            "dead", "no", "false",
+            // numbers
+            "0"
+        };
+
+        if (trueValues.contains(val)) return true;
+        if (falseValues.contains(val)) return false;
+
+        return std::unexpected(QString("unexpected %1 value of \"is_alive\" field").arg(in_field));
     }
 }

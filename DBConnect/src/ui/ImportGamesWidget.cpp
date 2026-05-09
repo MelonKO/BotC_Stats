@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QProgressDialog>
 
+#include "QMessageBox"
 #include "ui_ImportGamesWidget.h"
 #include "../config/ConfigManager.h"
 #include "../api/BotCApiClient.h"
@@ -66,6 +67,7 @@ namespace botc::ui
         QVector<api::models::games::GameImportRequest> requests;
         for (const utils::games::GameRecord& game : m_lastResult.records)
         {
+            m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
             QVector<api::models::games::PlayerImportRequest> players;
             for (const utils::games::PlayerRecord& player : game.players)
             {
@@ -285,15 +287,14 @@ namespace botc::ui
         assert(m_importCount > 0);
         --m_importCount;
         responses.push_back(in_response);
-        if (m_importCount == 0)
+        if (m_importCount != 0)
         {
-            disconnect(m_apiClient, &api::BotCApiClient::gameImportFinished, this,
-                       &ImportGamesWidget::onGamesImportFinished);
+            return;
         }
 
-        /*if (std::ranges::all_of(responses, std::mem_fn(&GameImportResponse::isSuccess)))
-        {
-        }*/
+        disconnect(m_apiClient, &api::BotCApiClient::gameImportFinished, this,
+                   &ImportGamesWidget::onGamesImportFinished);
+        m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
 
         uint successCount = 0;
         uint failedCount  = 0;
@@ -323,8 +324,9 @@ namespace botc::ui
                     errors += error + "\n";
                 }
 
-                message += QString("Импорт произошёл с ошибками.\nОшибки:\n%1")
-                    .arg(errors);
+                message += QString("Импорт произошёл с ошибками (%1).\nОшибки:\n%2")
+                           .arg(response.status)
+                           .arg(errors);
             }
         }
 
@@ -336,9 +338,17 @@ namespace botc::ui
         }
         else
         {
+            // QString message = "Импорт ролей произошёл с ошибкой";
+            // message         += "\nStatus: " + in_response.status;
+            // QMessageBox::warning(this,
+            //                      "Импорт ролей",
+            //                      message);
+            QMessageBox::information(this, "Games import", message);
             ui->statusLabel->setText(
                 QString("Импорт партий прозошёл с ошибками"));
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
+
+        responses.clear();
     }
 } // botc::ui

@@ -8,6 +8,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 # Apply Qt6 default project settings (enables AUTOMOC, AUTOUIC, AUTORCC automatically)
 qt_standard_project_setup()
 
+add_subdirectory(generated_api)
+
 # ─── Sources ──────────────────────────────────────────────────────────────────
 set(SOURCES
         src/main.cpp
@@ -55,7 +57,8 @@ target_compile_features(DBConnect PRIVATE cxx_std_23)
 target_link_libraries(DBConnect PRIVATE
         Qt6::Core
         Qt6::Widgets
-        Qt6::Network)
+        Qt6::Network
+        BotcStats)
 
 # ─── Определяем путь к vcpkg_installed ────────────────────────────────────────
 # Priority: the explicitly set VCPKG_INSTALLED_DIR from the preset.

@@ -2,3 +2,4 @@ build_debug/
 build_release/
 CMakeUserPresets.json
 vcpkg_installed/
+/generated_api/

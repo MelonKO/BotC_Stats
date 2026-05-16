@@ -1,0 +1,171 @@
+openapi: "3.0.3"
+
+info:
+  title: BotC Import API
+  description: API для импорта партий Blood on the Clocktower
+  version: "1.0.0"
+
+servers:
+  - url: https://{ip}
+    variables:
+      ip:
+        default: 'localhost'
+
+
+# ============================================================
+#  Security
+# ============================================================
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # requests
+    PlayerImportRequest: { $ref: "./schemas/requests.yaml#/PlayerImportRequest" }
+    GameImportRequest: { $ref: "./schemas/requests.yaml#/GameImportRequest" }
+    RoleImportItem: { $ref: "./schemas/requests.yaml#/RoleImportItem" }
+    RolesImportRequest: { $ref: "./schemas/requests.yaml#/RolesImportRequest" }
+    # responses
+    HealthResponse: { $ref: "./schemas/responses.yaml#/HealthResponse" }
+    ImportStatusResponse: { $ref: "./schemas/responses.yaml#/ImportStatusResponse" }
+    RolesResponse: { $ref: "./schemas/responses.yaml#/RolesResponse" }
+    RolesImportResponse: { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
+    # common
+    RoleItem: { $ref: "./schemas/common.yaml#/RoleItem" }
+    RoleTranslation: { $ref: "./schemas/common.yaml#/RoleTranslation" }
+    ErrorResponse: { $ref: "./schemas/common.yaml#/ErrorResponse" }
+
+# ============================================================
+#  Paths
+# ============================================================
+
+paths:
+
+  /health:
+    get:
+      operationId: health
+      summary: Health check
+      description: Проверка работоспособности сервиса и подключения к БД.
+      tags: [ System ]
+      responses:
+        "200":
+          description: Сервис работает (возможно в деградированном режиме).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/games/import:
+    post:
+      operationId: importGame
+      summary: Импортировать партию
+      description: |
+        Импортировать партию в базу данных.
+        Требует валидный API-ключ в заголовке X-API-Key.
+      tags: [ Games ]
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameImportRequest"
+      responses:
+        "200":
+          description: Партия успешно импортирована.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportStatusResponse"
+        "400":
+          description: Ошибка импорта.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Неверный или отсутствующий API-ключ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/roles:
+    get:
+      operationId: listRoles
+      summary: Получить список ролей
+      description: |
+        Получить список всех доступных ролей.
+        Если указан параметр `lang`, каждая роль будет содержать
+        перевод на запрошенный язык в поле `translation`.
+        Требует валидный API-ключ в заголовке X-API-Key.
+      tags: [ Roles ]
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: lang
+          in: query
+          required: false
+          description: |
+            Код языка для перевода ролей (например `ru`, `de`, `jp`).
+            Если язык не найден — поле `translation` будет `null`.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 5
+            example: "ru"
+      responses:
+        "200":
+          description: Список ролей.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolesResponse"
+        "401":
+          description: Неверный или отсутствующий API-ключ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/roles/import:
+    post:
+      operationId: importRoles
+      summary: Импортировать роли
+      description: |
+        Импортировать (upsert) список ролей в базу данных.
+        Существующие роли обновляются, новые — создаются.
+        Требует валидный API-ключ в заголовке X-API-Key.
+      tags: [ Roles ]
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RolesImportRequest"
+      responses:
+        "200":
+          description: Роли успешно импортированы.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolesImportResponse"
+        "400":
+          description: Ошибка импорта.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Неверный или отсутствующий API-ключ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

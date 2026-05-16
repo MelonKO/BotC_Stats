@@ -33,3 +33,8 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+/openapi/node_modules/
+/openapi/package-lock.json
+/openapi/cpp_gen/
+/openapi/python_gen/
+/openapi/openapitools.json

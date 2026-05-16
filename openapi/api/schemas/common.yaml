@@ -1,0 +1,59 @@
+RoleTranslation:
+  type: object
+  description: Перевод одной роли на один язык.
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+      example: "Дамочка"
+    description:
+      type: string
+      nullable: true
+      maxLength: 2000
+      example: "Служанка, которая следит за гостями"
+
+RoleItem:
+  type: object
+  description: Роль из базы данных.
+  required:
+    - id
+    - name
+    - alignment
+    - role_type
+  properties:
+    id:
+      type: integer
+      example: 1
+    name:
+      type: string
+      example: "Chambermaid"
+    alignment:
+      type: string
+      pattern: "^(good|evil|neutral)$"
+      example: "good"
+    role_type:
+      type: string
+      pattern: "^(Townsfolk|Outsider|Minion|Demon|Traveller)$"
+      example: "Outsider"
+    description:
+      type: string
+      nullable: true
+      example: "Simple, but not harmless"
+    translation:
+      description: Перевод на запрошенный язык (если был указан параметр lang).
+      nullable: true
+      $ref: "#/RoleTranslation"
+
+ErrorResponse:
+  type: object
+  required:
+    - detail
+  properties:
+    detail:
+      oneOf:
+        - type: string
+        - type: object
+          additionalProperties: true

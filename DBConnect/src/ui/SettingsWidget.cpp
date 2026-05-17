@@ -84,7 +84,7 @@ namespace botc::ui
         testConnectionDialog->show();
 
         auto* systemAPI = new OpenAPI::OAISystemApi{};
-        systemAPI->setApiKey("X-API-Key", ui->apiKeyEdit->text().trimmed());
+        systemAPI->addHeaders("X-API-Key", ui->apiKeyEdit->text().trimmed());
         systemAPI->setNewServerForAllOperations(QUrl(ui->apiUrlEdit->text().trimmed()));
         /*m_apiClient->setSslVerify(ui->sslVerifyCheckBox->isChecked());*/
 

@@ -86,7 +86,7 @@ namespace botc::api
     void BotCApiClient::initSystemAPI()
     {
         m_systemAPI = new OpenAPI::OAISystemApi{};
-        m_systemAPI->setApiKey("X-API-Key", m_apiKey);
+        m_systemAPI->addHeaders("X-API-Key", m_apiKey);
         m_systemAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
         connect(m_systemAPI, &OpenAPI::OAISystemApi::healthSignal,
                 this, [this](const OpenAPI::OAIHealth_200_response& summary)
@@ -100,7 +100,7 @@ namespace botc::api
     void BotCApiClient::initGameAPI()
     {
         m_gameAPI = new OpenAPI::OAIGamesApi{};
-        m_gameAPI->setApiKey("X-API-Key", m_apiKey);
+        m_gameAPI->addHeaders("X-API-Key", m_apiKey);
         m_gameAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
         connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGameSignalError,
                 this, &BotCApiClient::handleGameImportReply);
@@ -114,7 +114,7 @@ namespace botc::api
     void BotCApiClient::initRolesAPI()
     {
         m_rolesAPI = new OpenAPI::OAIRolesApi{};
-        m_rolesAPI->setApiKey("X-API-Key", m_apiKey);
+        m_rolesAPI->addHeaders("X-API-Key", m_apiKey);
         m_rolesAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
 
         //listRoles

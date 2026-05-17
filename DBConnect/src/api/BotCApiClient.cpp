@@ -120,7 +120,7 @@ namespace botc::api
         //listRoles
         connect(m_rolesAPI, &OpenAPI::OAIRolesApi::listRolesSignalError,
                 this, &BotCApiClient::handleRolesListReply);
-        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::listRolesSignalError,
+        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::listRolesSignal,
                 this, [this](const OpenAPI::OAIListRoles_200_response& summary)
                 {
                     handleRolesListReply(summary, QNetworkReply::NetworkError::NoError, "");
@@ -128,7 +128,7 @@ namespace botc::api
         //importRoles
         connect(m_rolesAPI, &OpenAPI::OAIRolesApi::importRolesSignalError,
                 this, &BotCApiClient::handleRolesImportReply);
-        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::importRolesSignalError,
+        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::importRolesSignal,
                 this, [this](const OpenAPI::OAIImportRoles_200_response& summary)
                 {
                     handleRolesImportReply(summary, QNetworkReply::NetworkError::NoError, "");

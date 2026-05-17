@@ -97,7 +97,7 @@ async def list_roles(
 
     Требует валидный API-ключ в заголовке X-API-Key.
     """
-    roles: RolesResponse = await get_all_roles(lang)
+    roles = await get_all_roles(lang)
     return RolesResponse(roles=roles)
 
 

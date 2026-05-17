@@ -25,8 +25,9 @@ RoleItem:
     - role_type
   properties:
     id:
-      type: integer
-      example: 1
+      type: string
+      format: uuid
+      example: "a09f3ff7-0f02-485a-b0e1-87388b27face"
     name:
       type: string
       example: "Chambermaid"

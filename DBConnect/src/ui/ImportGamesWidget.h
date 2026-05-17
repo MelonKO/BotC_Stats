@@ -1,21 +1,21 @@
 #pragma once
 
 #include <QWidget>
+
+#include "QNetworkReply"
 #include "../utils/games/parser/GamesCsvParser.h"
-#include "../api/models/GameImportResponse.h"
-#include "../api/models/GameImportRequest.h"
+
+namespace OpenAPI
+{
+    class OAIImportGame_200_response;
+    class OAIListRoles_200_response;
+}
 
 class QProgressDialog;
 
 namespace botc::api
 {
     class BotCApiClient;
-}
-
-namespace botc::api::models::games
-{
-    struct GameImportRequest;
-    struct GameImportResponse;
 }
 
 namespace botc::utils::games
@@ -49,7 +49,6 @@ namespace botc::ui
         void onGameSelected(int row);
 
     private:
-        void initApiClient();
         void showPreview(const utils::games::GamesParseResult& result);
         void populateGamesTable();
         void populatePlayersTable(int partyIndex);
@@ -58,16 +57,21 @@ namespace botc::ui
         void setImportEnabled(bool enabled) const;
         static QString statusStyle(bool ok);
 
-        void onGamesImportFinished(bool in_bSuccess, const api::models::games::GameImportResponse& in_response);
+        void onGamesImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
+                                   QNetworkReply::NetworkError error_type,
+                                   const QString& error_str);
+        void onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
+                                QNetworkReply::NetworkError error_type,
+                                const QString& error_str);
 
     private:
         Ui::ImportGamesWidget* ui;
+        QSet<QString> availableRoles;
         utils::games::GamesParseResult m_lastResult;
-        api::BotCApiClient* m_apiClient            = nullptr;
         QProgressDialog* m_importRolesProgressDial = nullptr;
         // TODO:: add batch game import and remove
         uint m_importCount = 0;
         // TODO:: add batch game import and remove
-        QVector<api::models::games::GameImportResponse> responses;
+        QVector<OpenAPI::OAIImportGame_200_response> responses;
     };
 } // botc::ui

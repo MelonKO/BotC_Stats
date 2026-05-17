@@ -15,9 +15,13 @@ namespace botc::config
             return &_instance;
         };
 
-        QString getApiUrl() const { return m_settings.value("connection/api_url", "https://localhost:443").toString(); }
-        QString getApiKey() const { return m_settings.value("connection/api_key", "").toString(); }
-        bool getSslVerify() const { return m_settings.value("connection/ssl_verify", false).toBool(); }
+        [[nodiscard]] QString getApiUrl() const
+        {
+            return m_settings.value("connection/api_url", "https://localhost:443").toString();
+        }
+
+        [[nodiscard]] QString getApiKey() const { return m_settings.value("connection/api_key", "").toString(); }
+        [[nodiscard]] bool getSslVerify() const { return m_settings.value("connection/ssl_verify", false).toBool(); }
 
         void setApiUrl(const QString& in_newValue)
         {

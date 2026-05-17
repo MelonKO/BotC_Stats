@@ -15,13 +15,6 @@ set(SOURCES
         src/main.cpp
         src/api/BotCApiClient.cpp
         src/api/BotCApiClient.h
-        src/api/models/GameImportRequest.h
-        src/api/models/PlayerImportRequest.h
-        src/api/models/RolesImportRequest.h
-        src/api/models/HealthResponse.h
-        src/api/models/GameImportResponse.h
-        src/api/models/RolesResponse.h
-        src/api/models/RolesImportResponse.h
         src/config/ConfigManager.cpp
         src/config/ConfigManager.h
         src/ui/MainWindow.cpp

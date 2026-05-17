@@ -3,9 +3,9 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 
+#include "OAISystemApi.h"
 #include "ui_SettingsWidget.h"
 #include "../api/BotCApiClient.h"
-#include "../api/models/HealthResponse.h"
 #include "../config/ConfigManager.h"
 
 namespace botc::ui
@@ -25,7 +25,6 @@ namespace botc::ui
                 this, &SettingsWidget::onTestConnectionClicked);
 
         loadSettings();
-        creatApiClient();
     }
 
     SettingsWidget::~SettingsWidget()
@@ -84,30 +83,45 @@ namespace botc::ui
         testConnectionDialog->setCancelButton(nullptr);
         testConnectionDialog->show();
 
-        m_apiClient->setBaseUrl(ui->apiUrlEdit->text().trimmed());
-        m_apiClient->setApiKey(ui->apiKeyEdit->text().trimmed());
-        m_apiClient->setSslVerify(ui->sslVerifyCheckBox->isChecked());
+        auto* systemAPI = new OpenAPI::OAISystemApi{};
+        systemAPI->setApiKey("X-API-Key", ui->apiKeyEdit->text().trimmed());
+        systemAPI->setNewServerForAllOperations(QUrl(ui->apiUrlEdit->text().trimmed()));
+        /*m_apiClient->setSslVerify(ui->sslVerifyCheckBox->isChecked());*/
 
-        connect(m_apiClient, &api::BotCApiClient::healthCheckFinished,
-                this, &SettingsWidget::onTestConnectionFinished);
-        m_apiClient->healthCheck();
+        connect(systemAPI, &OpenAPI::OAISystemApi::healthSignalError,
+                this,
+                [this, systemAPI](const OpenAPI::OAIHealth_200_response& summary,
+                                  const QNetworkReply::NetworkError errorType,
+                                  const QString& errorString)
+                {
+                    onTestConnectionFinished(std::move(summary), std::move(errorType), std::move(errorString));
+                    systemAPI->deleteLater();
+                }, Qt::SingleShotConnection);
+
+        connect(systemAPI, &OpenAPI::OAISystemApi::healthSignal,
+                this, [this, systemAPI](const OpenAPI::OAIHealth_200_response& summary)
+                {
+                    onTestConnectionFinished(summary, QNetworkReply::NoError, "");
+                    systemAPI->deleteLater();
+                }, Qt::SingleShotConnection);
+
+        systemAPI->health();
     }
 
-    void SettingsWidget::onTestConnectionFinished(const bool in_bSuccess,
-                                                  const api::models::HealthResponse& in_response)
+    void SettingsWidget::onTestConnectionFinished(const OpenAPI::OAIHealth_200_response& summary,
+                                                  const QNetworkReply::NetworkError errorType,
+                                                  const QString& errorString)
     {
-        disconnect(m_apiClient, &api::BotCApiClient::healthCheckFinished,
-                   this, &SettingsWidget::onTestConnectionFinished);
         if (testConnectionDialog) { testConnectionDialog->close(); }
 
         QString messageText;
-        if (in_bSuccess)
+        if (errorType == QNetworkReply::NoError)
         {
             messageText = "Подключение успешно установлено.";
         }
         else
         {
-            messageText = "Ошибка подключения: \n" + in_response.status;
+            messageText = "Ошибка подключения: \n" + summary.getStatus();
         }
 
         QMessageBox::information(
@@ -131,12 +145,5 @@ namespace botc::ui
         ConfigManager->setApiUrl(ui->apiUrlEdit->text().trimmed());
         ConfigManager->setApiKey(ui->apiKeyEdit->text().trimmed());
         ConfigManager->setSslVerify(ui->sslVerifyCheckBox->isChecked());
-    }
-
-    void SettingsWidget::creatApiClient()
-    {
-        const auto ConfigManager = config::ConfigManager::instance();
-        m_apiClient              = new api::BotCApiClient(ConfigManager->getApiUrl(), ConfigManager->getApiKey(),
-                                             ConfigManager->getSslVerify());
     }
 } // botc::ui

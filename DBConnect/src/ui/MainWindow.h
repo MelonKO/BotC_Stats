@@ -30,6 +30,5 @@ namespace botc::ui
 
     private:
         Ui::MainWindow* ui;
-        api::BotCApiClient* m_apiClient = nullptr;
     };
 } // botc::ui

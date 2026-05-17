@@ -1,12 +1,17 @@
 #include "ImportGamesWidget.h"
 
+#include <algorithm>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QProgressDialog>
 
-#include "QMessageBox"
+#include "OAIImportGame_200_response.h"
+#include "OAIImportGame_request.h"
+#include "OAIImportGame_request_players_inner.h"
+#include "OAIListRoles_200_response.h"
 #include "ui_ImportGamesWidget.h"
-#include "../config/ConfigManager.h"
 #include "../api/BotCApiClient.h"
+#include "../config/ConfigManager.h"
 
 namespace botc::ui
 {
@@ -28,7 +33,11 @@ namespace botc::ui
 
         setImportEnabled(false);
 
-        initApiClient();
+        auto* apiClient = api::BotCApiClient::instance();
+        // TODO:: synchronize with CSV parsing and role updating
+        connect(apiClient, &api::BotCApiClient::rolesListFinished,
+                this, &ImportGamesWidget::onRoleListFinished);
+        apiClient->listRoles("ru");
     }
 
     ImportGamesWidget::~ImportGamesWidget()
@@ -49,6 +58,24 @@ namespace botc::ui
         clearAll();
 
         m_lastResult = utils::games::GamesCsvParser::parse(path);
+
+        for (const utils::games::GameRecord& record : m_lastResult.records)
+        {
+            for (const auto& player : record.players)
+            {
+                if (!availableRoles.contains(player.roleStartName))
+                {
+                    m_lastResult.errors << QString("Role \"%1\" didn't contains in data base. You need to add it.")
+                        .arg(player.roleStartName);
+                }
+                if (!availableRoles.contains(player.roleEndName))
+                {
+                    m_lastResult.errors << QString("Role \"%1\" didn't contains in data base. You need to add it.")
+                        .arg(player.roleEndName);
+                }
+            }
+        }
+
         showPreview(m_lastResult);
     }
 
@@ -64,42 +91,51 @@ namespace botc::ui
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
         m_importRolesProgressDial->show();
 
-        QVector<api::models::games::GameImportRequest> requests;
+        QVector<OpenAPI::OAIImportGame_request> requests;
         for (const utils::games::GameRecord& game : m_lastResult.records)
         {
             m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
-            QVector<api::models::games::PlayerImportRequest> players;
+            QVector<OpenAPI::OAIImportGame_request_players_inner> players;
             for (const utils::games::PlayerRecord& player : game.players)
             {
-                players.push_back(api::models::games::PlayerImportRequest{
-                    .name         = player.playerName,
-                    .seatNumber   = player.seatNumber,
-                    .roleStart    = player.roleStartName,
-                    .roleEnd      = player.roleEndName,
-                    .alignmentEnd = player.alignmentEnd,
-                    .bIsAlive     = player.isAlive
-                });
+                OpenAPI::OAIImportGame_request_players_inner playerRequest{};
+                playerRequest.setName(player.playerName);
+                if (player.seatNumber.has_value())
+                {
+                    playerRequest.setSeatNumber(player.seatNumber.value());
+                }
+                playerRequest.setRoleStart(player.roleStartName);
+                playerRequest.setRoleEnd(player.roleEndName);
+                playerRequest.setAlignmentEnd(player.alignmentEnd);
+                playerRequest.setIsAlive(player.isAlive);
+                players.push_back(std::move(playerRequest));
             }
 
-            requests.push_back(api::models::games::GameImportRequest{
-                    .gameDate = game.gameDate,
-                    .scenarioName = game.scenarioName,
-                    .storytellerName = game.storytellerName,
-                    .alignmentWin = game.alignmentWin,
-                    .location = game.location,
-                    .gameNumber = static_cast<uint8_t>(game.gameNumber),
-                    .duration = game.duration.isValid() ? game.duration.toString("hh:mm:ss") : std::optional<QString>{},
-                    .notes = game.notes.isEmpty() ? std::optional<QString>{} : game.notes,
-                    .players = players
-                }
-            );
+            OpenAPI::OAIImportGame_request gameRequest{};
+            gameRequest.setGameDate(game.gameDate);
+            gameRequest.setScenarioName(game.scenarioName);
+            gameRequest.setStorytellerName(game.storytellerName);
+            gameRequest.setAlignmentWin(game.alignmentWin);
+            gameRequest.setLocation(game.location);
+            gameRequest.setGameNumber(game.gameNumber);
+            if (game.duration.isValid())
+            {
+                gameRequest.setDuration(game.duration.toString("hh:mm:ss"));
+            }
+            if (!game.notes.isEmpty())
+            {
+                gameRequest.setNotes(game.notes);
+            }
+            gameRequest.setPlayers(players);
+            requests.push_back(std::move(gameRequest));
         }
 
-        connect(m_apiClient, &api::BotCApiClient::gameImportFinished, this, &ImportGamesWidget::onGamesImportFinished);
+        auto* apiClient = api::BotCApiClient::instance();
+        connect(apiClient, &api::BotCApiClient::gameImportFinished, this, &ImportGamesWidget::onGamesImportFinished);
         m_importCount = requests.size();
-        std::ranges::for_each(requests, [this](const api::models::games::GameImportRequest& in_request)
+        std::ranges::for_each(requests, [apiClient](const OpenAPI::OAIImportGame_request& in_request)
         {
-            m_apiClient->importGame(in_request);
+            apiClient->importGame(in_request);
         });
     }
 
@@ -113,13 +149,6 @@ namespace botc::ui
     {
         if (row < 0 || row >= m_lastResult.records.size()) return;
         populatePlayersTable(row);
-    }
-
-    void ImportGamesWidget::initApiClient()
-    {
-        const auto ConfigManager = config::ConfigManager::instance();
-        m_apiClient              = new api::BotCApiClient(ConfigManager->getApiUrl(), ConfigManager->getApiKey(),
-                                             ConfigManager->getSslVerify(), this);
     }
 
     void ImportGamesWidget::showPreview(const utils::games::GamesParseResult& result)
@@ -280,19 +309,20 @@ namespace botc::ui
                    : "color: orange; font-weight: bold;";
     }
 
-    void ImportGamesWidget::onGamesImportFinished(bool in_bSuccess,
-                                                  const api::models::games::GameImportResponse& in_response)
+    void ImportGamesWidget::onGamesImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
+                                                  QNetworkReply::NetworkError error_type,
+                                                  const QString& error_str)
     {
-        using namespace api::models::games;
         assert(m_importCount > 0);
         --m_importCount;
-        responses.push_back(in_response);
+        responses.push_back(summary);
         if (m_importCount != 0)
         {
             return;
         }
 
-        disconnect(m_apiClient, &api::BotCApiClient::gameImportFinished, this,
+        auto* apiClient = api::BotCApiClient::instance();
+        disconnect(apiClient, &api::BotCApiClient::gameImportFinished, this,
                    &ImportGamesWidget::onGamesImportFinished);
         m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
 
@@ -301,31 +331,27 @@ namespace botc::ui
 
         QString message;
 
-        std::ranges::stable_sort(responses, [](const GameImportResponse& lhs, const GameImportResponse& rhs)
+        for (const OpenAPI::OAIImportGame_200_response& response : responses)
         {
-            return lhs.isSuccess() > rhs.isSuccess();
-        });
-        for (const GameImportResponse& response : responses)
-        {
-            if (response.isSuccess())
+            if (!response.is_errors_Set())
             {
                 successCount++;
                 message += QString("Игра %1 успешно иимпортирована. Создано игроков: %2\n")
-                           .arg(response.gameId)
-                           .arg(response.playersCreated);
+                           .arg(response.getGameId())
+                           .arg(response.getPlayersCreated());
             }
             else
             {
                 failedCount++;
 
                 QString errors;
-                for (const QString& error : response.errors)
+                for (const QString& error : response.getErrors())
                 {
                     errors += error + "\n";
                 }
 
                 message += QString("Импорт произошёл с ошибками (%1).\nОшибки:\n%2")
-                           .arg(response.status)
+                           .arg(response.getStatus())
                            .arg(errors);
             }
         }
@@ -338,11 +364,6 @@ namespace botc::ui
         }
         else
         {
-            // QString message = "Импорт ролей произошёл с ошибкой";
-            // message         += "\nStatus: " + in_response.status;
-            // QMessageBox::warning(this,
-            //                      "Импорт ролей",
-            //                      message);
             QMessageBox::information(this, "Games import", message);
             ui->statusLabel->setText(
                 QString("Импорт партий прозошёл с ошибками"));
@@ -350,5 +371,29 @@ namespace botc::ui
         }
 
         responses.clear();
+    }
+
+    void ImportGamesWidget::onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
+                                               QNetworkReply::NetworkError error_type,
+                                               const QString& error_str)
+    {
+        auto* apiClient = api::BotCApiClient::instance();
+        if (error_type != QNetworkReply::NoError)
+        {
+            api::BotCApiClient::instance()->listRoles("ru");
+            return;
+        }
+
+        disconnect(apiClient, &api::BotCApiClient::rolesListFinished,
+                   this, &ImportGamesWidget::onRoleListFinished);
+
+        std::ranges::transform(
+            summary.getRoles(),
+            std::inserter(availableRoles, availableRoles.end()),
+            [](const OpenAPI::OAIListRoles_200_response_roles_inner& role) -> QString
+            {
+                return role.getTranslation().getName();
+            }
+        );
     }
 } // botc::ui

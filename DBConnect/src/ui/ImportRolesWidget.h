@@ -2,18 +2,19 @@
 
 #include <QWidget>
 
+#include "QNetworkReply"
 #include "../utils/roles/parser/RolesCsvParser.h"
+
+namespace OpenAPI
+{
+    class OAIImportRoles_200_response;
+}
 
 class QProgressDialog;
 
 namespace botc::api
 {
     class BotCApiClient;
-
-    namespace models::roles
-    {
-        struct RolesImportResponse;
-    }
 }
 
 namespace botc::utils
@@ -45,7 +46,9 @@ namespace botc::ui
         void onImportClicked();
         void onLanguageChanged(const QString& lang);
         void onClearClicked();
-        void onRolesImportFinished(bool in_bSuccess, const api::models::roles::RolesImportResponse& in_response);
+        void onRolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
+                                   QNetworkReply::NetworkError error_type,
+                                   const QString& error_str);
 
     private:
         void showPreview(const utils::ParseResult& result);
@@ -54,7 +57,6 @@ namespace botc::ui
         void clearAll();
         void setImportEnabled(bool enabled) const;
         static QString statusStyle(bool ok);
-        void initApiClient();
 
     private:
         Ui::ImportRolesWidget* ui;
@@ -62,6 +64,5 @@ namespace botc::ui
         utils::ParseResult m_lastResult;
         QString m_currentLanguage;
         QProgressDialog* m_importRolesProgressDial = nullptr;
-        api::BotCApiClient* m_apiClient            = nullptr;
     };
 } // botc::ui

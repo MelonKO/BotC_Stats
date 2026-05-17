@@ -2,17 +2,18 @@
 
 #include <QWidget>
 
-#include "../api/models/GameImportRequest.h"
+#include "QNetworkReply"
+
+namespace OpenAPI
+{
+    class OAIHealth_200_response;
+    class OAISystemApi;
+}
 
 class QProgressDialog;
 
 namespace botc::api
 {
-    namespace models
-    {
-        struct HealthResponse;
-    }
-
     class BotCApiClient;
 }
 
@@ -40,16 +41,16 @@ namespace botc::ui
         void onResetClicked();
         void onToggleApiKeyVisibility(bool checked) const;
         void onTestConnectionClicked();
-        void onTestConnectionFinished(bool in_bSuccess, const api::models::HealthResponse& in_response);
+        void onTestConnectionFinished(const OpenAPI::OAIHealth_200_response& summary, QNetworkReply::NetworkError errorType,
+                                      const QString& errorString);
 
     private:
         void loadSettings() const;
         void saveSettings() const;
-        void creatApiClient();
+        void createApiClient();
 
     private:
         Ui::SettingsWidget* ui;
-        api::BotCApiClient* m_apiClient       = nullptr;
         QProgressDialog* testConnectionDialog = nullptr;
     };
 } // botc::ui

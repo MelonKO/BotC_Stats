@@ -4,10 +4,10 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 
+#include "OAIImportRoles_200_response.h"
+#include "OAIImportRoles_request.h"
 #include "ui_ImportRolesWidget.h"
 #include "../api/BotCApiClient.h"
-#include "../api/models/RolesImportRequest.h"
-#include "../api/models/RolesImportResponse.h"
 #include "../config/ConfigManager.h"
 
 namespace botc::ui
@@ -28,8 +28,6 @@ namespace botc::ui
 
         setImportEnabled(false);
         ui->statusLabel->clear();
-
-        initApiClient();
     }
 
     ImportRolesWidget::~ImportRolesWidget()
@@ -66,7 +64,7 @@ namespace botc::ui
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
         m_importRolesProgressDial->show();
 
-        QVector<api::models::roles::RoleImportItem> roles;
+        QVector<OpenAPI::OAIImportRoles_request_roles_inner> roles;
         for (const auto& record : m_lastResult.records)
         {
             m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
@@ -78,28 +76,30 @@ namespace botc::ui
                 return;
             }
 
-            QMap<QString, api::models::roles::RoleTranslation> translations;
+            QMap<QString, OpenAPI::OAIImportRoles_request_roles_inner_translations_value> translations;
 
             for (auto it = record.translations.constBegin(); it != record.translations.constEnd(); ++it)
             {
-                translations.insert(it.key(),
-                                    api::models::roles::RoleTranslation{
-                                        .name        = it.value().first,
-                                        .description = it.value().second
-                                    });
+                OpenAPI::OAIImportRoles_request_roles_inner_translations_value translation;
+                translation.setName(it.value().first);
+                translation.setDescription(it.value().second);
+                translations.insert(it.key(), std::move(translation));
             }
-
-            roles.push_back(api::models::roles::RoleImportItem{
-                .name         = record.name,
-                .alignment    = record.alignment,
-                .roleType     = record.roleType,
-                .description  = record.description,
-                .translations = translations
-            });
+            OpenAPI::OAIImportRoles_request_roles_inner role;
+            role.setName(record.name);
+            role.setAlignment(record.alignment);
+            role.setRoleType(record.roleType);
+            role.setDescription(record.description);
+            role.setTranslations(std::move(translations));
+            roles.push_back(std::move(role));
         }
 
-        connect(m_apiClient, &api::BotCApiClient::rolesImportFinished, this, &ImportRolesWidget::onRolesImportFinished);
-        m_apiClient->importRoles(api::models::roles::RolesImportRequest{std::move(roles)});
+        auto* apiClient = api::BotCApiClient::instance();
+        connect(apiClient, &api::BotCApiClient::rolesImportFinished,
+                this, &ImportRolesWidget::onRolesImportFinished, Qt::SingleShotConnection);
+        OpenAPI::OAIImportRoles_request rolesImportRequest{};
+        rolesImportRequest.setRoles(roles);
+        apiClient->importRoles(std::move(rolesImportRequest));
 
         setImportEnabled(false);
     }
@@ -117,31 +117,30 @@ namespace botc::ui
         clearAll();
     }
 
-    void ImportRolesWidget::onRolesImportFinished(const bool in_bSuccess,
-                                                  const api::models::roles::RolesImportResponse& in_response)
+    void ImportRolesWidget::onRolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
+                                                  QNetworkReply::NetworkError error_type,
+                                                  const QString& error_str)
     {
         m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
-        disconnect(m_apiClient, &api::BotCApiClient::rolesImportFinished, this,
-                   &ImportRolesWidget::onRolesImportFinished);
-        if (in_bSuccess)
+        if (error_type == QNetworkReply::NoError)
         {
             QString message = "Импорт ролей прошёл успешно.";
 
-            message += "\nStatus: " + in_response.status;
-            message += "\n Roles created: " + std::to_string(in_response.rolesCreated);
-            message += "\n Roles updated: " + std::to_string(in_response.rolesUpdated);
+            message += "\nStatus: " + summary.getStatus();
+            message += "\n Roles created: " + std::to_string(summary.getRolesCreated());
+            message += "\n Roles updated: " + std::to_string(summary.getRolesUpdated());
 
             QMessageBox::information(this, "Импорт ролей", message);
             ui->statusLabel->setText(
                 QString("✔ Импортировано записей: %1; Обновлено записей %2").arg(
-                    in_response.rolesCreated, in_response.rolesUpdated)
+                    summary.getRolesCreated(), summary.getRolesUpdated())
             );
             ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         }
         else
         {
             QString message = "Импорт ролей произошёл с ошибкой";
-            message         += "\nStatus: " + in_response.status;
+            message         += "\nStatus: " + summary.getStatus();
             QMessageBox::warning(this,
                                  "Импорт ролей",
                                  message);
@@ -280,12 +279,5 @@ namespace botc::ui
         return ok
                    ? "color: green; font-weight: bold;"
                    : "color: orange; font-weight: bold;";
-    }
-
-    void ImportRolesWidget::initApiClient()
-    {
-        const auto ConfigManager = config::ConfigManager::instance();
-        m_apiClient              = new api::BotCApiClient(ConfigManager->getApiUrl(), ConfigManager->getApiKey(),
-                                             ConfigManager->getSslVerify(), this);
     }
 } // botc::ui

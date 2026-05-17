@@ -1,35 +1,34 @@
 #pragma once
-#include <qobject.h>
-#include <QNetworkAccessManager>
 
-#include "models/RolesResponse.h"
+#include "QNetworkReply"
+
+namespace OpenAPI
+{
+    class OAIImportRoles_request;
+    class OAIImportRoles_200_response;
+    class OAIListRoles_200_response;
+    class OAIImportGame_200_response;
+    class OAIImportGame_request;
+    class OAIHealth_200_response;
+    class OAISystemApi;
+    class OAIRolesApi;
+    class OAIGamesApi;
+}
 
 namespace botc::api
 {
-    namespace models
-    {
-        struct HealthResponse;
-    }
-
-    namespace models::roles
-    {
-        struct RolesImportResponse;
-        struct RolesImportRequest;
-    }
-
-    namespace models::games
-    {
-        struct GameImportResponse;
-        struct GameImportRequest;
-    }
-
     class BotCApiClient final : public QObject
     {
         Q_OBJECT
 
     public:
-        BotCApiClient(const QString& baseUrl, const QString& apiKey,
-                      bool bSslVerify = false, QObject* parent = nullptr);
+        static BotCApiClient* instance()
+        {
+            static auto _instance = BotCApiClient();
+            return &_instance;
+        }
+
+        void init(const QString& baseUrl, const QString& apiKey, bool bSslVerify = false);
 
         // config
 
@@ -39,33 +38,55 @@ namespace botc::api
 
         // API
 
-        void healthCheck();
-        void importGame(const models::games::GameImportRequest& request);
-        void getRoles();
-        void importRoles(const models::roles::RolesImportRequest& request);
+        void healthCheck() const;
+        void importGame(const OpenAPI::OAIImportGame_request& importGameRequest) const;
+        void listRoles(const std::optional<QString>& lang) const;
+        void importRoles(const OpenAPI::OAIImportRoles_request& request) const;
 
     signals:
         // callbacks
 
-        void healthCheckFinished(bool bSuccess, const models::HealthResponse& response);
-        void gameImportFinished(bool bSuccess, const models::games::GameImportResponse& response);
-        void rolesListFinished(bool bSuccess, const models::roles::RolesResponse& response);
-        void rolesImportFinished(bool bSuccess, const models::roles::RolesImportResponse& response);
+        void healthCheckFinished(const OpenAPI::OAIHealth_200_response& summary,
+                                 QNetworkReply::NetworkError error_type,
+                                 const QString& error_str);
+        void gameImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
+                                QNetworkReply::NetworkError error_type,
+                                const QString& error_str);
+        void rolesListFinished(const OpenAPI::OAIListRoles_200_response& summary,
+                               QNetworkReply::NetworkError error_type,
+                               const QString& error_str);
+        void rolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
+                                 QNetworkReply::NetworkError error_type,
+                                 const QString& error_str);
 
     private:
-        QNetworkRequest initRequest(const QString& endpoint) const;
-        static QJsonDocument serializeGameRequest(const models::games::GameImportRequest& gameImportRequest);
-        static QJsonDocument serializeRolesRequest(const models::roles::RolesImportRequest& rolesImportRequest);
+        void initSystemAPI();
+        void initGameAPI();
+        void initRolesAPI();
 
-        void handleHealthCheckReply(QNetworkReply* reply);
-        void handleGameImportReply(QNetworkReply* reply);
-        void handleRolesListReply(QNetworkReply* reply);
-        void handleRolesImportReply(QNetworkReply* reply);
+        void handleHealthCheckReply(const OpenAPI::OAIHealth_200_response& summary,
+                                    QNetworkReply::NetworkError error_type,
+                                    const QString& error_str);
+        void handleGameImportReply(const OpenAPI::OAIImportGame_200_response& summary,
+                                   QNetworkReply::NetworkError error_type,
+                                   const QString& error_str);
+        void handleRolesListReply(const OpenAPI::OAIListRoles_200_response& summary,
+                                  QNetworkReply::NetworkError error_type,
+                                  const QString& error_str);
+        void handleRolesImportReply(const OpenAPI::OAIImportRoles_200_response& summary,
+                                    QNetworkReply::NetworkError error_type,
+                                    const QString& error_str);
 
     private:
-        QString m_baseUrl;
-        QString m_apiKey;
-        bool m_bSslVerify;
-        QNetworkAccessManager* m_networkManager;
+        BotCApiClient() = default;
+
+    private:
+        QString m_baseUrl{};
+        QString m_apiKey{};
+        bool m_bSslVerify = false;
+
+        OpenAPI::OAIGamesApi* m_gameAPI    = nullptr;
+        OpenAPI::OAIRolesApi* m_rolesAPI   = nullptr;
+        OpenAPI::OAISystemApi* m_systemAPI = nullptr;
     };
 }

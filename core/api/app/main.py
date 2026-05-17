@@ -1,18 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException, Header
-from contextlib import asynccontextmanager
 import asyncio
+from contextlib import asynccontextmanager
+from typing import Annotated, Optional
 
-from app.schemas import (
+from fastapi import FastAPI, Depends, HTTPException, Query
+
+from app.auth import validate_api_key
+from app.db import get_pool, close_pool
+from app.import_logic import import_game, get_all_roles, import_roles, check_db_connection
+from app.models import (
     GameImportRequest,
     ImportStatusResponse,
     RolesResponse,
     RolesImportRequest,
     RolesImportResponse,
     HealthResponse,
+    Status,
 )
-from app.auth import validate_api_key
-from app.import_logic import import_game, get_all_roles, import_roles, check_db_connection
-from app.db import get_pool, close_pool
 
 
 # ============================================================
@@ -62,7 +65,7 @@ app = FastAPI(
 async def health():
     """Проверка работоспособности сервиса."""
     db_ok = await check_db_connection()
-    return HealthResponse(status="ok" if db_ok else "degraded", db_connected=db_ok)
+    return HealthResponse(status=Status.ok if db_ok else Status.degraded, db_connected=db_ok)
 
 
 # ============================================================
@@ -71,35 +74,37 @@ async def health():
 
 @app.post("/api/games/import", response_model=ImportStatusResponse)
 async def create_import(
-    data: GameImportRequest,
-    owner: dict = Depends(validate_api_key),
+        data: GameImportRequest,
+        owner: dict = Depends(validate_api_key),
 ):
     """
     Импортировать партию в базу данных.
 
     Требует валидный API-ключ в заголовке X-API-Key.
     """
-    result = await import_game(data, owner)
-    if result["status"] == "error":
+    result: ImportStatusResponse = await import_game(data, owner)
+    if result.status == "error":
         raise HTTPException(status_code=400, detail=result)
     return result
 
 
 @app.get("/api/roles", response_model=RolesResponse)
-async def list_roles(owner: dict = Depends(validate_api_key)):
+async def list_roles(
+        lang: Annotated[Optional[str], Query(min_length=2, max_length=5)] = None,
+        owner: dict = Depends(validate_api_key)):
     """
     Получить список доступных ролей.
 
     Требует валидный API-ключ в заголовке X-API-Key.
     """
-    roles = await get_all_roles()
+    roles: RolesResponse = await get_all_roles(lang)
     return RolesResponse(roles=roles)
 
 
 @app.post("/api/roles/import", response_model=RolesImportResponse)
 async def create_roles_import(
-    data: RolesImportRequest,
-    owner: dict = Depends(validate_api_key),
+        data: RolesImportRequest,
+        owner: dict = Depends(validate_api_key),
 ):
     """
     Импортировать (upsert) список ролей в базу данных.
@@ -108,7 +113,7 @@ async def create_roles_import(
 
     Требует валидный API-ключ в заголовке X-API-Key.
     """
-    result = await import_roles(data)
+    result: RolesImportResponse = await import_roles(data)
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result)
     return result

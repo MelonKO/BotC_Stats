@@ -1,8 +1,10 @@
-import asyncpg
 from datetime import timedelta
+from typing import Optional
+
 from asyncpg.exceptions import UniqueViolationError
-from app.schemas import GameImportRequest, RolesImportRequest
+
 from app.db import get_connection
+from app.models import GameImportRequest, RolesImportRequest, Role1, Translation, ImportStatusResponse
 
 
 def _parse_interval(value: str | None) -> timedelta | None:
@@ -19,7 +21,7 @@ def _parse_interval(value: str | None) -> timedelta | None:
         return timedelta(days=d, hours=int(h), minutes=int(m), seconds=int(s))
 
 
-async def import_game(data: GameImportRequest, owner: dict) -> dict:
+async def import_game(data: GameImportRequest, owner: dict) -> ImportStatusResponse:
     """
     Импортирует партию через API.
 
@@ -47,25 +49,24 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
         missing_roles = role_names - existing_role_names
 
         if missing_roles:
-            return {
-                "status": "error",
-                "errors": [
-                    f"Отсутствуют роли: {', '.join(sorted(missing_roles))}. "
+            return ImportStatusResponse(
+                status="error",
+                errors=[
+                    f"Отсутствуют роли: {', '.join(sorted(missing_roles))}.",
                     f"Обратитесь к администратору для добавления ролей."
                 ],
-            }
+                players_created=0)
 
         # Шаг 2: Вставляем в staging (русские значения)
         for p in data.players:
             await conn.execute(
                 """
-                INSERT INTO games_import_staging (
-                    game_date, scenario_name, storyteller_name, alignment_win_ru,
-                    location, game_number, duration, notes,
-                    player_name, seat_number,
-                    role_start_name_ru, role_end_name_ru,
-                    alignment_end_ru, is_alive
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                INSERT INTO games_import_staging (game_date, scenario_name, storyteller_name, alignment_win_ru,
+                                                  location, game_number, duration, notes,
+                                                  player_name, seat_number,
+                                                  role_start_name_ru, role_end_name_ru,
+                                                  alignment_end_ru, is_alive)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 """,
                 data.game_date,
                 data.scenario_name,
@@ -87,55 +88,101 @@ async def import_game(data: GameImportRequest, owner: dict) -> dict:
         try:
             row = await conn.fetchrow("SELECT * FROM process_games_import()")
         except UniqueViolationError:
-            return {
-                "status": "error",
-                "errors": [
-                    f"Партия {data.scenario_name} ({data.game_date}, №{data.game_number}) "
+            return ImportStatusResponse(
+                status="error",
+                errors=[
+                    f"Партия {data.scenario_name} ({data.game_date}, №{data.game_number}) ",
                     f"рассказчик {data.storyteller_name} уже существует в базе данных."
                 ],
-            }
+                players_created=0
+            )
 
-        games_created = row["games_created"]
         players_created = row["players_created"]
         errors = row["errors"]
 
         if errors:
-            return {
-                "status": "error",
-                "errors": [errors],
-            }
+            return ImportStatusResponse(
+                status="error",
+                errors=[errors],
+                players_created=players_created
+            )
 
         # Шаг 4: Получаем ID созданной игры
         game_row = await conn.fetchrow(
             """
-            SELECT id::text FROM games
-            WHERE game_date = $1 AND scenario_name = $2 AND game_number = $3
-            ORDER BY id DESC LIMIT 1
+            SELECT id::text
+            FROM games
+            WHERE game_date = $1
+              AND scenario_name = $2
+              AND game_number = $3
+            ORDER BY id DESC
+            LIMIT 1
             """,
             data.game_date,
             data.scenario_name,
             data.game_number,
         )
 
-        return {
-            "status": "ok",
-            "game_id": game_row["id"] if game_row else None,
-            "players_created": players_created,
-            "errors": [],
-        }
+        return ImportStatusResponse(
+            status="ok",
+            game_id=game_row["id"] if game_row else None,
+            players_created=players_created,
+            errors=[],
+        )
 
 
-async def get_all_roles() -> list[dict]:
+async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
     """Возвращает список всех доступных ролей."""
     async with get_connection() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT name, alignment, role_type
-            FROM roles
-            ORDER BY role_type, name
-            """
-        )
-        return [dict(r) for r in rows]
+        if lang:
+            rows = await conn.fetch(
+                """
+                SELECT r.id,
+                       r.name,
+                       r.alignment,
+                       r.role_type,
+                       r.description,
+                       t.name        AS translation_name,
+                       t.description AS translation_description
+                FROM roles r
+                         LEFT JOIN role_translations t
+                                   ON t.role_id = r.id AND t.lang_code = $1
+                ORDER BY r.role_type, r.name
+                """,
+                lang,
+            )
+            return [
+                Role1(
+                    id=r["id"],
+                    name=r["name"],
+                    alignment=r["alignment"],
+                    role_type=r["role_type"],
+                    description=r["description"],
+                    translation=Translation(
+                        name=r["translation_name"],
+                        description=r["translation_description"],
+                    ) if r["translation_name"] is not None else None,
+                )
+                for r in rows
+            ]
+        else:
+            rows = await conn.fetch(
+                """
+                SELECT id, name, alignment, role_type, description
+                FROM roles
+                ORDER BY role_type, name
+                """
+            )
+            return [
+                Role1(
+                    id=r["id"],
+                    name=r["name"],
+                    alignment=r["alignment"],
+                    role_type=r["role_type"],
+                    description=r["description"],
+                )
+                for r in rows
+            ]
 
 
 async def check_db_connection() -> bool:
@@ -175,8 +222,8 @@ async def import_roles(data: RolesImportRequest) -> dict:
                     INSERT INTO roles (name, alignment, role_type, description)
                     VALUES ($1, $2, $3, $4)
                     ON CONFLICT (name) DO UPDATE
-                        SET alignment = EXCLUDED.alignment,
-                            role_type = EXCLUDED.role_type,
+                        SET alignment   = EXCLUDED.alignment,
+                            role_type   = EXCLUDED.role_type,
                             description = EXCLUDED.description
                     """,
                     role.name,
@@ -196,12 +243,10 @@ async def import_roles(data: RolesImportRequest) -> dict:
                         await conn.execute(
                             """
                             INSERT INTO role_translations (role_id, lang_code, name, description)
-                            VALUES (
-                                (SELECT id FROM roles WHERE name = $1),
-                                $2, $3, $4
-                            )
+                            VALUES ((SELECT id FROM roles WHERE name = $1),
+                                    $2, $3, $4)
                             ON CONFLICT (role_id, lang_code) DO UPDATE
-                                SET name = EXCLUDED.name,
+                                SET name        = EXCLUDED.name,
                                     description = EXCLUDED.description
                             """,
                             role.name,

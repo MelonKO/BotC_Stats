@@ -110,7 +110,17 @@ namespace botc::utils::games
             game_record.storytellerName = readFirstRow("storyteller_name");
             game_record.alignmentWin    = readFirstRow("alignment_win").toLower();
             game_record.duration        = QTime::fromString(readFirstRow("duration"), "hh:mm:ss");
-            game_record.notes           = readFirstRow("notes");
+
+            QString notes;
+            for (const auto& row : rows)
+            {
+                QString col   = "notes";
+                const int idx = headerToIndexMap.value(col, -1);
+                if (idx < 0 || idx >= row.cells.size()) continue;
+                notes.append(row.cells[idx].trimmed() + "\n");
+            }
+
+            game_record.notes = notes;
 
             // Validation of game fields
             result.errors << validateGame(game_record, firstRowLineNumber);

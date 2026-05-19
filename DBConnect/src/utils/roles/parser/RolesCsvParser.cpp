@@ -12,7 +12,7 @@ namespace botc::utils
     };
 
     const QStringList RolesCsvParser::VALID_ROLE_TYPES = {
-        "Townsfolk", "Outsider", "Minion", "Demon", "Traveler"
+        "Townsfolk", "Outsider", "Minion", "Demon", "Traveller"
     };
 
     ParseResult RolesCsvParser::parse(const QString& filePath)

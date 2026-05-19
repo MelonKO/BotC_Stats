@@ -333,7 +333,7 @@ namespace botc::ui
 
         for (const OpenAPI::OAIImportGame_200_response& response : responses)
         {
-            if (!response.is_errors_Set())
+            if (response.getErrors().isEmpty())
             {
                 successCount++;
                 message += QString("Игра %1 успешно иимпортирована. Создано игроков: %2\n")
@@ -356,6 +356,8 @@ namespace botc::ui
             }
         }
 
+        QMessageBox::information(this, "Games import", message);
+
         if (failedCount == 0)
         {
             ui->statusLabel->setText(
@@ -364,7 +366,6 @@ namespace botc::ui
         }
         else
         {
-            QMessageBox::information(this, "Games import", message);
             ui->statusLabel->setText(
                 QString("Импорт партий прозошёл с ошибками"));
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");

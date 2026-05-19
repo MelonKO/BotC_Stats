@@ -1,4 +1,4 @@
-name,alignment,role_type,"description ",ru_name,ru_description
+name,alignment,role_type,description,ru_name,ru_description
 Flowergirl,good,Townsfolk,"Each night*, you learn if a Demon voted today.",Цветочница,
 Dreamer,good,Townsfolk,"Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.",Сновидец,
 Acrobat,good,Townsfolk,"Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.",Акробат,
@@ -134,3 +134,4 @@ Lil' Monsta,evil,Demon,"Each night, Minions choose who babysits Lil' Monsta & 'i
 Lord of Typhon,evil,Demon,"Each night*, choose a player: they die. [Evil characters are in a line. You are in the middle. +1 Minion. -? to +? Outsiders]",Владыка Тифон,
 No Dashii,evil,Demon,"Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.",Но'Даши,
 Riot,evil,Demon,"On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.",Мятежник,
+Gunslinger,evil,Traveller,"Each day, after the 1st vote has been tallied, you may choose a player that voted: they die.",Гангстер,

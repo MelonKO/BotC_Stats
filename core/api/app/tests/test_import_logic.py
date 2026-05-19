@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.import_logic import import_game, import_roles, _parse_interval, check_db_connection
-from app.schemas import GameImportRequest, RolesImportRequest, PlayerImportRequest
+from app.models import GameImportRequest, RolesImportRequest, PlayerImportRequest
 from tests.test_utils import PatchGetConnection, PatchGetConnectionImportLogic
 
 

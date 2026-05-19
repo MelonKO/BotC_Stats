@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.schemas import (
+from app.models import (
     PlayerImportRequest,
     GameImportRequest,
     RoleImportItem,

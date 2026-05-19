@@ -319,6 +319,8 @@ namespace botc::ui
         ui->playersTable->setColumnCount(0);
         ui->errorsWidget->clear();
         ui->errorsGroup->setVisible(false);
+        ui->infoWidget->clear();
+        ui->infoGroup->setVisible(false);
         ui->statusLabel->clear();
         setImportEnabled(false);
     }

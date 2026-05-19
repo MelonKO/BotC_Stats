@@ -2,9 +2,10 @@ from datetime import timedelta
 from typing import Optional
 
 from asyncpg.exceptions import UniqueViolationError
+from pygments.lexers import r
 
 from app.db import get_connection
-from app.models import GameImportRequest, RolesImportRequest, Role1, Translation, ImportStatusResponse
+from app.models import GameImportRequest, RolesImportRequest, Role1, Translation, ImportStatusResponse, Player1
 
 import asyncio
 
@@ -277,3 +278,21 @@ async def import_roles(data: RolesImportRequest) -> dict:
         "roles_updated": updated,
         "errors": [],
     }
+
+
+async def get_all_players() -> list[Player1]:
+    async with get_connection() as conn:
+        rows = await conn.fetch(
+            """
+            select id, name
+            from players
+            order by name
+            """
+        )
+        return [
+            Player1(
+                id=r["id"],
+                name=r["name"],
+            )
+            for r in rows
+        ]

@@ -6,7 +6,13 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 
 from app.auth import validate_api_key
 from app.db import get_pool, close_pool
-from app.import_logic import import_game, get_all_roles, import_roles, check_db_connection
+from app.import_logic import (
+    import_game,
+    get_all_roles,
+    import_roles,
+    check_db_connection,
+    get_all_players
+)
 from app.models import (
     GameImportRequest,
     ImportStatusResponse,
@@ -15,6 +21,7 @@ from app.models import (
     RolesImportResponse,
     HealthResponse,
     Status,
+    PlayersResponse
 )
 
 
@@ -117,3 +124,9 @@ async def create_roles_import(
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result)
     return result
+
+
+@app.get("/api/players", response_model=PlayersResponse)
+async def list_players(owner: dict = Depends(validate_api_key)):
+    players = await get_all_players()
+    return PlayersResponse(players=players)

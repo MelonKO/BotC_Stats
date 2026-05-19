@@ -15,6 +15,13 @@ int main(int argc, char* argv[])
     auto* apiClient = botc::api::BotCApiClient::instance();
     apiClient->init(configManager->getApiUrl(), configManager->getApiKey(), configManager->getSslVerify());
 
+    QObject::connect(configManager, &botc::config::ConfigManager::apiUrlChanged,
+                     apiClient, &botc::api::BotCApiClient::setBaseUrl);
+    QObject::connect(configManager, &botc::config::ConfigManager::apiKeyChanged,
+                     apiClient, &botc::api::BotCApiClient::setApiKey);
+    QObject::connect(configManager, &botc::config::ConfigManager::sslVerifyChanged,
+                     apiClient, &botc::api::BotCApiClient::setSslVerify);
+
     // Create main window widget
     botc::ui::MainWindow window;
     // window.setWindowTitle("Qt vcpkg CMake Demo");

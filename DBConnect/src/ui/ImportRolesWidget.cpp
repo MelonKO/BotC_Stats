@@ -140,7 +140,7 @@ namespace botc::ui
         else
         {
             QString message = "Импорт ролей произошёл с ошибкой";
-            message         += "\nStatus: " + summary.getStatus();
+            message         += "\nStatus: " + error_str;
             QMessageBox::warning(this,
                                  "Импорт ролей",
                                  message);

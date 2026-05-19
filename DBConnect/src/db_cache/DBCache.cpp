@@ -21,6 +21,7 @@ namespace botc
         const auto* apiClient = api::BotCApiClient::instance();
         connect(apiClient, &api::BotCApiClient::playersListFinished,
                 this, &DBCache::onPlayerListFinished, Qt::SingleShotConnection);
+        apiClient->listPlayers();
     }
 
     void DBCache::onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,

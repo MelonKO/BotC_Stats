@@ -178,7 +178,10 @@ namespace botc::ui
                 }
             }
         }
-        showInfo(newPlayers);
+        if (!newPlayers.isEmpty())
+        {
+            showInfo(newPlayers);
+        }
 
         populateGamesTable();
 

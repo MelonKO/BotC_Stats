@@ -132,8 +132,9 @@ namespace botc::ui
 
             QMessageBox::information(this, "Импорт ролей", message);
             ui->statusLabel->setText(
-                QString("✔ Импортировано записей: %1; Обновлено записей %2").arg(
-                    summary.getRolesCreated(), summary.getRolesUpdated())
+                QString("✔ Импортировано записей: %1; Обновлено записей %2")
+                .arg(summary.getRolesCreated())
+                .arg(summary.getRolesUpdated())
             );
             ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         }
@@ -150,6 +151,7 @@ namespace botc::ui
             );
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
+        emit onRolesImported();
     }
 
     void ImportRolesWidget::showPreview(const utils::ParseResult& result)

@@ -35,6 +35,8 @@ set(SOURCES
         src/ui/ImportGamesWidget.ui
         src/utils/csv/CsvParser.cpp
         src/utils/csv/CsvParser.h
+        src/db_cache/DBCache.cpp
+        src/db_cache/DBCache.h
 )
 
 # WIN32 remove console window in GUI-app

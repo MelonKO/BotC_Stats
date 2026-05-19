@@ -8,10 +8,10 @@
 #include "OAIImportGame_200_response.h"
 #include "OAIImportGame_request.h"
 #include "OAIImportGame_request_players_inner.h"
-#include "OAIListRoles_200_response.h"
 #include "ui_ImportGamesWidget.h"
 #include "../api/BotCApiClient.h"
 #include "../config/ConfigManager.h"
+#include "db_cache/DBCache.h"
 
 namespace botc::ui
 {
@@ -33,11 +33,8 @@ namespace botc::ui
 
         setImportEnabled(false);
 
-        auto* apiClient = api::BotCApiClient::instance();
-        // TODO:: synchronize with CSV parsing and role updating
-        connect(apiClient, &api::BotCApiClient::rolesListFinished,
-                this, &ImportGamesWidget::onRoleListFinished);
-        apiClient->listRoles("ru");
+        const auto* dbCache = DBCache::instance();
+        dbCache->updateRoles("ru");
     }
 
     ImportGamesWidget::~ImportGamesWidget()
@@ -58,6 +55,9 @@ namespace botc::ui
         clearAll();
 
         m_lastResult = utils::games::GamesCsvParser::parse(path);
+
+        const auto* dbCache               = DBCache::instance();
+        const QStringList& availableRoles = dbCache->getRolesCache();
 
         for (const utils::games::GameRecord& record : m_lastResult.records)
         {
@@ -372,29 +372,5 @@ namespace botc::ui
         }
 
         responses.clear();
-    }
-
-    void ImportGamesWidget::onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
-                                               QNetworkReply::NetworkError error_type,
-                                               const QString& error_str)
-    {
-        auto* apiClient = api::BotCApiClient::instance();
-        if (error_type != QNetworkReply::NoError)
-        {
-            api::BotCApiClient::instance()->listRoles("ru");
-            return;
-        }
-
-        disconnect(apiClient, &api::BotCApiClient::rolesListFinished,
-                   this, &ImportGamesWidget::onRoleListFinished);
-
-        std::ranges::transform(
-            summary.getRoles(),
-            std::inserter(availableRoles, availableRoles.end()),
-            [](const OpenAPI::OAIListRoles_200_response_roles_inner& role) -> QString
-            {
-                return role.getTranslation().getName();
-            }
-        );
     }
 } // botc::ui

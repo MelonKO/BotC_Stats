@@ -41,6 +41,9 @@ namespace botc::ui
         explicit ImportRolesWidget(QWidget* parent = nullptr);
         ~ImportRolesWidget() override;
 
+    signals:
+        void onRolesImported();
+
     private slots:
         void onBrowseClicked();
         void onImportClicked();

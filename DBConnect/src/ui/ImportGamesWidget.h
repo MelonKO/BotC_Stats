@@ -8,7 +8,6 @@
 namespace OpenAPI
 {
     class OAIImportGame_200_response;
-    class OAIListRoles_200_response;
 }
 
 class QProgressDialog;
@@ -60,13 +59,9 @@ namespace botc::ui
         void onGamesImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
                                    QNetworkReply::NetworkError error_type,
                                    const QString& error_str);
-        void onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
-                                QNetworkReply::NetworkError error_type,
-                                const QString& error_str);
 
     private:
         Ui::ImportGamesWidget* ui;
-        QSet<QString> availableRoles;
         utils::games::GamesParseResult m_lastResult;
         QProgressDialog* m_importRolesProgressDial = nullptr;
         // TODO:: add batch game import and remove

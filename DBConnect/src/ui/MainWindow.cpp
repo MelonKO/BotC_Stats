@@ -4,6 +4,7 @@
 #include "ImportRolesWidget.h"
 #include "SettingsWidget.h"
 #include "ui_MainWindow.h"
+#include "db_cache/DBCache.h"
 
 namespace botc::ui
 {
@@ -12,10 +13,17 @@ namespace botc::ui
     {
         ui->setupUi(this);
 
-        auto* tabs = new QTabWidget(this);
-        tabs->addTab(new ImportRolesWidget(), tr("Roles import"));
+        auto* tabs             = new QTabWidget(this);
+        auto importRolesWidget = new ImportRolesWidget();
+        tabs->addTab(importRolesWidget, tr("Roles import"));
         tabs->addTab(new ImportGamesWidget(this), tr("Games import"));
         tabs->addTab(new SettingsWidget(this), tr("Settings"));
+
+        connect(importRolesWidget, &ImportRolesWidget::onRolesImported,
+                DBCache::instance(), []
+                {
+                    DBCache::instance()->updateRoles("ru");
+                });
 
         setCentralWidget(tabs);
         setWindowTitle("BotC DBConnect");

@@ -9,8 +9,7 @@ servers:
   - url: https://{ip}
     variables:
       ip:
-        default: 'localhost'
-
+        default: "localhost"
 
 # ============================================================
 #  Security
@@ -25,15 +24,17 @@ components:
 
   schemas:
     # requests
-    PlayerImportRequest: { $ref: "./schemas/requests.yaml#/PlayerImportRequest" }
     GameImportRequest: { $ref: "./schemas/requests.yaml#/GameImportRequest" }
     RoleImportItem: { $ref: "./schemas/requests.yaml#/RoleImportItem" }
     RolesImportRequest: { $ref: "./schemas/requests.yaml#/RolesImportRequest" }
     # responses
     HealthResponse: { $ref: "./schemas/responses.yaml#/HealthResponse" }
-    ImportStatusResponse: { $ref: "./schemas/responses.yaml#/ImportStatusResponse" }
+    ImportStatusResponse:
+      { $ref: "./schemas/responses.yaml#/ImportStatusResponse" }
     RolesResponse: { $ref: "./schemas/responses.yaml#/RolesResponse" }
-    RolesImportResponse: { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
+    RolesImportResponse:
+      { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
+    PlayersResponse: { $ref: "./schemas/responses.yaml#/PlayersResponse" }
     # common
     RoleItem: { $ref: "./schemas/common.yaml#/RoleItem" }
     RoleTranslation: { $ref: "./schemas/common.yaml#/RoleTranslation" }
@@ -44,13 +45,12 @@ components:
 # ============================================================
 
 paths:
-
   /health:
     get:
       operationId: health
       summary: Health check
       description: Проверка работоспособности сервиса и подключения к БД.
-      tags: [ System ]
+      tags: [System]
       responses:
         "200":
           description: Сервис работает (возможно в деградированном режиме).
@@ -66,9 +66,9 @@ paths:
       description: |
         Импортировать партию в базу данных.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [ Games ]
+      tags: [Games]
       security:
-        - ApiKeyAuth: [ ]
+        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -104,9 +104,9 @@ paths:
         Если указан параметр `lang`, каждая роль будет содержать
         перевод на запрошенный язык в поле `translation`.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [ Roles ]
+      tags: [Roles]
       security:
-        - ApiKeyAuth: [ ]
+        - ApiKeyAuth: []
       parameters:
         - name: lang
           in: query
@@ -141,9 +141,9 @@ paths:
         Импортировать (upsert) список ролей в базу данных.
         Существующие роли обновляются, новые — создаются.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [ Roles ]
+      tags: [Roles]
       security:
-        - ApiKeyAuth: [ ]
+        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -163,6 +163,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Неверный или отсутствующий API-ключ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/players:
+    get:
+      operationId: listPlayers
+      summary: Получить список игроков
+      tags: [Players]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Список игроков.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayersResponse"
         "401":
           description: Неверный или отсутствующий API-ключ.
           content:

@@ -48,6 +48,21 @@ RoleItem:
       nullable: true
       $ref: "#/RoleTranslation"
 
+PlayerItem:
+  type: object
+  description: Игрок из базы данных.
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "b1c2d3e4-f5a6-7890-abcd-1234567890ef"
+    name:
+      type: string
+      example: "Alice"
+
 ErrorResponse:
   type: object
   required:

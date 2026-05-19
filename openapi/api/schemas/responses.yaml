@@ -70,3 +70,13 @@ RolesImportResponse:
       items:
         type: string
       default: []
+
+PlayersResponse:
+  type: object
+  required:
+    - players
+  properties:
+    players:
+      type: array
+      items:
+        $ref: "./common.yaml#/PlayerItem"

@@ -41,6 +41,9 @@ namespace botc::ui
         explicit ImportGamesWidget(QWidget* parent = nullptr);
         ~ImportGamesWidget() override;
 
+    signals:
+        void onGamesImported();
+
     private slots:
         void onBrowseClicked();
         void onImportClicked();
@@ -52,6 +55,7 @@ namespace botc::ui
         void populateGamesTable();
         void populatePlayersTable(int partyIndex);
         void showErrors(const QStringList& errors) const;
+        void showInfo(const QStringList& messages) const;
         void clearAll();
         void setImportEnabled(bool enabled) const;
         static QString statusStyle(bool ok);

@@ -4,6 +4,7 @@
 
 namespace OpenAPI
 {
+    class OAIListPlayers_200_response;
     class OAIListRoles_200_response;
 }
 
@@ -19,8 +20,10 @@ namespace botc
         };
 
         void updateRoles(const std::optional<QString>& lang) const;
-
         const QStringList& getRolesCache() const { return m_cachedRoles; }
+
+        void updatePlayers() const;
+        const QStringList& getPlayersCache() const { return m_cachedPlayers; }
 
     signals:
         void onRolesCacheUpdated();
@@ -32,7 +35,11 @@ namespace botc
                                 QNetworkReply::NetworkError error_type,
                                 const QString& error_str);
 
+        void onPlayerListFinished(const OpenAPI::OAIListPlayers_200_response& summary,
+                                  QNetworkReply::NetworkError error_type, const QString& error_str);
+
     private:
         QStringList m_cachedRoles{};
+        QStringList m_cachedPlayers;
     };
 }

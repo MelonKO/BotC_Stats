@@ -13,16 +13,25 @@ namespace botc::ui
     {
         ui->setupUi(this);
 
-        auto* tabs             = new QTabWidget(this);
-        auto importRolesWidget = new ImportRolesWidget();
+        auto* tabs = new QTabWidget(this);
+
+        auto importRolesWidget = new ImportRolesWidget(this);
         tabs->addTab(importRolesWidget, tr("Roles import"));
-        tabs->addTab(new ImportGamesWidget(this), tr("Games import"));
+
+        auto* importGamesWidget = new ImportGamesWidget(this);
+        tabs->addTab(importGamesWidget, tr("Games import"));
         tabs->addTab(new SettingsWidget(this), tr("Settings"));
 
         connect(importRolesWidget, &ImportRolesWidget::onRolesImported,
                 DBCache::instance(), []
                 {
                     DBCache::instance()->updateRoles("ru");
+                });
+
+        connect(importGamesWidget, &ImportGamesWidget::onGamesImported,
+                DBCache::instance(), []()
+                {
+                    DBCache::instance()->updatePlayers();
                 });
 
         setCentralWidget(tabs);

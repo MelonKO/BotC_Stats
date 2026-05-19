@@ -35,6 +35,7 @@ namespace botc::ui
 
         const auto* dbCache = DBCache::instance();
         dbCache->updateRoles("ru");
+        dbCache->updatePlayers();
     }
 
     ImportGamesWidget::~ImportGamesWidget()
@@ -164,6 +165,21 @@ namespace botc::ui
             return;
         }
 
+        QStringList newPlayers;
+        const QStringList& existingPlayers = DBCache::instance()->getPlayersCache();
+        for (const auto& record : result.records)
+        {
+            for (const auto& player : record.players)
+            {
+                if (!existingPlayers.contains(player.playerName))
+                {
+                    newPlayers << QString("Player \"%1\" will be created after import")
+                        .arg(player.playerName);
+                }
+            }
+        }
+        showInfo(newPlayers);
+
         populateGamesTable();
 
         // Выбираем первую партию автоматически
@@ -282,6 +298,16 @@ namespace botc::ui
         ui->errorsGroup->setVisible(true);
     }
 
+    void ImportGamesWidget::showInfo(const QStringList& messages) const
+    {
+        ui->infoWidget->clear();
+        for (const QString& msg : messages)
+        {
+            ui->infoWidget->addItem(msg);
+        }
+        ui->infoGroup->setVisible(true);
+    }
+
     void ImportGamesWidget::clearAll()
     {
         m_lastResult = {};
@@ -372,5 +398,6 @@ namespace botc::ui
         }
 
         responses.clear();
+        emit onGamesImported();
     }
 } // botc::ui

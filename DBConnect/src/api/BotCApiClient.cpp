@@ -1,6 +1,7 @@
 #include "BotCApiClient.h"
 
 #include "OAIGamesApi.h"
+#include "OAIPlayersApi.h"
 #include "OAIRolesApi.h"
 #include "OAISystemApi.h"
 
@@ -30,22 +31,26 @@ namespace botc::api
         initSystemAPI();
         initRolesAPI();
         initGameAPI();
+        initPlayersAPI();
     }
 
     void BotCApiClient::setBaseUrl(const QString& baseUrl)
     {
         m_baseUrl = baseUrl;
-        m_systemAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
-        m_rolesAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
-        m_gameAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        const QUrl newUrl(m_baseUrl);
+        m_systemAPI->setNewServerForAllOperations(newUrl);
+        m_rolesAPI->setNewServerForAllOperations(newUrl);
+        m_gameAPI->setNewServerForAllOperations(newUrl);
+        m_playersAPI->setNewServerForAllOperations(newUrl);
     }
 
     void BotCApiClient::setApiKey(const QString& apiKey)
     {
         m_apiKey = apiKey;
-        m_systemAPI->setApiKey("X-API-Key", m_apiKey);
-        m_rolesAPI->setApiKey("X-API-Key", m_apiKey);
-        m_gameAPI->setApiKey("X-API-Key", m_apiKey);
+        m_systemAPI->addHeaders("X-API-Key", m_apiKey);
+        m_rolesAPI->addHeaders("X-API-Key", m_apiKey);
+        m_gameAPI->addHeaders("X-API-Key", m_apiKey);
+        m_playersAPI->addHeaders("X-API-Key", m_apiKey);
     }
 
     void BotCApiClient::setSslVerify(const bool bSslVerify)
@@ -81,6 +86,11 @@ namespace botc::api
     void BotCApiClient::importRoles(const OpenAPI::OAIImportRoles_request& request) const
     {
         m_rolesAPI->importRoles(request);
+    }
+
+    void BotCApiClient::listPlayers() const
+    {
+        m_playersAPI->listPlayers();
     }
 
     void BotCApiClient::initSystemAPI()
@@ -135,31 +145,48 @@ namespace botc::api
                 });
     }
 
+    void BotCApiClient::initPlayersAPI()
+    {
+        m_playersAPI = new OpenAPI::OAIPlayersApi{};
+        m_playersAPI->addHeaders("X-API-Key", m_apiKey);
+        m_playersAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+
+        connect(m_playersAPI, &OpenAPI::OAIPlayersApi::listPlayersSignalError,
+                this, &BotCApiClient::handlePlayersListReply);
+        connect(m_playersAPI, &OpenAPI::OAIPlayersApi::listPlayersSignal,
+                this, [this](const OpenAPI::OAIListPlayers_200_response& summary)
+                {
+                    handlePlayersListReply(summary, QNetworkReply::NetworkError::NoError, "");
+                });
+    }
+
     void BotCApiClient::handleHealthCheckReply(const OpenAPI::OAIHealth_200_response& summary,
-                                               const QNetworkReply::NetworkError error_type,
-                                               const QString& error_str)
+                                               const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit healthCheckFinished(summary, error_type, error_str);
     }
 
     void BotCApiClient::handleGameImportReply(const OpenAPI::OAIImportGame_200_response& summary,
-                                              const QNetworkReply::NetworkError error_type,
-                                              const QString& error_str)
+                                              const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit gameImportFinished(summary, error_type, error_str);
     }
 
     void BotCApiClient::handleRolesListReply(const OpenAPI::OAIListRoles_200_response& summary,
-                                             const QNetworkReply::NetworkError error_type,
-                                             const QString& error_str)
+                                             const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit rolesListFinished(summary, error_type, error_str);
     }
 
     void BotCApiClient::handleRolesImportReply(const OpenAPI::OAIImportRoles_200_response& summary,
-                                               const QNetworkReply::NetworkError error_type,
-                                               const QString& error_str)
+                                               const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit rolesImportFinished(summary, error_type, error_str);
+    }
+
+    void BotCApiClient::handlePlayersListReply(const OpenAPI::OAIListPlayers_200_response& summary,
+                                               const QNetworkReply::NetworkError error_type, const QString& error_str)
+    {
+        emit playersListFinished(summary, error_type, error_str);
     }
 }

@@ -1,9 +1,16 @@
 {
-  "name" : "dbconnect",
-  "version-string" : "1.0.0",
-  "builtin-baseline" : "d46283cf33cf5de7bd88e12156ce03882be1f179",
-  "dependencies" : [ {
-    "name" : "qtbase",
-    "version>=" : "6.10.2"
-  } ]
+  "name": "dbconnect",
+  "version-string": "1.0.0",
+  "builtin-baseline": "d46283cf33cf5de7bd88e12156ce03882be1f179",
+  "dependencies": [
+    {
+      "name": "qtbase"
+    }
+  ],
+  "overrides": [
+    {
+      "name": "qtbase",
+      "version": "6.10.2"
+    }
+  ]
 }

@@ -67,9 +67,36 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/html:/etc/nginx/html:ro
     depends_on:
       api:
         condition: service_healthy
+      metabase:
+        condition: service_started
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Metabase — dashboards and analytics UI
+  # ============================================================
+  metabase:
+    image: metabase/metabase:v0.53.5
+    container_name: botc-metabase
+    restart: unless-stopped
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase_meta_user
+      MB_DB_PASS: ${METABASE_META_PASSWORD:-change_me}
+      MB_DB_HOST: db
+      MB_EMBEDDING_SECRET_KEY: ${METABASE_EMBEDDING_SECRET:-change_me_use_random_32chars}
+      MB_SITE_URL: https://${SERVER_IP:-localhost}/stats
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
     networks:
       - botc_internal
 

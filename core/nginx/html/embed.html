@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BotC Stats</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #1a1a2e; }
+    iframe { display: block; width: 100%; height: 100vh; border: none; }
+  </style>
+</head>
+<body>
+  <!--
+    SIGNED_JWT_TOKEN — replace this placeholder with the output of:
+      python scripts/generate-embed-token.py $METABASE_EMBEDDING_SECRET <dashboard_id>
+
+    Regenerate the token whenever the dashboard ID changes or after 1 year.
+  -->
+  <iframe
+    src="/stats/embed/dashboard/SIGNED_JWT_TOKEN#bordered=false&titled=true"
+    allowtransparency="true">
+  </iframe>
+</body>
+</html>

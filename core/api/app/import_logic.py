@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from typing import Optional
 
@@ -17,6 +18,7 @@ from app.models import (
 )
 
 _IMPORT_ADVISORY_LOCK_KEY = 7391823
+logger = logging.getLogger(__name__)
 
 
 def _parse_interval(value: str | None) -> timedelta | None:
@@ -39,6 +41,8 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
     Must be called inside an advisory lock. Each call runs its own transaction
     so failures are isolated when processing a batch.
     """
+    game_label = f"{data.scenario_name} {data.game_date} №{data.game_number}"
+    logger.info("Importing game: %s", game_label)
     async with conn.transaction():
         # Step 1: Validate roles via Russian translations
         role_names = set()
@@ -54,6 +58,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
         missing_roles = role_names - existing_role_names
 
         if missing_roles:
+            logger.warning("Game %s: missing roles: %s", game_label, sorted(missing_roles))
             return Game1(
                 status="error",
                 errors=[
@@ -92,8 +97,10 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
 
         # Step 3: Call process_games_import()
         try:
+            logger.debug("Calling process_games_import() for game: %s", game_label)
             row = await conn.fetchrow("SELECT * FROM process_games_import()")
         except UniqueViolationError:
+            logger.warning("Game %s: duplicate — already exists in DB", game_label)
             return Game1(
                 status="error",
                 errors=[
@@ -102,11 +109,15 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
                 ],
                 players_created=0,
             )
+        except Exception:
+            logger.exception("process_games_import() failed for game: %s", game_label)
+            raise
 
         players_created = row["players_created"]
         errors = row["errors"]
 
         if errors:
+            logger.warning("Game %s: DB function returned errors: %s", game_label, errors)
             return Game1(
                 status="error",
                 errors=[errors],
@@ -129,6 +140,8 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
             data.game_number,
         )
 
+        logger.info("Game %s imported successfully: id=%s, players_created=%d",
+                    game_label, game_row["id"] if game_row else None, players_created)
         return Game1(
             status="ok",
             game_id=game_row["id"] if game_row else None,
@@ -144,12 +157,16 @@ async def import_game(data: GameImportRequest, owner: dict) -> GameImportStatusR
     Uses a PostgreSQL advisory lock for safe concurrent access across processes and workers.
     Each call runs inside its own transaction so staging rows are rolled back on any error.
     """
+    game_label = f"{data.scenario_name} {data.game_date} №{data.game_number}"
     async with get_connection() as conn:
+        logger.debug("Acquiring advisory lock for game: %s", game_label)
         await conn.execute("SELECT pg_advisory_lock($1)", _IMPORT_ADVISORY_LOCK_KEY)
+        logger.debug("Advisory lock acquired for game: %s", game_label)
         try:
             result = await _import_single_game_on_conn(conn, data)
         finally:
             await conn.execute("SELECT pg_advisory_unlock($1)", _IMPORT_ADVISORY_LOCK_KEY)
+            logger.debug("Advisory lock released for game: %s", game_label)
 
     return GameImportStatusResponse(
         status=result.status,

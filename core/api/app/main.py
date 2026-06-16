@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 
@@ -58,6 +59,11 @@ async def lifespan(app: FastAPI):
     # Shutdown: close connection pool
     await close_pool()
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title="BotC Import API",

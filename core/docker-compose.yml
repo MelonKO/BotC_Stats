@@ -14,6 +14,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
       BOTC_USER_PASSWORD: ${BOTC_USER_PASSWORD:-change_me}
       API_SERVICE_PASSWORD: ${API_SERVICE_PASSWORD:-change_me}
+      METABASE_META_PASSWORD: ${METABASE_META_PASSWORD:-change_me}
+      METABASE_READONLY_PASSWORD: ${METABASE_READONLY_PASSWORD:-change_me}
     # Порт доступен только на localhost хоста — для SSH-туннеля
     # Внутренние сервисы подключаются через Docker network
     # Внешний доступ: только через Nginx (API, HTTPS :443)
@@ -24,7 +26,7 @@ services:
       - botc_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
       interval: 10s
       timeout: 5s
       retries: 5

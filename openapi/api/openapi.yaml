@@ -25,16 +25,18 @@ components:
   schemas:
     # requests
     GameImportRequest: { $ref: "./schemas/requests.yaml#/GameImportRequest" }
+    GamesImportRequest: { $ref: "./schemas/requests.yaml#/GamesImportRequest" }
     RoleImportItem: { $ref: "./schemas/requests.yaml#/RoleImportItem" }
     RolesImportRequest: { $ref: "./schemas/requests.yaml#/RolesImportRequest" }
+
     # responses
     HealthResponse: { $ref: "./schemas/responses.yaml#/HealthResponse" }
-    ImportStatusResponse:
-      { $ref: "./schemas/responses.yaml#/ImportStatusResponse" }
+    GameImportStatusResponse: { $ref: "./schemas/responses.yaml#/GameImportStatusResponse" }
+    GamesImportStatusResponse: {$ref: "./schemas/responses.yaml#/GamesImportStatusResponse" }
     RolesResponse: { $ref: "./schemas/responses.yaml#/RolesResponse" }
-    RolesImportResponse:
-      { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
+    RolesImportResponse: { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
     PlayersResponse: { $ref: "./schemas/responses.yaml#/PlayersResponse" }
+
     # common
     RoleItem: { $ref: "./schemas/common.yaml#/RoleItem" }
     RoleTranslation: { $ref: "./schemas/common.yaml#/RoleTranslation" }
@@ -50,7 +52,7 @@ paths:
       operationId: health
       summary: Health check
       description: Проверка работоспособности сервиса и подключения к БД.
-      tags: [System]
+      tags: [ System ]
       responses:
         "200":
           description: Сервис работает (возможно в деградированном режиме).
@@ -66,9 +68,9 @@ paths:
       description: |
         Импортировать партию в базу данных.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [Games]
+      tags: [ Games ]
       security:
-        - ApiKeyAuth: []
+        - ApiKeyAuth: [ ]
       requestBody:
         required: true
         content:
@@ -81,13 +83,43 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ImportStatusResponse"
+                $ref: "#/components/schemas/GameImportStatusResponse"
         "400":
           description: Ошибка импорта.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Неверный или отсутствующий API-ключ.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/games/import_batch:
+    post:
+      operationId: importGames
+      summary: Импортировать набор партий
+      description: |
+        Импортировать несколько партий в базе данных.
+        Требует валидный API-ключ в заголовке X-API-Key.
+      tags:
+        - Games
+      security:
+        - ApiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GamesImportRequest"
+      responses:
+        "200":
+          description: Партии успешно импортированы
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GamesImportStatusResponse"
         "401":
           description: Неверный или отсутствующий API-ключ.
           content:
@@ -104,9 +136,9 @@ paths:
         Если указан параметр `lang`, каждая роль будет содержать
         перевод на запрошенный язык в поле `translation`.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [Roles]
+      tags: [ Roles ]
       security:
-        - ApiKeyAuth: []
+        - ApiKeyAuth: [ ]
       parameters:
         - name: lang
           in: query
@@ -141,9 +173,9 @@ paths:
         Импортировать (upsert) список ролей в базу данных.
         Существующие роли обновляются, новые — создаются.
         Требует валидный API-ключ в заголовке X-API-Key.
-      tags: [Roles]
+      tags: [ Roles ]
       security:
-        - ApiKeyAuth: []
+        - ApiKeyAuth: [ ]
       requestBody:
         required: true
         content:
@@ -174,9 +206,9 @@ paths:
     get:
       operationId: listPlayers
       summary: Получить список игроков
-      tags: [Players]
+      tags: [ Players ]
       security:
-        - ApiKeyAuth: []
+        - ApiKeyAuth: [ ]
       responses:
         "200":
           description: Список игроков.

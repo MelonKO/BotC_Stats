@@ -8,6 +8,7 @@ from app.auth import validate_api_key
 from app.db import get_pool, close_pool
 from app.import_logic import (
     import_game,
+    import_games_batch,
     get_all_roles,
     import_roles,
     check_db_connection,
@@ -15,7 +16,9 @@ from app.import_logic import (
 )
 from app.models import (
     GameImportRequest,
-    ImportStatusResponse,
+    GamesImportRequest,
+    GameImportStatusResponse,
+    GamesImportStatusResponse,
     RolesResponse,
     RolesImportRequest,
     RolesImportResponse,
@@ -79,7 +82,7 @@ async def health():
 #  API endpoints
 # ============================================================
 
-@app.post("/api/games/import", response_model=ImportStatusResponse)
+@app.post("/api/games/import", response_model=GameImportStatusResponse)
 async def create_import(
         data: GameImportRequest,
         owner: dict = Depends(validate_api_key),
@@ -89,10 +92,24 @@ async def create_import(
 
     Требует валидный API-ключ в заголовке X-API-Key.
     """
-    result: ImportStatusResponse = await import_game(data, owner)
+    result: GameImportStatusResponse = await import_game(data, owner)
     if result.status == "error":
-        raise HTTPException(status_code=400, detail=result)
+        raise HTTPException(status_code=400, detail=result.model_dump())
     return result
+
+
+@app.post("/api/games/import_batch", response_model=GamesImportStatusResponse)
+async def create_import_batch(
+        data: GamesImportRequest,
+        owner: dict = Depends(validate_api_key),
+):
+    """
+    Импортировать несколько партий за один запрос.
+
+    Каждая партия обрабатывается независимо — ошибка в одной не отменяет остальные.
+    Требует валидный API-ключ в заголовке X-API-Key.
+    """
+    return await import_games_batch(data.games, owner)
 
 
 @app.get("/api/roles", response_model=RolesResponse)

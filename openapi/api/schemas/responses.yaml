@@ -6,13 +6,13 @@ HealthResponse:
   properties:
     status:
       type: string
-      enum: [ok, degraded]
+      enum: [ ok, degraded ]
       example: "ok"
     db_connected:
       type: boolean
       example: true
 
-ImportStatusResponse:
+GameImportStatusResponse:
   type: object
   required:
     - status
@@ -34,7 +34,16 @@ ImportStatusResponse:
       type: array
       items:
         type: string
-      default: []
+      default: [ ]
+
+GamesImportStatusResponse:
+  type: object
+  properties:
+    games:
+      type: array
+      minItems: 1
+      items:
+        $ref: "./responses.yaml#/GameImportStatusResponse"
 
 RolesResponse:
   type: object
@@ -69,7 +78,7 @@ RolesImportResponse:
       type: array
       items:
         type: string
-      default: []
+      default: [ ]
 
 PlayersResponse:
   type: object

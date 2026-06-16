@@ -91,6 +91,18 @@ GameImportRequest:
       items:
         $ref: "./requests.yaml#/PlayerImportRequest"
 
+GamesImportRequest:
+  type: object
+  description: Запрос импорта нескольких партий
+  required:
+    - games
+  properties:
+    games:
+      type: array
+      minItems: 1
+      items:
+        $ref: "./requests.yaml#/GameImportRequest"
+
 RoleImportItem:
   type: object
   description: Одна роль в запросе импорта.

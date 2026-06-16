@@ -139,11 +139,10 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
 
 async def import_game(data: GameImportRequest, owner: dict) -> GameImportStatusResponse:
     """
-    Импортирует одну партию через API.
+    Import a single game via the API.
 
-    Использует PostgreSQL advisory lock для безопасного конкурентного доступа
-    (работает между процессами и воркерами). Каждый вызов оборачивается в
-    транзакцию, чтобы staging-строки откатывались при любой ошибке.
+    Uses a PostgreSQL advisory lock for safe concurrent access across processes and workers.
+    Each call runs inside its own transaction so staging rows are rolled back on any error.
     """
     async with get_connection() as conn:
         await conn.execute("SELECT pg_advisory_lock($1)", _IMPORT_ADVISORY_LOCK_KEY)
@@ -162,10 +161,10 @@ async def import_game(data: GameImportRequest, owner: dict) -> GameImportStatusR
 
 async def import_games_batch(games: list[Game], owner: dict) -> GamesImportStatusResponse:
     """
-    Импортирует несколько партий за один запрос.
+    Import multiple games in a single request.
 
-    Каждая партия обрабатывается независимо: ошибка в одной не отменяет остальные.
-    Все партии обрабатываются последовательно под одним advisory lock.
+    Each game is processed independently: a failure in one does not roll back the others.
+    All games are processed sequentially under a single advisory lock.
     """
     async with get_connection() as conn:
         await conn.execute("SELECT pg_advisory_lock($1)", _IMPORT_ADVISORY_LOCK_KEY)
@@ -181,7 +180,7 @@ async def import_games_batch(games: list[Game], owner: dict) -> GamesImportStatu
 
 
 async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
-    """Возвращает список всех доступных ролей."""
+    """Return all available roles, optionally with a translation for the given language code."""
     async with get_connection() as conn:
         if lang:
             rows = await conn.fetch(
@@ -235,7 +234,7 @@ async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
 
 
 async def check_db_connection() -> bool:
-    """Проверяет подключение к БД."""
+    """Return True if the database is reachable, False otherwise."""
     try:
         async with get_connection() as conn:
             await conn.fetchval("SELECT 1")
@@ -246,10 +245,10 @@ async def check_db_connection() -> bool:
 
 async def import_roles(data: RolesImportRequest) -> dict:
     """
-    Импортирует (upsert) список ролей в БД.
+    Upsert a list of roles into the database.
 
-    INSERT ... ON CONFLICT (name) DO UPDATE — существующие роли обновляются.
-    Если у роли есть translations — upsert в role_translations для каждого языка.
+    INSERT ... ON CONFLICT (name) DO UPDATE — existing roles are updated.
+    If a role has translations, each language is upserted into role_translations.
     """
     created = 0
     updated = 0

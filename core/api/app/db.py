@@ -14,7 +14,7 @@ _pool: asyncpg.Pool | None = None
 
 
 async def get_pool() -> asyncpg.Pool:
-    """Получить пул подключений к БД (singleton)."""
+    """Return the asyncpg connection pool, creating it on first call (singleton)."""
     global _pool
     if _pool is None:
         _pool = await asyncpg.create_pool(
@@ -27,7 +27,7 @@ async def get_pool() -> asyncpg.Pool:
 
 
 async def close_pool():
-    """Закрыть пул подключений."""
+    """Close the connection pool and reset the singleton."""
     global _pool
     if _pool is not None:
         await _pool.close()
@@ -36,7 +36,7 @@ async def close_pool():
 
 @asynccontextmanager
 async def get_connection():
-    """Контекстный менеджер для получения подключения."""
+    """Async context manager that yields a single connection from the pool."""
     pool = await get_pool()
     async with pool.acquire() as conn:
         yield conn

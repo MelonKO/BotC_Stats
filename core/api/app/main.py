@@ -33,7 +33,7 @@ from app.models import (
 # ============================================================
 
 async def wait_for_db(max_retries: int = 30, delay: float = 2.0):
-    """Ждём готовности БД при старте с повторными попытками."""
+    """Wait for DB to be ready at startup, retrying up to max_retries times."""
     for attempt in range(1, max_retries + 1):
         try:
             pool = await get_pool()
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="BotC Import API",
-    description="API для импорта партий Blood on the Clocktower",
+    description="API for importing Blood on the Clocktower game records",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -73,7 +73,7 @@ app = FastAPI(
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    """Проверка работоспособности сервиса."""
+    """Check service health and database connectivity."""
     db_ok = await check_db_connection()
     return HealthResponse(status=Status.ok if db_ok else Status.degraded, db_connected=db_ok)
 
@@ -88,9 +88,9 @@ async def create_import(
         owner: dict = Depends(validate_api_key),
 ):
     """
-    Импортировать партию в базу данных.
+    Import a single game into the database.
 
-    Требует валидный API-ключ в заголовке X-API-Key.
+    Requires a valid API key in the X-API-Key header.
     """
     result: GameImportStatusResponse = await import_game(data, owner)
     if result.status == "error":
@@ -104,10 +104,10 @@ async def create_import_batch(
         owner: dict = Depends(validate_api_key),
 ):
     """
-    Импортировать несколько партий за один запрос.
+    Import multiple games in a single request.
 
-    Каждая партия обрабатывается независимо — ошибка в одной не отменяет остальные.
-    Требует валидный API-ключ в заголовке X-API-Key.
+    Each game is processed independently — a failure in one does not roll back the others.
+    Requires a valid API key in the X-API-Key header.
     """
     return await import_games_batch(data.games, owner)
 
@@ -117,9 +117,9 @@ async def list_roles(
         lang: Annotated[Optional[str], Query(min_length=2, max_length=5)] = None,
         owner: dict = Depends(validate_api_key)):
     """
-    Получить список доступных ролей.
+    Return the list of available roles.
 
-    Требует валидный API-ключ в заголовке X-API-Key.
+    Requires a valid API key in the X-API-Key header.
     """
     roles = await get_all_roles(lang)
     return RolesResponse(roles=roles)
@@ -131,11 +131,10 @@ async def create_roles_import(
         owner: dict = Depends(validate_api_key),
 ):
     """
-    Импортировать (upsert) список ролей в базу данных.
+    Upsert a list of roles into the database.
 
-    Существующие роли обновляются, новые — создаются.
-
-    Требует валидный API-ключ в заголовке X-API-Key.
+    Existing roles are updated; new ones are created.
+    Requires a valid API key in the X-API-Key header.
     """
     result: RolesImportResponse = await import_roles(data)
     if result["status"] == "error":

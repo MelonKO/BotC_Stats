@@ -4,16 +4,16 @@ from app.db import get_connection
 
 
 def hash_api_key(key: str) -> str:
-    """SHA-256 хеш API-ключа для сравнения с БД."""
+    """Return the SHA-256 hex digest of an API key for comparison with the database."""
     return hashlib.sha256(key.encode()).hexdigest()
 
 
 async def validate_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> dict:
     """
-    Валидирует API-ключ из заголовка X-API-Key.
+    Validate the API key from the X-API-Key header.
 
-    Возвращает информацию о владельце ключа.
-    Бросает HTTPException 401/403 при ошибке.
+    Returns owner info on success.
+    Raises HTTPException 401 if the key is unknown, 403 if it has been revoked.
     """
     key_hash = hash_api_key(x_api_key)
 
@@ -33,7 +33,7 @@ async def validate_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> d
         if not row["active"]:
             raise HTTPException(status_code=403, detail="API key has been revoked")
 
-        # Обновляем last_used_at
+        # Update last_used_at timestamp
         await conn.execute(
             """
             UPDATE api_keys SET last_used_at = now() WHERE id = $1

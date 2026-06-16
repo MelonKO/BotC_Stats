@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Blood on the Clocktower (BotC) Stats — a monorepo for tracking board game session statistics. Components: PostgreSQL 16 database, FastAPI REST API, Nginx reverse proxy (all in Docker), and a Python CLI importer.
+Blood on the Clocktower (BotC) Stats — a monorepo for tracking board game session statistics. Components: PostgreSQL 16 database, FastAPI REST API, Nginx reverse proxy (all in Docker), and a Qt6 desktop GUI application (DBConnect) for importing data.
 
 ## Commands
 
@@ -24,25 +24,20 @@ bash scripts/create-api-key.sh create "Your Name" "email@example.com"
 # Output: sk-<32-hex-chars> — store this; only shown once
 ```
 
-### Uploader (Python CLI)
+### DBConnect (Qt6 GUI)
 ```bash
-cd uploader
-python -m venv venv
-venv\Scripts\activate               # Windows
-# source venv/bin/activate          # Linux/macOS
-pip install -r requirements.txt
-cp .env.example .env                # Set API_KEY and API_URL
+cd DBConnect
+cmake --preset debug          # configure debug build (or 'release')
+cmake --build build_debug     # build
 
-python uploader.py path/to/games.csv          # Import game records
-python uploader.py --roles path/to/roles.csv  # Import role definitions
+# Windows deploy — collects exe + Qt DLLs into dist/:
+cmake --preset release && cmake --build build_release --target deploy
 ```
+
+Open the built executable, set API URL and API key on the **Settings** tab, then use the **Import Games** or **Import Roles** tabs to load a CSV file and import.
 
 ### Tests
 ```bash
-# Uploader
-cd uploader && venv\Scripts\activate
-python -m pytest tests/ -v
-
 # Core API
 cd core/api && venv\Scripts\activate
 python -m pytest app/tests/ -v
@@ -59,13 +54,13 @@ npm run generate:cpp       # Regenerate C++ client → cpp_gen/
 ## Architecture
 
 ```
-CSV files → uploader.py → POST /api/games/import or /api/roles/import
-                                    ↓
-                            FastAPI (core/api/)
-                                    ↓
-                           asyncpg → PostgreSQL 16
-                                    ↑
-                           Nginx (SSL termination, port 443)
+CSV files → DBConnect (Qt6) → POST /api/games/import or /api/roles/import
+                                         ↓
+                                 FastAPI (core/api/)
+                                         ↓
+                                asyncpg → PostgreSQL 16
+                                         ↑
+                                Nginx (SSL termination, port 443)
 ```
 
 **`core/`** — Docker stack. `docker-compose.yml` defines three services: `db` (PostgreSQL), `api` (FastAPI/Uvicorn), `nginx` (reverse proxy). Init scripts in `core/init-scripts/` run once on first `docker-compose up`: schema creation, user creation, privilege grants.
@@ -77,7 +72,7 @@ CSV files → uploader.py → POST /api/games/import or /api/roles/import
 - `db.py` — asyncpg connection pool; use the `get_db()` async context manager
 - `import_logic.py` — business logic for game/role imports
 
-**`uploader/uploader.py`** — argparse CLI. Reads CSV, groups rows into game records, calls the REST API. `SSL_VERIFY=false` is default in `.env.example` for self-signed cert.
+**`DBConnect/`** — Qt6 desktop app. `src/main.cpp` initialises `ConfigManager`, `BotCApiClient`, and `MainWindow`. Tabbed UI: Settings (API URL/key/SSL), Import Games, Import Roles, with player list caching via `DBCache`. Uses the auto-generated OpenAPI C++ client in `generated_api/`. Configuration persisted in `config.ini`.
 
 **`openapi/api/openapi.yaml`** — source of truth for the API contract. Edit this first, then regenerate `models.py` and the C++ client.
 
@@ -95,7 +90,6 @@ CSV files → uploader.py → POST /api/games/import or /api/roles/import
 **Versioning:** Single semver tag for the entire monorepo. Bump PATCH/MINOR/MAJOR applies to all components simultaneously.
 
 **Test fixtures:**
-- Uploader tests: temp CSV files via `conftest.py`
 - Core API tests: mocked asyncpg pool via `conftest.py` — tests do not hit a real database
 
 **Git workflow:** git-flow; all commit messages in English.

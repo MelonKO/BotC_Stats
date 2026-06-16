@@ -5,7 +5,8 @@
 | Directory | Purpose | Key Files |
 |-----------|---------|-----------|
 | `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx | `docker-compose.yml`, `api/` |
-| `uploader/` | CLI tool for CSV→API import | `uploader.py`, `requirements.txt` |
+| `DBConnect/` | Qt6 GUI for CSV→API import (games, roles, players) | `src/main.cpp`, `CMakeLists.txt`, `config.ini` |
+| `uploader/` | *(legacy)* Python CLI importer — superseded by DBConnect | `uploader.py`, `requirements.txt` |
 
 ## Developer Commands
 
@@ -24,41 +25,24 @@ bash scripts/create-api-key.sh create "Your Name" "contact@example.com"
 # Output contains: sk-<32-hex-chars> — save it securely
 ```
 
-### Run uploader (import games)
+### Build DBConnect (Qt6 GUI importer)
 ```bash
-cd uploader
-python -m venv venv
-venv\Scripts\activate  # Windows
-# or: source venv/bin/activate  # Linux/macOS
-pip install -r requirements.txt
+cd DBConnect
+cmake --preset debug          # configure
+cmake --build build_debug     # build
 
-# Copy .env.example and set API_KEY
-python uploader.py path/to/games.csv
+# Windows deploy (exe + Qt DLLs → dist/):
+cmake --preset release && cmake --build build_release --target deploy
 ```
 
-### Run uploader (import roles)
-```bash
-cd uploader
-venv\Scripts\activate  # Windows
-# or: source venv/bin/activate  # Linux/macOS
-python uploader.py --roles path/to/roles.csv
-```
+Open the built executable. Configure API URL and key on the **Settings** tab, then import via **Import Games** or **Import Roles** tabs.
 
 ### Run tests
 ```bash
-# Uploader tests (from repo root)
-cd uploader && venv\Scripts\activate  # Windows
-cd uploader && source venv/bin/activate  # Linux/macOS
-python -m pytest tests/ -v
-
 # Core API tests
 cd core/api && venv\Scripts\activate  # Windows
 cd core/api && source venv/bin/activate  # Linux/macOS
 python -m pytest app/tests/ -v
-
-# From CI (ubuntu/windows):
-#   uploader:   python -m pytest tests/ -v
-#   core/api:   python -m pytest app/tests/ -v
 ```
 
 ## Critical Conventions
@@ -69,11 +53,11 @@ python -m pytest app/tests/ -v
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 
-4. **SSL**: Local dev uses self-signed cert. `uploader/.env` defaults `SSL_VERIFY=false`. For production, replace `core/nginx/ssl/` certs.
+4. **SSL**: Local dev uses self-signed cert. `DBConnect/config.ini` has `SSL_VERIFY = false` — required for self-signed cert. For production, replace `core/nginx/ssl/` certs.
 
 5. **Database access**: PostgreSQL port 5432 is **not exposed externally**. Admin access only via SSH tunnel: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>`.
 
-6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `uploader/`.
+6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `DBConnect/`.
 
 7. **Test fixtures**: 
    - Uploader: temp CSV files in `uploader/tests/test_*.py` (see `conftest.py`)
@@ -82,7 +66,7 @@ python -m pytest app/tests/ -v
 ## Common Pitfalls
 
 - ❌ Forgetting to run `generate-cert.sh` → Nginx fails to start
-- ❌ Not copying `.env` and setting `API_KEY` → uploader exits with "API_KEY not specified"
+- ❌ `SSL_VERIFY = false` not set in `DBConnect/config.ini` → DBConnect fails TLS verification against self-signed cert
 - ❌ Using `alignment_win: "нейтральный"` → only `"добро"` or `"зло"` allowed
 - ❌ Mixing English and Russian in gameplay fields → CSV parser expects Russian for alignment and role names
 - ❌ Assuming PostgreSQL is reachable on host port → only SSH tunnel works for admin access
@@ -175,8 +159,8 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 | Container not starting | `docker-compose logs db` → check errors |
 | Database not initializing | `docker-compose down -v && docker-compose up -d` |
 | API connection error | Check `docker-compose ps`, `api` container status |
-| `Invalid API key` | Check `.env` key, create new one |
-| SSL error in uploader | Set `SSL_VERIFY=false` in `.env` |
+| `Invalid API key` | Check `config.ini` key, create new one |
+| SSL error in DBConnect | Set `SSL_VERIFY = false` in `DBConnect/config.ini` |
 | Missing roles | Add roles to `roles` table before import |
 | PostgreSQL port 5432 not accessible | Use SSH tunnel only: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>` |
 
@@ -188,14 +172,13 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 
-4. **SSL**: Local dev uses self-signed cert. `uploader/.env` defaults `SSL_VERIFY=false`. For production, replace `core/nginx/ssl/` certs.
+4. **SSL**: Local dev uses self-signed cert. `DBConnect/config.ini` has `SSL_VERIFY = false` — required for self-signed cert. For production, replace `core/nginx/ssl/` certs.
 
 5. **Database access**: PostgreSQL port 5432 is **not exposed externally**. Admin access only via SSH tunnel: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>`.
 
-6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `uploader/`.
+6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `DBConnect/`.
 
 7. **Test fixtures**: 
-   - Uploader tests use temp CSV files (see `uploader/tests/conftest.py`)
    - Core API tests mock asyncpg pool (see `core/api/app/tests/conftest.py`)
 
 8. **Git workflow**: Work by git-flow. All commit messages in English.

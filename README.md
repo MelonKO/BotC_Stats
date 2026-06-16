@@ -10,9 +10,9 @@
 ┌───────────────────────────────────────────────────────────┐
 │                    BotC Monorepo                           │
 ├──────────────┬──────────────┬─────────────────────────────┤
-│   core/      │  uploader/   │  (future)                   │
-│  Docker +    │  CSV → API   │  telegram-bot, web-ui, ...  │
-│  PostgreSQL  │  Importer    │                             │
+│   core/      │  DBConnect/  │  (future)                   │
+│  Docker +    │  Qt6 GUI     │  telegram-bot, web-ui, ...  │
+│  PostgreSQL  │  CSV → API   │                             │
 │  + FastAPI   │              │                             │
 │  + Nginx     │              │                             │
 └──────┬───────┴──────┬───────┴─────────────────────────────┘
@@ -26,7 +26,8 @@
 | Компонент | Описание | Подробности |
 |-----------|----------|-------------|
 | **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
-| **[uploader/](uploader/)** | CLI-утилита для импорта CSV-файлов с партиями через REST API. | [uploader/README.md](uploader/README.md) |
+| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI для импорта CSV (игры, роли, игроки). Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
+| **[uploader/](uploader/)** *(legacy)* | CLI-утилита для импорта CSV — заменена DBConnect. | [uploader/README.md](uploader/README.md) |
 
 ## Quick Start
 
@@ -45,17 +46,9 @@ docker-compose up -d
 bash scripts/create-api-key.sh create "Your Name" "contact"
 ```
 
-### 3. Импорт данных (uploader)
+### 3. Импорт данных (DBConnect)
 
-```bash
-cd uploader
-python -m venv venv
-venv\Scripts\activate        # Windows
-pip install -r requirements.txt
-
-# Настроить .env — вставить API_KEY
-python uploader.py path/to/games.csv
-```
+Открыть приложение DBConnect. На вкладке **Settings** указать API URL и API key, сохранить. На вкладках **Import Games** / **Import Roles** выбрать CSV-файл и нажать **Import**.
 
 ## Project Structure
 
@@ -74,7 +67,12 @@ BotC/
 │   ├── nginx/
 │   ├── scripts/
 │   └── docs/                   # SSH and API access documentation
-├── uploader/                   # CSV importer CLI
+├── DBConnect/                  # Qt6 GUI importer (games, roles, players)
+│   ├── src/
+│   ├── generated_api/          # Auto-generated OpenAPI C++ client
+│   ├── CMakeLists.txt
+│   └── config.ini
+├── uploader/                   # Legacy Python CLI importer (superseded by DBConnect)
 │   ├── uploader.py
 │   └── requirements.txt
 ```
@@ -191,11 +189,11 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 ```
 v3.1.0
   core:      no changes
-  uploader:  added CSV input validation
+  DBConnect: added CSV input validation
 
 v4.0.0
   core:      BREAKING — changed API endpoint to /api/v2/import
-  uploader:  updated to use new /api/v2/import
+  DBConnect: updated to use new /api/v2/import
 ```
 
 ## License

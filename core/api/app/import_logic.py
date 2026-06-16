@@ -61,10 +61,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
             logger.warning("Game %s: missing roles: %s", game_label, sorted(missing_roles))
             return Game1(
                 status="error",
-                errors=[
-                    f"Отсутствуют роли: {', '.join(sorted(missing_roles))}.",
-                    f"Обратитесь к администратору для добавления ролей."
-                ],
+                errors=[f"Unknown roles: {', '.join(sorted(missing_roles))}"],
                 players_created=0,
             )
 
@@ -103,10 +100,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
             logger.warning("Game %s: duplicate — already exists in DB", game_label)
             return Game1(
                 status="error",
-                errors=[
-                    f"Партия {data.scenario_name} ({data.game_date}, №{data.game_number}) ",
-                    f"рассказчик {data.storyteller_name} уже существует в базе данных."
-                ],
+                errors=[f"Duplicate: '{data.scenario_name}' {data.game_date} #{data.game_number}"],
                 players_created=0,
             )
         except Exception:
@@ -316,8 +310,11 @@ async def import_roles(data: RolesImportRequest) -> dict:
                             tr.description,
                         )
 
+            except UniqueViolationError:
+                errors.append(f"'{role.name}': already exists")
             except Exception as e:
-                errors.append(f"Role '{role.name}': {e}")
+                logger.exception("Role import failed: %s", role.name)
+                errors.append(f"'{role.name}': save failed")
 
     if errors:
         return {

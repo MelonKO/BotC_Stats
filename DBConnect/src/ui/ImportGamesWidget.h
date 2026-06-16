@@ -72,5 +72,6 @@ namespace botc::ui
         uint m_importCount = 0;
         // TODO:: add batch game import and remove
         QVector<OpenAPI::OAIImportGame_200_response> responses;
+        QVector<QNetworkReply::NetworkError> m_responseErrors;
     };
 } // botc::ui

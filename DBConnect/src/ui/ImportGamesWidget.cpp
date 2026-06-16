@@ -13,6 +13,25 @@
 #include "../config/ConfigManager.h"
 #include "db_cache/DBCache.h"
 
+namespace
+{
+    QString networkErrorMessage(QNetworkReply::NetworkError err)
+    {
+        switch (err)
+        {
+        case QNetworkReply::ServiceUnavailableError:
+            return "Сервер отклонил запрос (503). Используйте пакетный импорт.";
+        case QNetworkReply::TimeoutError:
+            return "Превышено время ожидания ответа от сервера.";
+        case QNetworkReply::ConnectionRefusedError:
+        case QNetworkReply::HostNotFoundError:
+            return "Нет соединения с сервером. Проверьте настройки.";
+        default:
+            return QString("Сетевая ошибка (код %1).").arg(static_cast<int>(err));
+        }
+    }
+}
+
 namespace botc::ui
 {
     ImportGamesWidget::ImportGamesWidget(QWidget* parent) :
@@ -347,6 +366,7 @@ namespace botc::ui
         assert(m_importCount > 0);
         --m_importCount;
         responses.push_back(summary);
+        m_responseErrors.push_back(error_type);
         if (m_importCount != 0)
         {
             return;
@@ -359,50 +379,58 @@ namespace botc::ui
 
         uint successCount = 0;
         uint failedCount  = 0;
-
         QString message;
 
-        for (const OpenAPI::OAIImportGame_200_response& response : responses)
+        for (int i = 0; i < responses.size(); ++i)
         {
-            if (response.getErrors().isEmpty())
+            const OpenAPI::OAIImportGame_200_response& response = responses[i];
+            const QNetworkReply::NetworkError errType = m_responseErrors[i];
+
+            if (errType != QNetworkReply::NoError && response.getErrors().isEmpty())
             {
-                successCount++;
-                message += QString("Игра %1 успешно иимпортирована. Создано игроков: %2\n")
-                           .arg(response.getGameId())
-                           .arg(response.getPlayersCreated());
+                // Сетевая или HTTP ошибка (503, таймаут и т.д.)
+                failedCount++;
+                message += networkErrorMessage(errType) + "\n";
+            }
+            else if (!response.getErrors().isEmpty())
+            {
+                // API вернул ошибку
+                failedCount++;
+                message += response.getErrors().join("\n") + "\n";
             }
             else
             {
-                failedCount++;
-
-                QString errors;
-                for (const QString& error : response.getErrors())
-                {
-                    errors += error + "\n";
-                }
-
-                message += QString("Импорт произошёл с ошибками (%1).\nОшибки:\n%2")
-                           .arg(response.getStatus())
-                           .arg(errors);
+                successCount++;
+                message += QString("✔ Партия %1 импортирована, создано игроков: %2\n")
+                           .arg(response.getGameId())
+                           .arg(response.getPlayersCreated());
             }
         }
 
-        QMessageBox::information(this, "Games import", message);
+        QMessageBox::information(this, "Импорт партий", message.trimmed());
 
         if (failedCount == 0)
         {
             ui->statusLabel->setText(
-                QString("✔ Импортировано партий: %1").arg(m_lastResult.records.size())
+                QString("✔ Импортировано партий: %1").arg(successCount)
             );
+            ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
+        }
+        else if (successCount == 0)
+        {
+            ui->statusLabel->setText("✘ Импорт завершён с ошибками");
+            ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
         else
         {
             ui->statusLabel->setText(
-                QString("Импорт партий прозошёл с ошибками"));
-            ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
+                QString("⚠ Импортировано: %1, ошибок: %2").arg(successCount).arg(failedCount)
+            );
+            ui->statusLabel->setStyleSheet("color: orange; font-weight: bold;");
         }
 
         responses.clear();
+        m_responseErrors.clear();
         emit onGamesImported();
     }
 } // botc::ui

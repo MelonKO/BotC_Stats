@@ -10,6 +10,25 @@
 #include "../api/BotCApiClient.h"
 #include "../config/ConfigManager.h"
 
+namespace
+{
+    QString networkErrorMessage(QNetworkReply::NetworkError err)
+    {
+        switch (err)
+        {
+        case QNetworkReply::ServiceUnavailableError:
+            return "Сервер отклонил запрос (503). Попробуйте позже.";
+        case QNetworkReply::TimeoutError:
+            return "Превышено время ожидания ответа от сервера.";
+        case QNetworkReply::ConnectionRefusedError:
+        case QNetworkReply::HostNotFoundError:
+            return "Нет соединения с сервером. Проверьте настройки.";
+        default:
+            return QString("Сетевая ошибка (код %1).").arg(static_cast<int>(err));
+        }
+    }
+}
+
 namespace botc::ui
 {
     ImportRolesWidget::ImportRolesWidget(QWidget* parent) :
@@ -122,17 +141,17 @@ namespace botc::ui
                                                   const QString& error_str)
     {
         m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
-        if (error_type == QNetworkReply::NoError)
+
+        const QList<QString> apiErrors = summary.getErrors();
+
+        if (error_type == QNetworkReply::NoError && apiErrors.isEmpty())
         {
-            QString message = "Импорт ролей прошёл успешно.";
-
-            message += "\nStatus: " + summary.getStatus();
-            message += "\n Roles created: " + std::to_string(summary.getRolesCreated());
-            message += "\n Roles updated: " + std::to_string(summary.getRolesUpdated());
-
+            QString message = QString("Создано ролей: %1\nОбновлено ролей: %2")
+                              .arg(summary.getRolesCreated())
+                              .arg(summary.getRolesUpdated());
             QMessageBox::information(this, "Импорт ролей", message);
             ui->statusLabel->setText(
-                QString("✔ Импортировано записей: %1; Обновлено записей %2")
+                QString("✔ Создано: %1, обновлено: %2")
                 .arg(summary.getRolesCreated())
                 .arg(summary.getRolesUpdated())
             );
@@ -140,17 +159,18 @@ namespace botc::ui
         }
         else
         {
-            QString message = "Импорт ролей произошёл с ошибкой";
-            message         += "\nStatus: " + error_str;
-            QMessageBox::warning(this,
-                                 "Импорт ролей",
-                                 message);
+            QString message;
+            if (!apiErrors.isEmpty())
+                message = apiErrors.join("\n");
+            else
+                message = networkErrorMessage(error_type);
 
-            ui->statusLabel->setText(
-                QString("Импорт завершён с ошибкой: %1").arg(m_lastResult.records.size())
-            );
+            QMessageBox::warning(this, "Ошибка импорта ролей", message);
+            ui->statusLabel->setText("✘ Импорт завершён с ошибкой");
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
+
+        setImportEnabled(true);
         emit onRolesImported();
     }
 

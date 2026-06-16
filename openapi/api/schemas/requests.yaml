@@ -1,6 +1,6 @@
 PlayerImportRequest:
   type: object
-  description: Один игрок в запросе импорта.
+  description: A single player entry in a game import request.
   required:
     - name
     - role_start
@@ -38,7 +38,7 @@ PlayerImportRequest:
 
 GameImportRequest:
   type: object
-  description: Полный запрос импорта партии.
+  description: Full game import request.
   required:
     - game_date
     - scenario_name
@@ -93,7 +93,7 @@ GameImportRequest:
 
 GamesImportRequest:
   type: object
-  description: Запрос импорта нескольких партий
+  description: Batch game import request.
   required:
     - games
   properties:
@@ -105,7 +105,7 @@ GamesImportRequest:
 
 RoleImportItem:
   type: object
-  description: Одна роль в запросе импорта.
+  description: A single role entry in a roles import request.
   required:
     - name
     - alignment
@@ -141,7 +141,7 @@ RoleImportItem:
 
 RolesImportRequest:
   type: object
-  description: Полный запрос импорта списка ролей.
+  description: Full roles import request.
   required:
     - roles
   properties:

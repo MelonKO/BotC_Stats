@@ -1,6 +1,6 @@
 RoleTranslation:
   type: object
-  description: Перевод одной роли на один язык.
+  description: Translation of a single role into one language.
   required:
     - name
   properties:
@@ -17,7 +17,7 @@ RoleTranslation:
 
 RoleItem:
   type: object
-  description: Роль из базы данных.
+  description: Role record from the database.
   required:
     - id
     - name
@@ -44,13 +44,13 @@ RoleItem:
       nullable: true
       example: "Simple, but not harmless"
     translation:
-      description: Перевод на запрошенный язык (если был указан параметр lang).
+      description: Translation into the requested language (only present when the lang query parameter was provided).
       nullable: true
       $ref: "#/RoleTranslation"
 
 PlayerItem:
   type: object
-  description: Игрок из базы данных.
+  description: Player record from the database.
   required:
     - id
     - name

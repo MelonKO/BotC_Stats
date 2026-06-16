@@ -2,7 +2,7 @@ openapi: "3.0.3"
 
 info:
   title: BotC Import API
-  description: API для импорта партий Blood on the Clocktower
+  description: API for importing Blood on the Clocktower game records
   version: "1.0.0"
 
 servers:
@@ -51,11 +51,11 @@ paths:
     get:
       operationId: health
       summary: Health check
-      description: Проверка работоспособности сервиса и подключения к БД.
+      description: Check service health and database connectivity.
       tags: [ System ]
       responses:
         "200":
-          description: Сервис работает (возможно в деградированном режиме).
+          description: Service is running (possibly in degraded mode).
           content:
             application/json:
               schema:
@@ -64,10 +64,10 @@ paths:
   /api/games/import:
     post:
       operationId: importGame
-      summary: Импортировать партию
+      summary: Import a game
       description: |
-        Импортировать партию в базу данных.
-        Требует валидный API-ключ в заголовке X-API-Key.
+        Import a single game into the database.
+        Requires a valid API key in the X-API-Key header.
       tags: [ Games ]
       security:
         - ApiKeyAuth: [ ]
@@ -79,19 +79,19 @@ paths:
               $ref: "#/components/schemas/GameImportRequest"
       responses:
         "200":
-          description: Партия успешно импортирована.
+          description: Game imported successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/GameImportStatusResponse"
         "400":
-          description: Ошибка импорта.
+          description: Import error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
-          description: Неверный или отсутствующий API-ключ.
+          description: Missing or invalid API key.
           content:
             application/json:
               schema:
@@ -99,10 +99,10 @@ paths:
   /api/games/import_batch:
     post:
       operationId: importGames
-      summary: Импортировать набор партий
+      summary: Import multiple games
       description: |
-        Импортировать несколько партий в базе данных.
-        Требует валидный API-ключ в заголовке X-API-Key.
+        Import multiple games into the database.
+        Requires a valid API key in the X-API-Key header.
       tags:
         - Games
       security:
@@ -115,13 +115,13 @@ paths:
               $ref: "#/components/schemas/GamesImportRequest"
       responses:
         "200":
-          description: Партии успешно импортированы
+          description: Games imported successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/GamesImportStatusResponse"
         "401":
-          description: Неверный или отсутствующий API-ключ.
+          description: Missing or invalid API key.
           content:
             application/json:
               schema:
@@ -130,12 +130,12 @@ paths:
   /api/roles:
     get:
       operationId: listRoles
-      summary: Получить список ролей
+      summary: List roles
       description: |
-        Получить список всех доступных ролей.
-        Если указан параметр `lang`, каждая роль будет содержать
-        перевод на запрошенный язык в поле `translation`.
-        Требует валидный API-ключ в заголовке X-API-Key.
+        Return all available roles.
+        If the `lang` parameter is provided, each role will include
+        a translation in the `translation` field.
+        Requires a valid API key in the X-API-Key header.
       tags: [ Roles ]
       security:
         - ApiKeyAuth: [ ]
@@ -144,8 +144,8 @@ paths:
           in: query
           required: false
           description: |
-            Код языка для перевода ролей (например `ru`, `de`, `jp`).
-            Если язык не найден — поле `translation` будет `null`.
+            Language code for role translations (e.g. `ru`, `de`, `jp`).
+            If the language is not found, the `translation` field will be `null`.
           schema:
             type: string
             minLength: 2
@@ -153,13 +153,13 @@ paths:
             example: "ru"
       responses:
         "200":
-          description: Список ролей.
+          description: List of roles.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RolesResponse"
         "401":
-          description: Неверный или отсутствующий API-ключ.
+          description: Missing or invalid API key.
           content:
             application/json:
               schema:
@@ -168,11 +168,11 @@ paths:
   /api/roles/import:
     post:
       operationId: importRoles
-      summary: Импортировать роли
+      summary: Import roles
       description: |
-        Импортировать (upsert) список ролей в базу данных.
-        Существующие роли обновляются, новые — создаются.
-        Требует валидный API-ключ в заголовке X-API-Key.
+        Upsert a list of roles into the database.
+        Existing roles are updated; new ones are created.
+        Requires a valid API key in the X-API-Key header.
       tags: [ Roles ]
       security:
         - ApiKeyAuth: [ ]
@@ -184,19 +184,19 @@ paths:
               $ref: "#/components/schemas/RolesImportRequest"
       responses:
         "200":
-          description: Роли успешно импортированы.
+          description: Roles imported successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RolesImportResponse"
         "400":
-          description: Ошибка импорта.
+          description: Import error.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
-          description: Неверный или отсутствующий API-ключ.
+          description: Missing or invalid API key.
           content:
             application/json:
               schema:
@@ -205,19 +205,19 @@ paths:
   /api/players:
     get:
       operationId: listPlayers
-      summary: Получить список игроков
+      summary: List players
       tags: [ Players ]
       security:
         - ApiKeyAuth: [ ]
       responses:
         "200":
-          description: Список игроков.
+          description: List of players.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlayersResponse"
         "401":
-          description: Неверный или отсутствующий API-ключ.
+          description: Missing or invalid API key.
           content:
             application/json:
               schema:

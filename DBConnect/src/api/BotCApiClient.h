@@ -11,6 +11,8 @@ namespace OpenAPI
     class OAIListRoles_200_response;
     class OAIImportGame_200_response;
     class OAIImportGame_request;
+    class OAIImportGames_request;
+    class OAIImportGames_200_response;
     class OAIHealth_200_response;
     class OAISystemApi;
     class OAIRolesApi;
@@ -42,6 +44,7 @@ namespace botc::api
 
         void healthCheck() const;
         void importGame(const OpenAPI::OAIImportGame_request& importGameRequest) const;
+        void importGamesBatch(const OpenAPI::OAIImportGames_request& request) const;
         void listRoles(const std::optional<QString>& lang) const;
         void importRoles(const OpenAPI::OAIImportRoles_request& request) const;
         void listPlayers() const;
@@ -53,6 +56,8 @@ namespace botc::api
                                  QNetworkReply::NetworkError error_type, const QString& error_str);
         void gameImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
                                 QNetworkReply::NetworkError error_type, const QString& error_str);
+        void gamesImportBatchFinished(const OpenAPI::OAIImportGames_200_response& summary,
+                                      QNetworkReply::NetworkError error_type, const QString& error_str);
         void rolesListFinished(const OpenAPI::OAIListRoles_200_response& summary,
                                QNetworkReply::NetworkError error_type, const QString& error_str);
         void rolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
@@ -70,6 +75,8 @@ namespace botc::api
                                     QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleGameImportReply(const OpenAPI::OAIImportGame_200_response& summary,
                                    QNetworkReply::NetworkError error_type, const QString& error_str);
+        void handleGamesBatchImportReply(const OpenAPI::OAIImportGames_200_response& summary,
+                                         QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleRolesListReply(const OpenAPI::OAIListRoles_200_response& summary,
                                   QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleRolesImportReply(const OpenAPI::OAIImportRoles_200_response& summary,

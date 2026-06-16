@@ -8,6 +8,8 @@
 namespace OpenAPI
 {
     class OAIImportGame_200_response;
+    class OAIImportGames_200_response;
+    class OAIImportGames_request;
 }
 
 class QProgressDialog;
@@ -60,18 +62,13 @@ namespace botc::ui
         void setImportEnabled(bool enabled) const;
         static QString statusStyle(bool ok);
 
-        void onGamesImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
-                                   QNetworkReply::NetworkError error_type,
-                                   const QString& error_str);
+        void onGamesImportBatchFinished(const OpenAPI::OAIImportGames_200_response& summary,
+                                        QNetworkReply::NetworkError error_type,
+                                        const QString& error_str);
 
     private:
         Ui::ImportGamesWidget* ui;
         utils::games::GamesParseResult m_lastResult;
         QProgressDialog* m_importRolesProgressDial = nullptr;
-        // TODO:: add batch game import and remove
-        uint m_importCount = 0;
-        // TODO:: add batch game import and remove
-        QVector<OpenAPI::OAIImportGame_200_response> responses;
-        QVector<QNetworkReply::NetworkError> m_responseErrors;
     };
 } // botc::ui

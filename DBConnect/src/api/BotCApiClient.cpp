@@ -1,9 +1,11 @@
 #include "BotCApiClient.h"
 
 #include "OAIGamesApi.h"
+#include "OAIImportGames_200_response.h"
 #include "OAIPlayersApi.h"
 #include "OAIRolesApi.h"
 #include "OAISystemApi.h"
+#include "QRegularExpression"
 
 namespace
 {
@@ -78,6 +80,11 @@ namespace botc::api
         m_gameAPI->importGame(importGameRequest);
     }
 
+    void BotCApiClient::importGamesBatch(const OpenAPI::OAIImportGames_request& request) const
+    {
+        m_gameAPI->importGames(request);
+    }
+
     void BotCApiClient::listRoles(const std::optional<QString>& lang) const
     {
         m_rolesAPI->listRoles(lang.value_or(QStringLiteral("")));
@@ -118,6 +125,13 @@ namespace botc::api
                 this, [this](const OpenAPI::OAIImportGame_200_response& _t1)
                 {
                     handleGameImportReply(_t1, QNetworkReply::NetworkError::NoError, "");
+                });
+        connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGamesSignalError,
+                this, &BotCApiClient::handleGamesBatchImportReply);
+        connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGamesSignal,
+                this, [this](const OpenAPI::OAIImportGames_200_response& summary)
+                {
+                    handleGamesBatchImportReply(summary, QNetworkReply::NetworkError::NoError, "");
                 });
     }
 
@@ -170,6 +184,13 @@ namespace botc::api
                                               const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit gameImportFinished(summary, error_type, error_str);
+    }
+
+    void BotCApiClient::handleGamesBatchImportReply(const OpenAPI::OAIImportGames_200_response& summary,
+                                                    const QNetworkReply::NetworkError error_type,
+                                                    const QString& error_str)
+    {
+        emit gamesImportBatchFinished(summary, error_type, error_str);
     }
 
     void BotCApiClient::handleRolesListReply(const OpenAPI::OAIListRoles_200_response& summary,

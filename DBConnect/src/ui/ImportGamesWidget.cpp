@@ -1,13 +1,13 @@
 #include "ImportGamesWidget.h"
 
-#include <algorithm>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
 
-#include "OAIImportGame_200_response.h"
 #include "OAIImportGame_request.h"
 #include "OAIImportGame_request_players_inner.h"
+#include "OAIImportGames_request.h"
+#include "OAIImportGames_200_response.h"
 #include "ui_ImportGamesWidget.h"
 #include "../api/BotCApiClient.h"
 #include "../config/ConfigManager.h"
@@ -111,7 +111,7 @@ namespace botc::ui
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
         m_importRolesProgressDial->show();
 
-        QVector<OpenAPI::OAIImportGame_request> requests;
+        QList<OpenAPI::OAIImportGame_request> gamesList;
         for (const utils::games::GameRecord& game : m_lastResult.records)
         {
             m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
@@ -147,16 +147,17 @@ namespace botc::ui
                 gameRequest.setNotes(game.notes);
             }
             gameRequest.setPlayers(players);
-            requests.push_back(std::move(gameRequest));
+            gamesList.push_back(std::move(gameRequest));
         }
 
+        OpenAPI::OAIImportGames_request batchRequest;
+        batchRequest.setGames(gamesList);
+
         auto* apiClient = api::BotCApiClient::instance();
-        connect(apiClient, &api::BotCApiClient::gameImportFinished, this, &ImportGamesWidget::onGamesImportFinished);
-        m_importCount = requests.size();
-        std::ranges::for_each(requests, [apiClient](const OpenAPI::OAIImportGame_request& in_request)
-        {
-            apiClient->importGame(in_request);
-        });
+        connect(apiClient, &api::BotCApiClient::gamesImportBatchFinished,
+                this, &ImportGamesWidget::onGamesImportBatchFinished,
+                Qt::SingleShotConnection);
+        apiClient->importGamesBatch(batchRequest);
     }
 
     void ImportGamesWidget::onClearClicked()
@@ -359,51 +360,40 @@ namespace botc::ui
                    : "color: orange; font-weight: bold;";
     }
 
-    void ImportGamesWidget::onGamesImportFinished(const OpenAPI::OAIImportGame_200_response& summary,
-                                                  QNetworkReply::NetworkError error_type,
-                                                  const QString& error_str)
+    void ImportGamesWidget::onGamesImportBatchFinished(const OpenAPI::OAIImportGames_200_response& summary,
+                                                       QNetworkReply::NetworkError error_type,
+                                                       const QString& error_str)
     {
-        assert(m_importCount > 0);
-        --m_importCount;
-        responses.push_back(summary);
-        m_responseErrors.push_back(error_type);
-        if (m_importCount != 0)
+        m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
+
+        if (error_type != QNetworkReply::NoError)
         {
+            QMessageBox::warning(this, "Импорт партий", networkErrorMessage(error_type));
+            ui->statusLabel->setText("✘ Импорт завершён с ошибкой");
+            ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
+            setImportEnabled(true);
+            emit onGamesImported();
             return;
         }
 
-        auto* apiClient = api::BotCApiClient::instance();
-        disconnect(apiClient, &api::BotCApiClient::gameImportFinished, this,
-                   &ImportGamesWidget::onGamesImportFinished);
-        m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
-
+        const auto& games = summary.getGames();
         uint successCount = 0;
         uint failedCount  = 0;
         QString message;
 
-        for (int i = 0; i < responses.size(); ++i)
+        for (const auto& result : games)
         {
-            const OpenAPI::OAIImportGame_200_response& response = responses[i];
-            const QNetworkReply::NetworkError errType = m_responseErrors[i];
-
-            if (errType != QNetworkReply::NoError && response.getErrors().isEmpty())
+            if (!result.getErrors().isEmpty())
             {
-                // Сетевая или HTTP ошибка (503, таймаут и т.д.)
                 failedCount++;
-                message += networkErrorMessage(errType) + "\n";
-            }
-            else if (!response.getErrors().isEmpty())
-            {
-                // API вернул ошибку
-                failedCount++;
-                message += response.getErrors().join("\n") + "\n";
+                message += result.getErrors().join("\n") + "\n";
             }
             else
             {
                 successCount++;
                 message += QString("✔ Партия %1 импортирована, создано игроков: %2\n")
-                           .arg(response.getGameId())
-                           .arg(response.getPlayersCreated());
+                           .arg(result.getGameId())
+                           .arg(result.getPlayersCreated());
             }
         }
 
@@ -411,9 +401,7 @@ namespace botc::ui
 
         if (failedCount == 0)
         {
-            ui->statusLabel->setText(
-                QString("✔ Импортировано партий: %1").arg(successCount)
-            );
+            ui->statusLabel->setText(QString("✔ Импортировано партий: %1").arg(successCount));
             ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         }
         else if (successCount == 0)
@@ -429,8 +417,7 @@ namespace botc::ui
             ui->statusLabel->setStyleSheet("color: orange; font-weight: bold;");
         }
 
-        responses.clear();
-        m_responseErrors.clear();
+        setImportEnabled(true);
         emit onGamesImported();
     }
 } // botc::ui

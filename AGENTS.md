@@ -49,7 +49,7 @@ python -m pytest app/tests/ -v
 
 1. **CSV format for games**: `test_sample.csv` has the exact schema. Each row = one player's role in a game. Multiple rows per game are grouped by `(game_date, scenario_name, storyteller_name, alignment_win, location, game_number)`.
 
-2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles).
+2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles). **All code text must be English: comments, docstrings, and `Field(description=...)` values in models.** `models.py` is auto-generated — fix Russian text in the OpenAPI spec (`openapi/api/`) and regenerate via `npm run bundle && npm run generate:python`, then copy `python_gen/models.py` to `core/api/app/models.py`.
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 
@@ -168,7 +168,7 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 
 1. **CSV format for games**: `test_sample.csv` has the exact schema. Each row = one player's role in a game. Multiple rows per game are grouped by `(game_date, scenario_name, storyteller_name, alignment_win, location, game_number)`.
 
-2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles).
+2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles). **All code text must be English: comments, docstrings, and `Field(description=...)` values in models.** `models.py` is auto-generated — fix Russian text in the OpenAPI spec (`openapi/api/`) and regenerate via `npm run bundle && npm run generate:python`, then copy `python_gen/models.py` to `core/api/app/models.py`.
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 

@@ -80,7 +80,7 @@ services:
   #  Metabase — dashboards and analytics UI
   # ============================================================
   metabase:
-    image: metabase/metabase:v0.53.5
+    image: ${METABASE_IMAGE:-metabase/metabase:v0.53.5}
     container_name: botc-metabase
     restart: unless-stopped
     environment:

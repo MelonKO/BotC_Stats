@@ -50,7 +50,7 @@ Content-Type: application/json
 {
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
-    "storyteller_name": "МелонКО",
+    "storyteller_names": ["МелонКО"],
     "alignment_win": "добро",
     "location": "Москва, Антикафе на Арбате",
     "game_number": 1,
@@ -91,8 +91,8 @@ Content-Type: application/json
 |------------------------|-----|--------------|----------|
 | `game_date` | string (date) | ✅ | Дата партии (YYYY-MM-DD) |
 | `scenario_name` | string | ✅ | Название сценария |
-| `storyteller_name` | string | ✅ | Имя рассказчика |
-| `alignment_win` | string | ✅ | Победивший alignment: `добро` или `зло` |
+| `storyteller_names` | array | ✅ | Имена рассказчиков (1–5, несколько при совместном ведении) |
+| `alignment_win` | string | ✅ | Победивший alignment: `добро`, `зло` или `ничья` |
 | `location` | string | ✅ | Место проведения |
 | `game_number` | int | ✅ | Номер партии в рамках встречи |
 | `duration` | string | | Длительность (HH:MM:SS) |
@@ -326,7 +326,7 @@ API_KEY = "sk-EXAMPLE_DO_NOT_USE"  # Ваш API-ключ
 data = {
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
-    "storyteller_name": "МелонКО",
+    "storyteller_names": ["МелонКО"],
     "alignment_win": "добро",
     "location": "Москва, Антикафе на Арбате",
     "game_number": 1,
@@ -412,7 +412,7 @@ curl -k -X POST "https://<SERVER_IP>/api/import" \
   -d '{
     "game_date": "2026-01-15",
     "scenario_name": "Вселенная зла",
-    "storyteller_name": "МелонКО",
+    "storyteller_names": ["МелонКО"],
     "alignment_win": "добро",
     "location": "Москва, Антикафе на Арбате",
     "game_number": 1,

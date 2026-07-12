@@ -11,7 +11,7 @@ namespace botc::utils::games
     };
 
     const QStringList GamesCsvParser::VALID_ALIGNMENT_WINS = {
-        "добро", "зло"
+        "добро", "зло", "ничья"
     };
 
     // ─── parse ───────────────────────────────────────────────────
@@ -107,7 +107,12 @@ namespace botc::utils::games
             game_record.scenarioName    = readFirstRow("scenario_name");
             game_record.location        = readFirstRow("location");
             game_record.gameNumber      = readFirstRow("game_number").toInt();
-            game_record.storytellerName = readFirstRow("storyteller_name");
+            // Cell may contain several comma-separated storyteller names
+            for (const QString& name : readFirstRow("storyteller_name").split(','))
+            {
+                if (const QString trimmed = name.trimmed(); !trimmed.isEmpty())
+                    game_record.storytellerNames << trimmed;
+            }
             game_record.alignmentWin    = readFirstRow("alignment_win").toLower();
             game_record.duration        = QTime::fromString(readFirstRow("duration"), "hh:mm:ss");
 
@@ -189,7 +194,7 @@ namespace botc::utils::games
             err("The \"location\" field cannot be empty.");
         if (in_gameRecord.gameNumber <= 0)
             err("The 'game_number' field must be a positive number.");
-        if (in_gameRecord.storytellerName.isEmpty())
+        if (in_gameRecord.storytellerNames.isEmpty())
             err("The 'storyteller_name' field cannot be empty.");
         if (!VALID_ALIGNMENT_WINS.contains(in_gameRecord.alignmentWin))
             err(QString("Invalid value for the \"alignment_win\" field='%1'. Valid values: %2")

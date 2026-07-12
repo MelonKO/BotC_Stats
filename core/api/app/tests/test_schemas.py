@@ -13,7 +13,7 @@ from app.models import (
     RoleImportItem,
     RolesImportRequest,
     RoleTranslation,
-    ImportStatusResponse,
+    GameImportStatusResponse,
     RolesImportResponse,
     HealthResponse,
     RolesResponse,
@@ -124,7 +124,7 @@ class TestGameImportRequest:
         return {
             "game_date": date(2026, 1, 15),
             "scenario_name": "Тест",
-            "storyteller_name": "СТ",
+            "storyteller_names": ["СТ"],
             "alignment_win": "добро",
             "location": "Локация",
             "game_number": 1,
@@ -161,12 +161,33 @@ class TestGameImportRequest:
             GameImportRequest(**data)
 
     def test_valid_alignment_win_values(self):
-        """Only 'добро' and 'зло' are valid."""
-        for align in ("добро", "зло"):
+        """'добро', 'зло' and 'ничья' are valid."""
+        for align in ("добро", "зло", "ничья"):
             data = self._minimal_valid_game()
             data["alignment_win"] = align
             game = GameImportRequest(**data)
             assert game.alignment_win == align
+
+    def test_multiple_storytellers(self):
+        """More than one storyteller is allowed."""
+        data = self._minimal_valid_game()
+        data["storyteller_names"] = ["СТ1", "СТ2"]
+        game = GameImportRequest(**data)
+        assert len(game.storyteller_names) == 2
+
+    def test_empty_storyteller_names_fails(self):
+        """Empty storyteller_names list fails (minItems=1)."""
+        data = self._minimal_valid_game()
+        data["storyteller_names"] = []
+        with pytest.raises(Exception):
+            GameImportRequest(**data)
+
+    def test_empty_storyteller_name_item_fails(self):
+        """Empty string inside storyteller_names fails (minLength=1)."""
+        data = self._minimal_valid_game()
+        data["storyteller_names"] = [""]
+        with pytest.raises(Exception):
+            GameImportRequest(**data)
 
     def test_empty_scenario_fails(self):
         """Empty scenario_name fails."""
@@ -335,16 +356,16 @@ class TestRolesImportRequest:
 class TestResponseSchemas:
     """Tests for response model defaults."""
 
-    def test_import_status_response_defaults(self):
-        """ImportStatusResponse has correct defaults."""
-        r = ImportStatusResponse(status="ok")
+    def test_game_import_status_response(self):
+        """GameImportStatusResponse works; game_id defaults to None."""
+        r = GameImportStatusResponse(status="ok", players_created=0, errors=[])
         assert r.game_id is None
         assert r.players_created == 0
         assert r.errors == []
 
-    def test_roles_import_response_defaults(self):
-        """RolesImportResponse has correct defaults."""
-        r = RolesImportResponse(status="ok")
+    def test_roles_import_response(self):
+        """RolesImportResponse works."""
+        r = RolesImportResponse(status="ok", roles_created=0, roles_updated=0, errors=[])
         assert r.roles_created == 0
         assert r.roles_updated == 0
         assert r.errors == []

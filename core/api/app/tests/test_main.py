@@ -181,7 +181,7 @@ class TestGameImportEndpoint:
 
         payload = {
             "game_date": "2026-01-15", "scenario_name": "Тест",
-            "storyteller_name": "СТ", "alignment_win": "добро",
+            "storyteller_names": ["СТ"], "alignment_win": "добро",
             "location": "X", "game_number": 1,
             "players": [{
                 "name": "Игрок", "seat_number": 1,
@@ -205,7 +205,7 @@ class TestGameImportEndpoint:
 
         payload = {
             "game_date": "not-a-date", "scenario_name": "",
-            "storyteller_name": "СТ", "alignment_win": "wrong",
+            "storyteller_names": ["СТ"], "alignment_win": "wrong",
             "location": "X", "game_number": 0, "players": [],
         }
 
@@ -341,7 +341,7 @@ def valid_game_payload():
     return {
         "game_date": "2026-01-15",
         "scenario_name": "Вселенная зла",
-        "storyteller_name": "МелонКО",
+        "storyteller_names": ["МелонКО"],
         "alignment_win": "добро",
         "location": "Москва, Антикафе на Арбате",
         "game_number": 1,

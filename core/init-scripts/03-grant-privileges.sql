@@ -50,9 +50,10 @@ GRANT SELECT ON languages TO api_service;
 -- 3. Read reference data, create players if missing
 GRANT SELECT, INSERT ON players TO api_service;
 
--- 4. Write to game tables (function inserts games + game_players)
+-- 4. Write to game tables (function inserts games + game_players + game_storytellers)
 GRANT INSERT, SELECT ON games TO api_service;
 GRANT INSERT, SELECT ON game_players TO api_service;
+GRANT INSERT, SELECT ON game_storytellers TO api_service;
 
 -- 5. Read API keys (for authentication)
 GRANT SELECT, UPDATE (last_used_at) ON api_keys TO api_service;

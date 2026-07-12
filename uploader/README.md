@@ -33,7 +33,7 @@ python uploader.py --roles path/to/roles.csv
 
 ### 1. Импорт партий (по умолчанию)
 
-CSV-файл с данными партий. Один файл может содержать несколько партий — скрипт автоматически группирует по `(game_date, scenario_name, location, game_number, storyteller_name, alignment_win)`.
+CSV-файл с данными партий. Один файл может содержать несколько партий — скрипт автоматически группирует по `(game_date, scenario_name, location, game_number, storyteller_name, alignment_win)`. В колонке `storyteller_name` можно указать несколько рассказчиков через запятую; `alignment_win` допускает `добро`, `зло` или `ничья`.
 
 **Формат CSV:**
 ```csv

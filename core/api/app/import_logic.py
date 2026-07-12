@@ -78,7 +78,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
                 """,
                 data.game_date,
                 data.scenario_name,
-                data.storyteller_name,
+                ", ".join(s.root for s in data.storyteller_names),
                 data.alignment_win,
                 data.location,
                 data.game_number,

@@ -12,7 +12,7 @@ namespace botc::utils::games
         QString playerName;
         QString roleStartName;
         QString roleEndName;
-        QString alignmentEnd; // "good" | "evil"
+        QString alignmentEnd; // "добро" | "зло"
         bool isAlive                      = false;
         std::optional<uint8_t> seatNumber = 0;
     };
@@ -23,8 +23,8 @@ namespace botc::utils::games
         QString scenarioName;
         QString location;
         int gameNumber = 0;
-        QString storytellerName;
-        QString alignmentWin; // "good" | "evil"
+        QStringList storytellerNames;
+        QString alignmentWin; // "добро" | "зло" | "ничья"
         QTime duration;
         QString notes;
 

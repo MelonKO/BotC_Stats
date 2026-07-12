@@ -42,7 +42,7 @@ GameImportRequest:
   required:
     - game_date
     - scenario_name
-    - storyteller_name
+    - storyteller_names
     - alignment_win
     - location
     - game_number
@@ -57,14 +57,19 @@ GameImportRequest:
       minLength: 1
       maxLength: 300
       example: "Вселенная зла"
-    storyteller_name:
-      type: string
-      minLength: 1
-      maxLength: 200
-      example: "МелонКО"
+    storyteller_names:
+      type: array
+      description: Names of the storyteller(s) running this game (more than one for co-storytelling).
+      minItems: 1
+      maxItems: 5
+      items:
+        type: string
+        minLength: 1
+        maxLength: 200
+      example: ["МелонКО"]
     alignment_win:
       type: string
-      pattern: "^(добро|зло)$"
+      pattern: "^(добро|зло|ничья)$"
       example: "добро"
     location:
       type: string

@@ -47,7 +47,7 @@ VALID_ROLE_TYPES = {"Townsfolk", "Outsider", "Minion", "Demon", "Traveller"}
 
 # Валидация игр (русские)
 VALID_ALIGNMENTS_RU = {"добро", "зло", "нейтральный"}
-VALID_ALIGNMENTS_WIN_RU = {"добро", "зло"}
+VALID_ALIGNMENTS_WIN_RU = {"добро", "зло", "ничья"}
 
 
 def load_config() -> Dict[str, Any]:
@@ -98,7 +98,7 @@ def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
     games_dict = defaultdict(lambda: {
         "game_date": None,
         "scenario_name": None,
-        "storyteller_name": None,
+        "storyteller_names": None,
         "alignment_win": None,
         "location": None,
         "game_number": None,
@@ -127,7 +127,7 @@ def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
             duration_val = row.get("duration", "").strip() or None
             notes_val: str | None = row.get("notes", "").strip() or None
 
-            # Валидация alignment_win (только "добро" или "зло")
+            # Валидация alignment_win ("добро", "зло" или "ничья")
             alignment_win_val = row["alignment_win"].strip()
             if alignment_win_val not in VALID_ALIGNMENTS_WIN_RU:
                 raise ValueError(
@@ -156,7 +156,10 @@ def parse_csv(csv_path: Path) -> List[Dict[str, Any]]:
             game = games_dict[game_key]
             game["game_date"] = row["game_date"].strip()
             game["scenario_name"] = row["scenario_name"].strip()
-            game["storyteller_name"] = row["storyteller_name"].strip()
+            # Ячейка может содержать несколько имён рассказчиков через запятую
+            game["storyteller_names"] = [
+                name.strip() for name in row["storyteller_name"].split(",") if name.strip()
+            ]
             game["alignment_win"] = alignment_win_val
             game["location"] = row["location"].strip()
             game_number_val = row["game_number"].strip()

@@ -91,8 +91,7 @@ CREATE TABLE games (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     game_date       DATE NOT NULL DEFAULT CURRENT_DATE,
     scenario_name   TEXT NOT NULL,
-    storyteller_id  UUID NOT NULL REFERENCES players (id),
-    alignment_win   TEXT NOT NULL CHECK (alignment_win IN ('good', 'evil')),
+    alignment_win   TEXT NOT NULL CHECK (alignment_win IN ('good', 'evil', 'draw')),
     location        TEXT NOT NULL,
     game_number     INTEGER NOT NULL DEFAULT 1,
     duration        INTERVAL,
@@ -101,9 +100,18 @@ CREATE TABLE games (
 
 CREATE INDEX idx_games_date        ON games (game_date DESC);
 CREATE INDEX idx_games_scenario    ON games (scenario_name);
-CREATE INDEX idx_games_storyteller ON games (storyteller_id);
-CREATE UNIQUE INDEX uq_games_date_scenario_storyteller_num
-    ON games (game_date, scenario_name, storyteller_id, game_number);
+CREATE UNIQUE INDEX uq_games_date_scenario_num
+    ON games (game_date, scenario_name, game_number);
+
+-- Game storytellers: junction table, a game may be run by multiple storytellers
+CREATE TABLE game_storytellers (
+    game_id     UUID NOT NULL REFERENCES games (id) ON DELETE CASCADE,
+    player_id   UUID NOT NULL REFERENCES players (id),
+    PRIMARY KEY (game_id, player_id)
+);
+
+CREATE INDEX idx_gst_game   ON game_storytellers (game_id);
+CREATE INDEX idx_gst_player ON game_storytellers (player_id);
 
 -- Game participants: junction table linking players to games with role assignment
 CREATE TABLE game_players (
@@ -154,8 +162,8 @@ COMMENT ON TABLE api_keys IS 'API keys for external import access — store only
 CREATE TABLE games_import_staging (
     game_date           DATE NOT NULL,
     scenario_name       TEXT NOT NULL,
-    storyteller_name    TEXT NOT NULL,
-    alignment_win_ru    TEXT NOT NULL CHECK (alignment_win_ru IN ('добро', 'зло')),
+    storyteller_name    TEXT NOT NULL,  -- comma-separated list of storyteller names
+    alignment_win_ru    TEXT NOT NULL CHECK (alignment_win_ru IN ('добро', 'зло', 'ничья')),
     location            TEXT NOT NULL,
     game_number         INTEGER NOT NULL,
     duration            INTERVAL,
@@ -185,6 +193,7 @@ DECLARE
     v_game_id UUID;
     v_player_id UUID;
     v_storyteller_id UUID;
+    v_storyteller_name TEXT;
     v_role_start_id UUID;
     v_role_end_id UUID;
     v_alignment_win TEXT;
@@ -236,15 +245,8 @@ BEGIN
         IF v_alignment_win IS NULL THEN
             RETURN QUERY SELECT
                 0, 0,
-                format('Неизвестное значение alignment_win: %s. Допустимы: добро, зло.', rec.alignment_win_ru);
+                format('Неизвестное значение alignment_win: %s. Допустимы: добро, зло, ничья.', rec.alignment_win_ru);
             RETURN;
-        END IF;
-
-        -- Resolve or auto-create storyteller player record
-        SELECT id INTO v_storyteller_id FROM players WHERE name = rec.storyteller_name;
-        IF v_storyteller_id IS NULL THEN
-            INSERT INTO players (name) VALUES (rec.storyteller_name) RETURNING id INTO v_storyteller_id;
-            v_players_count := v_players_count + 1;
         END IF;
 
         -- Skip if this game session already exists
@@ -252,7 +254,6 @@ BEGIN
             SELECT 1 FROM games
             WHERE game_date = rec.game_date
               AND scenario_name = rec.scenario_name
-              AND storyteller_id = v_storyteller_id
               AND game_number = rec.game_number
         ) THEN
             CONTINUE;
@@ -260,12 +261,27 @@ BEGIN
 
         -- Create the game session record
         INSERT INTO games (
-            game_date, scenario_name, storyteller_id, alignment_win, location, game_number, duration, notes
+            game_date, scenario_name, alignment_win, location, game_number, duration, notes
         ) VALUES (
-            rec.game_date, rec.scenario_name, v_storyteller_id, v_alignment_win, rec.location, rec.game_number, rec.duration, rec.notes
+            rec.game_date, rec.scenario_name, v_alignment_win, rec.location, rec.game_number, rec.duration, rec.notes
         ) RETURNING id INTO v_game_id;
 
         v_games_count := v_games_count + 1;
+
+        -- Resolve or auto-create each storyteller in the comma-separated list, link to the game
+        FOR v_storyteller_name IN
+            SELECT DISTINCT TRIM(name) FROM UNNEST(STRING_TO_ARRAY(rec.storyteller_name, ',')) AS name
+            WHERE TRIM(name) <> ''
+        LOOP
+            SELECT id INTO v_storyteller_id FROM players WHERE name = v_storyteller_name;
+            IF v_storyteller_id IS NULL THEN
+                INSERT INTO players (name) VALUES (v_storyteller_name) RETURNING id INTO v_storyteller_id;
+                v_players_count := v_players_count + 1;
+            END IF;
+
+            INSERT INTO game_storytellers (game_id, player_id) VALUES (v_game_id, v_storyteller_id)
+            ON CONFLICT DO NOTHING;
+        END LOOP;
 
         -- Insert all player participations for this game
         -- First, create missing players (excluding storyteller which is already handled)
@@ -348,9 +364,11 @@ INSERT INTO alignment_translations (alignment_en, lang_code, name) VALUES
     ('good',      'en', 'good'),
     ('evil',      'en', 'evil'),
     ('neutral',   'en', 'neutral'),
+    ('draw',      'en', 'draw'),
     ('good',      'ru', 'добро'),
     ('evil',      'ru', 'зло'),
-    ('neutral',   'ru', 'нейтральный');
+    ('neutral',   'ru', 'нейтральный'),
+    ('draw',      'ru', 'ничья');
 
 -- Roles and role translations are populated via the API roles import endpoint.
 -- See: POST /api/roles/import
@@ -416,7 +434,7 @@ SELECT
     g.location,
     g.duration,
     g.notes,
-    st.name                                                             AS storyteller,
+    st.storyteller,
     g.alignment_win,
     at.name                                                             AS alignment_win_ru,
     COUNT(gp.id)                                                        AS players,
@@ -427,10 +445,15 @@ SELECT
         WHERE gp.role_start_id <> gp.role_end_id
     )                                                                   AS role_changes
 FROM games g
-JOIN players       st ON st.id = g.storyteller_id
+LEFT JOIN LATERAL (
+    SELECT STRING_AGG(p.name, ', ' ORDER BY p.name) AS storyteller
+    FROM game_storytellers gst
+    JOIN players p ON p.id = gst.player_id
+    WHERE gst.game_id = g.id
+) st ON true
 LEFT JOIN game_players gp ON gp.game_id = g.id
 LEFT JOIN alignment_translations at ON at.alignment_en = g.alignment_win AND at.lang_code = 'ru'
-GROUP BY g.id, g.game_date, g.game_number, g.scenario_name, g.location, g.duration, g.notes, st.name, g.alignment_win, at.name;
+GROUP BY g.id, g.game_date, g.game_number, g.scenario_name, g.location, g.duration, g.notes, st.storyteller, g.alignment_win, at.name;
 
 -- Role type effectiveness: aggregated win rates by role category and team
 CREATE VIEW v_role_type_stats AS

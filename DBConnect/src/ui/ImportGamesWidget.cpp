@@ -134,7 +134,7 @@ namespace botc::ui
             OpenAPI::OAIImportGame_request gameRequest{};
             gameRequest.setGameDate(game.gameDate);
             gameRequest.setScenarioName(game.scenarioName);
-            gameRequest.setStorytellerName(game.storytellerName);
+            gameRequest.setStorytellerNames(game.storytellerNames);
             gameRequest.setAlignmentWin(game.alignmentWin);
             gameRequest.setLocation(game.location);
             gameRequest.setGameNumber(game.gameNumber);
@@ -243,7 +243,7 @@ namespace botc::ui
                 p.scenarioName,
                 p.location,
                 QString::number(p.gameNumber),
-                p.storytellerName,
+                p.storytellerNames.join(", "),
                 p.alignmentWin,
                 p.duration.isValid() ? p.duration.toString("hh:mm:ss") : "—",
                 QString::number(p.players.size())
@@ -279,7 +279,7 @@ namespace botc::ui
             QString("Игроки — %1, %2 (%3)")
             .arg(game_record.scenarioName,
                  game_record.gameDate.toString("dd.MM.yyyy"),
-                 game_record.storytellerName)
+                 game_record.storytellerNames.join(", "))
         );
 
         for (int row = 0; row < game_record.players.size(); ++row)

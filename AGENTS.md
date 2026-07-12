@@ -67,7 +67,7 @@ python -m pytest app/tests/ -v
 
 - ❌ Forgetting to run `generate-cert.sh` → Nginx fails to start
 - ❌ `SSL_VERIFY = false` not set in `DBConnect/config.ini` → DBConnect fails TLS verification against self-signed cert
-- ❌ Using `alignment_win: "нейтральный"` → only `"добро"` or `"зло"` allowed
+- ❌ Using `alignment_win: "нейтральный"` → only `"добро"`, `"зло"` or `"ничья"` allowed
 - ❌ Mixing English and Russian in gameplay fields → CSV parser expects Russian for alignment and role names
 - ❌ Assuming PostgreSQL is reachable on host port → only SSH tunnel works for admin access
 
@@ -85,7 +85,8 @@ python -m pytest app/tests/ -v
 |-------|---------|
 | `players` | Player registry (unique name, contacts) |
 | `roles` | Role dictionary (name, alignment, type in English) |
-| `games` | Game metadata (date, scenario, storyteller, winning alignment, location, game_number) |
+| `games` | Game metadata (date, scenario, winning alignment, location, game_number) |
+| `game_storytellers` | Game-storyteller link (a game may have several storytellers) |
 | `game_players` | Game setup (player-role link, alignment, survival) |
 | `api_keys` | API key hashes for authentication (SHA-256) |
 | `games_import_staging` | Temporary table for CSV import (Russian → English values) |

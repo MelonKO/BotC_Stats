@@ -9,7 +9,7 @@
 
 namespace
 {
-    const QRegularExpression ALIGNMENT_WIN_PATTERN("^(добро|зло)$");
+    const QRegularExpression ALIGNMENT_WIN_PATTERN("^(добро|зло|ничья)$");
     const QRegularExpression ALIGNMENT_END_PATTERN("^(добро|зло|нейтральный)$");
     const QRegularExpression VALID_ROLE_ALIGNMENT("^(good|evil|neutral)$");
     const QRegularExpression VALID_ROLE_TYPE("^(Townsfolk|Outsider|Minion|Demon|Traveller)$");

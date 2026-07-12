@@ -96,7 +96,7 @@ CSV files → DBConnect (Qt6) → POST /api/games/import or /api/roles/import
 
 ## Database Schema Quick Reference
 
-Key tables: `players`, `roles`, `games`, `game_players`, `api_keys`, `games_import_staging`  
+Key tables: `players`, `roles`, `games`, `game_storytellers`, `game_players`, `api_keys`, `games_import_staging`  
 Localization: `languages`, `role_translations`, `role_type_translations`, `alignment_translations`  
 Analytical views: `v_player_stats`, `v_role_stats`, `v_game_summary`, `v_role_type_stats`
 

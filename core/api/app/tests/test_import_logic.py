@@ -91,7 +91,7 @@ def sample_game_request():
     return GameImportRequest(
         game_date="2026-01-15",
         scenario_name="Вселенная зла",
-        storyteller_name="МелонКО",
+        storyteller_names=["МелонКО"],
         alignment_win="добро",
         location="Москва",
         game_number=1,

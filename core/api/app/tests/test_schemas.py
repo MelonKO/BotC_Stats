@@ -373,10 +373,15 @@ class TestResponseSchemas:
     def test_health_response(self):
         """HealthResponse works."""
         r = HealthResponse(status="ok", db_connected=True)
-        assert r.status == "ok"
+        assert r.status.value == "ok"
         assert r.db_connected is True
 
     def test_roles_response(self):
         """RolesResponse works."""
-        r = RolesResponse(roles=[{"name": "Chambermaid", "alignment": "good"}])
+        r = RolesResponse(roles=[{
+            "id": "a09f3ff7-0f02-485a-b0e1-87388b27face",
+            "name": "Chambermaid",
+            "alignment": "good",
+            "role_type": "Outsider",
+        }])
         assert len(r.roles) == 1

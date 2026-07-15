@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tests.test_utils import PatchGetConnection
+from tests.test_utils import PatchGetConnection, make_mock_transaction
 
 
 def auth_headers(api_key: str) -> dict:
@@ -33,6 +33,7 @@ def mock_conn():
     conn.fetch = AsyncMock(return_value=[])
     conn.execute = AsyncMock(return_value="INSERT 0 1")
     conn.fetchval = AsyncMock(return_value=None)
+    conn.transaction = make_mock_transaction()
     return conn
 
 
@@ -53,7 +54,7 @@ async def app_client_with_auth(mock_conn):
             return [{"name": "Дамочка"}, {"name": "Убийца"}]
         if "process_games_import" in query:
             return {"games_created": 1, "players_created": 2, "errors": None}
-        if "SELECT id::text FROM games" in query:
+        if "id::text" in query:
             return {"id": "42"}
         return None
 
@@ -226,8 +227,10 @@ class TestRolesListEndpoint:
     async def test_success(self, app_client_with_auth):
         client, conn = app_client_with_auth
         conn.fetch = AsyncMock(return_value=[
-            {"name": "Chambermaid", "alignment": "good", "role_type": "Outsider"},
-            {"name": "Imp", "alignment": "evil", "role_type": "Demon"},
+            {"id": "a09f3ff7-0f02-485a-b0e1-87388b27face", "name": "Chambermaid",
+             "alignment": "good", "role_type": "Outsider", "description": None},
+            {"id": "b1c2d3e4-f5a6-7890-abcd-1234567890ef", "name": "Imp",
+             "alignment": "evil", "role_type": "Demon", "description": None},
         ])
 
         response = await client.get(

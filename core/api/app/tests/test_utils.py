@@ -17,6 +17,18 @@ def make_mock_acquire(conn):
     return mock_get_conn
 
 
+def make_mock_transaction():
+    """
+    Mock for asyncpg's conn.transaction(): it returns an async context
+    manager, not a coroutine, so a plain AsyncMock attribute breaks
+    `async with conn.transaction():`.
+    """
+    @asynccontextmanager
+    async def mock_transaction():
+        yield
+    return mock_transaction
+
+
 class PatchGetConnection:
     """
     Context manager that patches get_connection in multiple modules

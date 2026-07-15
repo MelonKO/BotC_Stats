@@ -63,11 +63,14 @@ def mock_revoked_api_key_row():
 @pytest.fixture
 def mock_conn():
     """Mock asyncpg connection."""
+    from tests.test_utils import make_mock_transaction
+
     conn = AsyncMock()
     conn.fetchrow = AsyncMock(return_value=None)
     conn.fetch = AsyncMock(return_value=[])
     conn.execute = AsyncMock(return_value="INSERT 0 1")
     conn.fetchval = AsyncMock(return_value=None)
+    conn.transaction = make_mock_transaction()
     return conn
 
 

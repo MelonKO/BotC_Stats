@@ -4,8 +4,8 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 
-#include "OAIImportRoles_200_response.h"
-#include "OAIImportRoles_request.h"
+#include "OAIRolesImportResponse.h"
+#include "OAIRolesImportRequest.h"
 #include "ui_ImportRolesWidget.h"
 #include "../api/BotCApiClient.h"
 #include "../config/ConfigManager.h"
@@ -83,7 +83,7 @@ namespace botc::ui
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
         m_importRolesProgressDial->show();
 
-        QVector<OpenAPI::OAIImportRoles_request_roles_inner> roles;
+        QVector<OpenAPI::OAIRoleImportItem> roles;
         for (const auto& record : m_lastResult.records)
         {
             m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
@@ -95,16 +95,16 @@ namespace botc::ui
                 return;
             }
 
-            QMap<QString, OpenAPI::OAIImportRoles_request_roles_inner_translations_value> translations;
+            QMap<QString, OpenAPI::OAIRoleTranslation> translations;
 
             for (auto it = record.translations.constBegin(); it != record.translations.constEnd(); ++it)
             {
-                OpenAPI::OAIImportRoles_request_roles_inner_translations_value translation;
+                OpenAPI::OAIRoleTranslation translation;
                 translation.setName(it.value().first);
                 translation.setDescription(it.value().second);
                 translations.insert(it.key(), std::move(translation));
             }
-            OpenAPI::OAIImportRoles_request_roles_inner role;
+            OpenAPI::OAIRoleImportItem role;
             role.setName(record.name);
             role.setAlignment(record.alignment);
             role.setRoleType(record.roleType);
@@ -116,7 +116,7 @@ namespace botc::ui
         auto* apiClient = api::BotCApiClient::instance();
         connect(apiClient, &api::BotCApiClient::rolesImportFinished,
                 this, &ImportRolesWidget::onRolesImportFinished, Qt::SingleShotConnection);
-        OpenAPI::OAIImportRoles_request rolesImportRequest{};
+        OpenAPI::OAIRolesImportRequest rolesImportRequest{};
         rolesImportRequest.setRoles(roles);
         apiClient->importRoles(std::move(rolesImportRequest));
 
@@ -136,7 +136,7 @@ namespace botc::ui
         clearAll();
     }
 
-    void ImportRolesWidget::onRolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
+    void ImportRolesWidget::onRolesImportFinished(const OpenAPI::OAIRolesImportResponse& summary,
                                                   QNetworkReply::NetworkError error_type,
                                                   const QString& error_str)
     {

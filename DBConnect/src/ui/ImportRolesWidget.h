@@ -7,7 +7,7 @@
 
 namespace OpenAPI
 {
-    class OAIImportRoles_200_response;
+    class OAIRolesImportResponse;
 }
 
 class QProgressDialog;
@@ -49,7 +49,7 @@ namespace botc::ui
         void onImportClicked();
         void onLanguageChanged(const QString& lang);
         void onClearClicked();
-        void onRolesImportFinished(const OpenAPI::OAIImportRoles_200_response& summary,
+        void onRolesImportFinished(const OpenAPI::OAIRolesImportResponse& summary,
                                    QNetworkReply::NetworkError error_type,
                                    const QString& error_str);
 

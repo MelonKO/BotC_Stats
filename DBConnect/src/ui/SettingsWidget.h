@@ -6,7 +6,7 @@
 
 namespace OpenAPI
 {
-    class OAIHealth_200_response;
+    class OAIHealthResponse;
     class OAISystemApi;
 }
 
@@ -41,7 +41,7 @@ namespace botc::ui
         void onResetClicked();
         void onToggleApiKeyVisibility(bool checked) const;
         void onTestConnectionClicked();
-        void onTestConnectionFinished(const OpenAPI::OAIHealth_200_response& summary, QNetworkReply::NetworkError errorType,
+        void onTestConnectionFinished(const OpenAPI::OAIHealthResponse& summary, QNetworkReply::NetworkError errorType,
                                       const QString& errorString);
 
     private:

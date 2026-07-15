@@ -90,7 +90,7 @@ namespace botc::ui
 
         connect(systemAPI, &OpenAPI::OAISystemApi::healthSignalError,
                 this,
-                [this, systemAPI](const OpenAPI::OAIHealth_200_response& summary,
+                [this, systemAPI](const OpenAPI::OAIHealthResponse& summary,
                                   const QNetworkReply::NetworkError errorType,
                                   const QString& errorString)
                 {
@@ -99,7 +99,7 @@ namespace botc::ui
                 }, Qt::SingleShotConnection);
 
         connect(systemAPI, &OpenAPI::OAISystemApi::healthSignal,
-                this, [this, systemAPI](const OpenAPI::OAIHealth_200_response& summary)
+                this, [this, systemAPI](const OpenAPI::OAIHealthResponse& summary)
                 {
                     onTestConnectionFinished(summary, QNetworkReply::NoError, "");
                     systemAPI->deleteLater();
@@ -108,7 +108,7 @@ namespace botc::ui
         systemAPI->health();
     }
 
-    void SettingsWidget::onTestConnectionFinished(const OpenAPI::OAIHealth_200_response& summary,
+    void SettingsWidget::onTestConnectionFinished(const OpenAPI::OAIHealthResponse& summary,
                                                   const QNetworkReply::NetworkError errorType,
                                                   const QString& errorString)
     {

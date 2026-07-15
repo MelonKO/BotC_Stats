@@ -7,14 +7,12 @@ from asyncpg.exceptions import UniqueViolationError
 from app.db import get_connection
 from app.models import (
     GameImportRequest,
-    Game,
     RolesImportRequest,
-    Role1,
-    Translation,
+    RoleItem,
+    RoleTranslation,
     GameImportStatusResponse,
-    Game1,
     GamesImportStatusResponse,
-    Player2,
+    PlayerItem,
 )
 
 _IMPORT_ADVISORY_LOCK_KEY = 7391823
@@ -35,7 +33,7 @@ def _parse_interval(value: str | None) -> timedelta | None:
         return timedelta(days=d, hours=int(h), minutes=int(m), seconds=int(s))
 
 
-async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> Game1:
+async def _import_single_game_on_conn(conn, data: GameImportRequest) -> GameImportStatusResponse:
     """
     Imports a single game using an already-open connection.
     Must be called inside an advisory lock. Each call runs its own transaction
@@ -59,7 +57,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
 
         if missing_roles:
             logger.warning("Game %s: missing roles: %s", game_label, sorted(missing_roles))
-            return Game1(
+            return GameImportStatusResponse(
                 status="error",
                 errors=[f"Unknown roles: {', '.join(sorted(missing_roles))}"],
                 players_created=0,
@@ -98,7 +96,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
             row = await conn.fetchrow("SELECT * FROM process_games_import()")
         except UniqueViolationError:
             logger.warning("Game %s: duplicate — already exists in DB", game_label)
-            return Game1(
+            return GameImportStatusResponse(
                 status="error",
                 errors=[f"Duplicate: '{data.scenario_name}' {data.game_date} #{data.game_number}"],
                 players_created=0,
@@ -112,7 +110,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
 
         if errors:
             logger.warning("Game %s: DB function returned errors: %s", game_label, errors)
-            return Game1(
+            return GameImportStatusResponse(
                 status="error",
                 errors=[errors],
                 players_created=players_created,
@@ -136,7 +134,7 @@ async def _import_single_game_on_conn(conn, data: GameImportRequest | Game) -> G
 
         logger.info("Game %s imported successfully: id=%s, players_created=%d",
                     game_label, game_row["id"] if game_row else None, players_created)
-        return Game1(
+        return GameImportStatusResponse(
             status="ok",
             game_id=game_row["id"] if game_row else None,
             players_created=players_created,
@@ -162,15 +160,10 @@ async def import_game(data: GameImportRequest, owner: dict) -> GameImportStatusR
             await conn.execute("SELECT pg_advisory_unlock($1)", _IMPORT_ADVISORY_LOCK_KEY)
             logger.debug("Advisory lock released for game: %s", game_label)
 
-    return GameImportStatusResponse(
-        status=result.status,
-        game_id=result.game_id,
-        players_created=result.players_created,
-        errors=result.errors,
-    )
+    return result
 
 
-async def import_games_batch(games: list[Game], owner: dict) -> GamesImportStatusResponse:
+async def import_games_batch(games: list[GameImportRequest], owner: dict) -> GamesImportStatusResponse:
     """
     Import multiple games in a single request.
 
@@ -190,7 +183,7 @@ async def import_games_batch(games: list[Game], owner: dict) -> GamesImportStatu
     return GamesImportStatusResponse(games=results)
 
 
-async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
+async def get_all_roles(lang: Optional[str] = None) -> list[RoleItem]:
     """Return all available roles, optionally with a translation for the given language code."""
     async with get_connection() as conn:
         if lang:
@@ -211,13 +204,13 @@ async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
                 lang,
             )
             return [
-                Role1(
+                RoleItem(
                     id=r["id"],
                     name=r["name"],
                     alignment=r["alignment"],
                     role_type=r["role_type"],
                     description=r["description"],
-                    translation=Translation(
+                    translation=RoleTranslation(
                         name=r["translation_name"],
                         description=r["translation_description"],
                     ) if r["translation_name"] is not None else None,
@@ -233,7 +226,7 @@ async def get_all_roles(lang: Optional[str] = None) -> list[Role1]:
                 """
             )
             return [
-                Role1(
+                RoleItem(
                     id=r["id"],
                     name=r["name"],
                     alignment=r["alignment"],
@@ -332,7 +325,7 @@ async def import_roles(data: RolesImportRequest) -> dict:
     }
 
 
-async def get_all_players() -> list[Player2]:
+async def get_all_players() -> list[PlayerItem]:
     async with get_connection() as conn:
         rows = await conn.fetch(
             """
@@ -342,7 +335,7 @@ async def get_all_players() -> list[Player2]:
             """
         )
         return [
-            Player2(
+            PlayerItem(
                 id=r["id"],
                 name=r["name"],
             )

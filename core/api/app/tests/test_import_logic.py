@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.import_logic import import_game, import_roles, _parse_interval, check_db_connection
-from app.models import GameImportRequest, RolesImportRequest, Player
+from app.models import GameImportRequest, RolesImportRequest, PlayerImportRequest
 from tests.test_utils import (
     PatchGetConnection,
     PatchGetConnectionImportLogic,
@@ -102,12 +102,12 @@ def sample_game_request():
         duration="01:30:00",
         notes="Тест",
         players=[
-            Player(
+            PlayerImportRequest(
                 name="Анна", seat_number=1,
                 role_start="Дамочка", role_end="Дамочка",
                 alignment_end="добро", is_alive=True,
             ),
-            Player(
+            PlayerImportRequest(
                 name="Борис", seat_number=2,
                 role_start="Убийца", role_end="Убийца",
                 alignment_end="зло", is_alive=False,

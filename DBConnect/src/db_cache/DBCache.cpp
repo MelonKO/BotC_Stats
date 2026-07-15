@@ -1,8 +1,8 @@
 #include "DBCache.h"
 
-#include "OAIListPlayers_200_response.h"
-#include "OAIListRoles_200_response.h"
-#include "OAIListRoles_200_response_roles_inner.h"
+#include "OAIPlayersResponse.h"
+#include "OAIRolesResponse.h"
+#include "OAIRoleItem.h"
 #include "qeventloop.h"
 #include "api/BotCApiClient.h"
 
@@ -24,7 +24,7 @@ namespace botc
         apiClient->listPlayers();
     }
 
-    void DBCache::onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
+    void DBCache::onRoleListFinished(const OpenAPI::OAIRolesResponse& summary,
                                      const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         if (error_type != QNetworkReply::NoError) { m_cachedRoles.clear(); }
@@ -32,7 +32,7 @@ namespace botc
         std::ranges::transform(
             summary.getRoles(),
             std::inserter(m_cachedRoles, m_cachedRoles.end()),
-            [](const OpenAPI::OAIListRoles_200_response_roles_inner& role) -> QString
+            [](const OpenAPI::OAIRoleItem& role) -> QString
             {
                 QString transName = role.getTranslation().getName();
                 return transName.isEmpty() ? role.getName() : transName;
@@ -40,7 +40,7 @@ namespace botc
         );
     }
 
-    void DBCache::onPlayerListFinished(const OpenAPI::OAIListPlayers_200_response& summary,
+    void DBCache::onPlayerListFinished(const OpenAPI::OAIPlayersResponse& summary,
                                        QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         if (error_type != QNetworkReply::NoError) { m_cachedPlayers.clear(); }
@@ -48,7 +48,7 @@ namespace botc
         std::ranges::transform(
             summary.getPlayers(),
             std::inserter(m_cachedPlayers, m_cachedPlayers.end()),
-            [](const OpenAPI::OAIListPlayers_200_response_players_inner& player) -> QString
+            [](const OpenAPI::OAIPlayerItem& player) -> QString
             {
                 return player.getName();
             });

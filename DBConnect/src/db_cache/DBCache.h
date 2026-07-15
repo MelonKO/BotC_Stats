@@ -4,8 +4,8 @@
 
 namespace OpenAPI
 {
-    class OAIListPlayers_200_response;
-    class OAIListRoles_200_response;
+    class OAIPlayersResponse;
+    class OAIRolesResponse;
 }
 
 namespace botc
@@ -31,11 +31,11 @@ namespace botc
     private:
         DBCache() = default;
 
-        void onRoleListFinished(const OpenAPI::OAIListRoles_200_response& summary,
+        void onRoleListFinished(const OpenAPI::OAIRolesResponse& summary,
                                 QNetworkReply::NetworkError error_type,
                                 const QString& error_str);
 
-        void onPlayerListFinished(const OpenAPI::OAIListPlayers_200_response& summary,
+        void onPlayerListFinished(const OpenAPI::OAIPlayersResponse& summary,
                                   QNetworkReply::NetworkError error_type, const QString& error_str);
 
     private:

@@ -7,9 +7,9 @@
 
 namespace OpenAPI
 {
-    class OAIImportGame_200_response;
-    class OAIImportGames_200_response;
-    class OAIImportGames_request;
+    class OAIGameImportStatusResponse;
+    class OAIGamesImportStatusResponse;
+    class OAIGamesImportRequest;
 }
 
 class QProgressDialog;
@@ -62,7 +62,7 @@ namespace botc::ui
         void setImportEnabled(bool enabled) const;
         static QString statusStyle(bool ok);
 
-        void onGamesImportBatchFinished(const OpenAPI::OAIImportGames_200_response& summary,
+        void onGamesImportBatchFinished(const OpenAPI::OAIGamesImportStatusResponse& summary,
                                         QNetworkReply::NetworkError error_type,
                                         const QString& error_str);
 

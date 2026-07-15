@@ -4,10 +4,10 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 
-#include "OAIImportGame_request.h"
-#include "OAIImportGame_request_players_inner.h"
-#include "OAIImportGames_request.h"
-#include "OAIImportGames_200_response.h"
+#include "OAIGameImportRequest.h"
+#include "OAIPlayerImportRequest.h"
+#include "OAIGamesImportRequest.h"
+#include "OAIGamesImportStatusResponse.h"
 #include "ui_ImportGamesWidget.h"
 #include "../api/BotCApiClient.h"
 #include "../config/ConfigManager.h"
@@ -111,14 +111,14 @@ namespace botc::ui
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
         m_importRolesProgressDial->show();
 
-        QList<OpenAPI::OAIImportGame_request> gamesList;
+        QList<OpenAPI::OAIGameImportRequest> gamesList;
         for (const utils::games::GameRecord& game : m_lastResult.records)
         {
             m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
-            QVector<OpenAPI::OAIImportGame_request_players_inner> players;
+            QVector<OpenAPI::OAIPlayerImportRequest> players;
             for (const utils::games::PlayerRecord& player : game.players)
             {
-                OpenAPI::OAIImportGame_request_players_inner playerRequest{};
+                OpenAPI::OAIPlayerImportRequest playerRequest{};
                 playerRequest.setName(player.playerName);
                 if (player.seatNumber.has_value())
                 {
@@ -131,7 +131,7 @@ namespace botc::ui
                 players.push_back(std::move(playerRequest));
             }
 
-            OpenAPI::OAIImportGame_request gameRequest{};
+            OpenAPI::OAIGameImportRequest gameRequest{};
             gameRequest.setGameDate(game.gameDate);
             gameRequest.setScenarioName(game.scenarioName);
             gameRequest.setStorytellerNames(game.storytellerNames);
@@ -150,7 +150,7 @@ namespace botc::ui
             gamesList.push_back(std::move(gameRequest));
         }
 
-        OpenAPI::OAIImportGames_request batchRequest;
+        OpenAPI::OAIGamesImportRequest batchRequest;
         batchRequest.setGames(gamesList);
 
         auto* apiClient = api::BotCApiClient::instance();
@@ -360,7 +360,7 @@ namespace botc::ui
                    : "color: orange; font-weight: bold;";
     }
 
-    void ImportGamesWidget::onGamesImportBatchFinished(const OpenAPI::OAIImportGames_200_response& summary,
+    void ImportGamesWidget::onGamesImportBatchFinished(const OpenAPI::OAIGamesImportStatusResponse& summary,
                                                        QNetworkReply::NetworkError error_type,
                                                        const QString& error_str)
     {

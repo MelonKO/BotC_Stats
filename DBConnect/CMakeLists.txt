@@ -118,6 +118,14 @@ if (WIN32)
                 COMMAND ${CMAKE_COMMAND} -E copy
                 "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
                 "${CMAKE_BINARY_DIR}/dist/"
+                # vcpkg applocal places third-party runtime DLLs (zlib, pcre2,
+                # harfbuzz, openssl, ...) next to the built exe; windeployqt
+                # only knows about Qt's own DLLs, so copy them explicitly
+                COMMAND ${CMAKE_COMMAND}
+                -DSRC_DIR=$<TARGET_FILE_DIR:${PROJECT_NAME}>
+                -DVCPKG_BIN_DIR=${VCPKG_INST}/x64-windows$<$<CONFIG:Debug>:/debug>/bin
+                -DDST_DIR=${CMAKE_BINARY_DIR}/dist
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/copy_runtime_dlls.cmake"
                 # windeployqt copy all Qt's DLLs and plugins into dist/
                 COMMAND $<IF:$<CONFIG:Debug>,${WINDEPLOYQT_DEBUG},${WINDEPLOYQT}>
                 $<IF:$<CONFIG:Debug>,--debug,--release>

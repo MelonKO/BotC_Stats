@@ -6,7 +6,6 @@
 |-----------|---------|-----------|
 | `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx | `docker-compose.yml`, `api/` |
 | `DBConnect/` | Qt6 GUI for CSV→API import (games, roles, players) | `src/main.cpp`, `CMakeLists.txt`, `config.ini` |
-| `uploader/` | *(legacy)* Python CLI importer — superseded by DBConnect | `uploader.py`, `requirements.txt` |
 
 ## Developer Commands
 
@@ -60,8 +59,13 @@ python -m pytest app/tests/ -v
 6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `DBConnect/`.
 
 7. **Test fixtures**: 
-   - Uploader: temp CSV files in `uploader/tests/test_*.py` (see `conftest.py`)
-   - Core API: mocked asyncpg pool in `core/api/app/tests/test_*.py` (see `conftest.py`)
+   - Core API tests mock asyncpg pool (see `core/api/app/tests/conftest.py`)
+
+8. **Git workflow**: Work by git-flow. All commit messages in English.
+
+9. **Code style**: Comments/documentation in English only.
+
+10. **Database permissions**: When adding new tables, always check `api_service` (and `botc_user`) permissions. Define exact operations needed (SELECT, INSERT, UPDATE, DELETE), not just read access. Example: `role_translations` needs INSERT+UPDATE for upsert via API, not just SELECT.
 
 ## Common Pitfalls
 
@@ -164,26 +168,3 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 | SSL error in DBConnect | Set `SSL_VERIFY = false` in `DBConnect/config.ini` |
 | Missing roles | Add roles to `roles` table before import |
 | PostgreSQL port 5432 not accessible | Use SSH tunnel only: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>` |
-
-## Critical Conventions
-
-1. **CSV format for games**: `test_sample.csv` has the exact schema. Each row = one player's role in a game. Multiple rows per game are grouped by `(game_date, scenario_name, storyteller_name, alignment_win, location, game_number)`.
-
-2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles). **All code text must be English: comments, docstrings, and `Field(description=...)` values in models.** `models.py` is auto-generated — fix Russian text in the OpenAPI spec (`openapi/api/`) and regenerate via `npm run bundle && npm run generate:python`, then copy `python_gen/models.py` to `core/api/app/models.py`.
-
-3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
-
-4. **SSL**: Local dev uses self-signed cert. `DBConnect/config.ini` has `SSL_VERIFY = false` — required for self-signed cert. For production, replace `core/nginx/ssl/` certs.
-
-5. **Database access**: PostgreSQL port 5432 is **not exposed externally**. Admin access only via SSH tunnel: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>`.
-
-6. **Versioning**: Single semver for entire monorepo. One tag = guaranteed compatibility across `core/` and `DBConnect/`.
-
-7. **Test fixtures**: 
-   - Core API tests mock asyncpg pool (see `core/api/app/tests/conftest.py`)
-
-8. **Git workflow**: Work by git-flow. All commit messages in English.
-
-9. **Code style**: Comments/documentation in English only.
-
-10. **Database permissions**: When adding new tables, always check `api_service` (and `botc_user`) permissions. Define exact operations needed (SELECT, INSERT, UPDATE, DELETE), not just read access. Example: `role_translations` needs INSERT+UPDATE for upsert via API, not just SELECT.

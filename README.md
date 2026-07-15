@@ -27,7 +27,6 @@
 |-----------|----------|-------------|
 | **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
 | **[DBConnect/](DBConnect/)** | Qt6 desktop GUI для импорта CSV (игры, роли, игроки). Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
-| **[uploader/](uploader/)** *(legacy)* | CLI-утилита для импорта CSV — заменена DBConnect. | [uploader/README.md](uploader/README.md) |
 
 ## Quick Start
 
@@ -72,9 +71,6 @@ BotC/
 │   ├── generated_api/          # Auto-generated OpenAPI C++ client
 │   ├── CMakeLists.txt
 │   └── config.ini
-├── uploader/                   # Legacy Python CLI importer (superseded by DBConnect)
-│   ├── uploader.py
-│   └── requirements.txt
 ```
 
 ## Database Schema

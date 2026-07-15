@@ -46,9 +46,14 @@ python -m pytest app/tests/ -v
 ### OpenAPI code generation
 ```bash
 cd openapi
+npm run generate           # Full pipeline: bundle → python + cpp → sync into live code
+# Individual steps:
 npm run bundle             # Compile openapi.yaml → dist/
 npm run generate:python    # Regenerate Python models → python_gen/
 npm run generate:cpp       # Regenerate C++ client → cpp_gen/
+npm run sync               # Copy python_gen/models.py → core/api/app/models.py,
+                           #  mirror cpp_gen/client/ → DBConnect/generated_api/
+npm run sync:dry           # Preview what sync would change
 ```
 
 ## Architecture

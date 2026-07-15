@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "bundle": "redocly bundle api/openapi.yaml -o dist/openapi.json --dereferenced",
+    "bundle": "redocly bundle api/openapi.yaml -o dist/openapi.json",
     "generate:cpp": "openapi-generator-cli generate -i dist/openapi.json -g cpp-qt-client -o ./cpp_gen --additional-properties=packageName=BotcStats,qtVersion=6",
     "generate:python": "python generate.py",
-    "generate": "npm run bundle && npm run generate:python && npm run generate:cpp"
+    "sync": "python sync.py",
+    "sync:dry": "python sync.py --dry-run",
+    "generate": "npm run bundle && npm run generate:python && npm run generate:cpp && npm run sync"
   },
   "devDependencies": {
     "@redocly/cli": "^2.30.4",

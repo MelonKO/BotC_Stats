@@ -12,7 +12,7 @@ servers:
         default: "localhost"
 
 # ============================================================
-#  Security
+#  Security & Schemas
 # ============================================================
 
 components:
@@ -23,24 +23,342 @@ components:
       name: X-API-Key
 
   schemas:
-    # requests
-    GameImportRequest: { $ref: "./schemas/requests.yaml#/GameImportRequest" }
-    GamesImportRequest: { $ref: "./schemas/requests.yaml#/GamesImportRequest" }
-    RoleImportItem: { $ref: "./schemas/requests.yaml#/RoleImportItem" }
-    RolesImportRequest: { $ref: "./schemas/requests.yaml#/RolesImportRequest" }
+    # ------------------------------------------------------------
+    # Requests
+    # ------------------------------------------------------------
+    GameImportRequest:
+      type: object
+      description: Full game import request.
+      required:
+        - game_date
+        - scenario_name
+        - storyteller_names
+        - alignment_win
+        - location
+        - game_number
+        - players
+      properties:
+        game_date:
+          type: string
+          format: date
+          example: "2026-01-15"
+        scenario_name:
+          type: string
+          minLength: 1
+          maxLength: 300
+          example: "Вселенная зла"
+        storyteller_names:
+          type: array
+          description: Names of the storyteller(s) running this game (more than one for co-storytelling).
+          minItems: 1
+          maxItems: 5
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          example: ["МелонКО"]
+        alignment_win:
+          type: string
+          pattern: "^(добро|зло|ничья)$"
+          example: "добро"
+        location:
+          type: string
+          minLength: 1
+          maxLength: 300
+          example: "Москва, Антикафе на Арбате"
+        game_number:
+          type: integer
+          minimum: 1
+          example: 1
+        duration:
+          type: string
+          nullable: true
+          example: "01:30:00"
+        notes:
+          type: string
+          nullable: true
+          maxLength: 2000
+          example: "Отличная партия, все получили удовольствие"
+        players:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/PlayerImportRequest"
 
-    # responses
-    HealthResponse: { $ref: "./schemas/responses.yaml#/HealthResponse" }
-    GameImportStatusResponse: { $ref: "./schemas/responses.yaml#/GameImportStatusResponse" }
-    GamesImportStatusResponse: {$ref: "./schemas/responses.yaml#/GamesImportStatusResponse" }
-    RolesResponse: { $ref: "./schemas/responses.yaml#/RolesResponse" }
-    RolesImportResponse: { $ref: "./schemas/responses.yaml#/RolesImportResponse" }
-    PlayersResponse: { $ref: "./schemas/responses.yaml#/PlayersResponse" }
+    GamesImportRequest:
+      type: object
+      description: Batch game import request.
+      required:
+        - games
+      properties:
+        games:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/GameImportRequest"
 
-    # common
-    RoleItem: { $ref: "./schemas/common.yaml#/RoleItem" }
-    RoleTranslation: { $ref: "./schemas/common.yaml#/RoleTranslation" }
-    ErrorResponse: { $ref: "./schemas/common.yaml#/ErrorResponse" }
+    RoleImportItem:
+      type: object
+      description: A single role entry in a roles import request.
+      required:
+        - name
+        - alignment
+        - role_type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Chambermaid"
+        alignment:
+          type: string
+          pattern: "^(good|evil|neutral)$"
+          example: "good"
+        role_type:
+          type: string
+          pattern: "^(Townsfolk|Outsider|Minion|Demon|Traveller)$"
+          example: "Outsider"
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+          example: "Simple, but not harmless"
+        translations:
+          type: object
+          nullable: true
+          additionalProperties:
+            $ref: "#/components/schemas/RoleTranslation"
+          example:
+            ru:
+              name: "Дамочка"
+              description: "Служанка, которая следит за гостями"
+
+    RolesImportRequest:
+      type: object
+      description: Full roles import request.
+      required:
+        - roles
+      properties:
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/RoleImportItem"
+
+    # ------------------------------------------------------------
+    # Responses
+    # ------------------------------------------------------------
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - db_connected
+      properties:
+        status:
+          type: string
+          enum: [ ok, degraded ]
+          example: "ok"
+        db_connected:
+          type: boolean
+          example: true
+
+    GameImportStatusResponse:
+      type: object
+      required:
+        - status
+        - players_created
+        - errors
+      properties:
+        status:
+          type: string
+          example: "ok"
+        game_id:
+          type: string
+          nullable: true
+          example: "42"
+        players_created:
+          type: integer
+          default: 0
+          example: 5
+        errors:
+          type: array
+          items:
+            type: string
+          default: [ ]
+
+    GamesImportStatusResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/GameImportStatusResponse"
+
+    RolesResponse:
+      type: object
+      required:
+        - roles
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleItem"
+
+    RolesImportResponse:
+      type: object
+      required:
+        - status
+        - roles_created
+        - roles_updated
+        - errors
+      properties:
+        status:
+          type: string
+          example: "ok"
+        roles_created:
+          type: integer
+          default: 0
+          example: 3
+        roles_updated:
+          type: integer
+          default: 0
+          example: 1
+        errors:
+          type: array
+          items:
+            type: string
+          default: [ ]
+
+    PlayersResponse:
+      type: object
+      required:
+        - players
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerItem"
+
+    # ------------------------------------------------------------
+    # Common
+    # ------------------------------------------------------------
+    RoleItem:
+      type: object
+      description: Role record from the database.
+      required:
+        - id
+        - name
+        - alignment
+        - role_type
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a09f3ff7-0f02-485a-b0e1-87388b27face"
+        name:
+          type: string
+          example: "Chambermaid"
+        alignment:
+          type: string
+          pattern: "^(good|evil|neutral)$"
+          example: "good"
+        role_type:
+          type: string
+          pattern: "^(Townsfolk|Outsider|Minion|Demon|Traveller)$"
+          example: "Outsider"
+        description:
+          type: string
+          nullable: true
+          example: "Simple, but not harmless"
+        translation:
+          description: Translation into the requested language (only present when the lang query parameter was provided).
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/RoleTranslation"
+
+    RoleTranslation:
+      type: object
+      description: Translation of a single role into one language.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Дамочка"
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+          example: "Служанка, которая следит за гостями"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: true
+
+    PlayerImportRequest:
+      type: object
+      description: A single player entry in a game import request.
+      required:
+        - name
+        - role_start
+        - role_end
+        - alignment_end
+        - is_alive
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Мая Вишневская"
+        seat_number:
+          type: integer
+          minimum: 1
+          nullable: true
+          example: 1
+        role_start:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Дамочка"
+        role_end:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Дамочка"
+        alignment_end:
+          type: string
+          pattern: "^(добро|зло|нейтральный)$"
+          example: "добро"
+        is_alive:
+          type: boolean
+          example: true
+
+    PlayerItem:
+      type: object
+      description: Player record from the database.
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b1c2d3e4-f5a6-7890-abcd-1234567890ef"
+        name:
+          type: string
+          example: "Alice"
 
 # ============================================================
 #  Paths

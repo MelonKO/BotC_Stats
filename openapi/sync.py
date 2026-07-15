@@ -1,0 +1,80 @@
+# openapi/sync.py
+"""Copy generated clients to their live locations in the monorepo.
+
+Sources (produced by `npm run generate:python` / `npm run generate:cpp`):
+  python_gen/models.py  ->  core/api/app/models.py
+  cpp_gen/client/       ->  DBConnect/generated_api/   (mirror: stale files deleted)
+
+Run with --dry-run to see what would change without touching anything.
+"""
+import filecmp
+import shutil
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
+PY_SRC = Path(__file__).parent / "python_gen" / "models.py"
+PY_DST = ROOT / "core" / "api" / "app" / "models.py"
+CPP_SRC = Path(__file__).parent / "cpp_gen" / "client"
+CPP_DST = ROOT / "DBConnect" / "generated_api"
+
+dry_run = "--dry-run" in sys.argv
+
+
+def fail(msg: str):
+    print(f"ERROR: {msg}")
+    sys.exit(1)
+
+
+def sync_python():
+    if not PY_SRC.is_file() or PY_SRC.stat().st_size == 0:
+        fail(f"{PY_SRC} is missing or empty — run `npm run generate:python` first")
+
+    if PY_DST.is_file() and filecmp.cmp(PY_SRC, PY_DST, shallow=False):
+        print(f"models.py: up to date ({PY_DST})")
+        return
+
+    print(f"models.py: {'would copy' if dry_run else 'copying'} {PY_SRC} -> {PY_DST}")
+    if not dry_run:
+        shutil.copyfile(PY_SRC, PY_DST)
+
+
+def sync_cpp():
+    if not CPP_SRC.is_dir() or not any(CPP_SRC.glob("*.h")):
+        fail(f"{CPP_SRC} is missing or has no headers — run `npm run generate:cpp` first")
+
+    src_files = {p.name for p in CPP_SRC.iterdir() if p.is_file()}
+    dst_files = {p.name for p in CPP_DST.iterdir() if p.is_file()} if CPP_DST.is_dir() else set()
+
+    stale = sorted(dst_files - src_files)
+    added = sorted(src_files - dst_files)
+    changed = sorted(
+        name for name in src_files & dst_files
+        if not filecmp.cmp(CPP_SRC / name, CPP_DST / name, shallow=False)
+    )
+
+    if not (stale or added or changed):
+        print(f"generated_api: up to date ({CPP_DST})")
+        return
+
+    verb = "would " if dry_run else ""
+    for name in stale:
+        print(f"generated_api: {verb}delete {name}")
+    for name in added:
+        print(f"generated_api: {verb}add    {name}")
+    for name in changed:
+        print(f"generated_api: {verb}update {name}")
+
+    if not dry_run:
+        CPP_DST.mkdir(parents=True, exist_ok=True)
+        for name in stale:
+            (CPP_DST / name).unlink()
+        for name in added + changed:
+            shutil.copyfile(CPP_SRC / name, CPP_DST / name)
+
+    print(f"generated_api: {len(added)} added, {len(changed)} updated, {len(stale)} deleted")
+
+
+sync_python()
+sync_cpp()
+print("Dry run — nothing was written." if dry_run else "Sync complete.")

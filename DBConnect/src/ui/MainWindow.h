@@ -4,6 +4,8 @@
 
 #include "../api/BotCApiClient.h"
 
+class QTimer;
+
 namespace botc::utils
 {
     struct RoleRecord;
@@ -30,5 +32,6 @@ namespace botc::ui
 
     private:
         Ui::MainWindow* ui;
+        QTimer* m_cacheRefreshTimer{};
     };
 } // botc::ui

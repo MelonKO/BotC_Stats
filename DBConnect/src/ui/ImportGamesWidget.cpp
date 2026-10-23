@@ -52,7 +52,7 @@ namespace botc::ui
 
         setImportEnabled(false);
 
-        const auto* dbCache = DBCache::instance();
+        auto* dbCache = DBCache::instance();
         dbCache->updateRoles("ru");
         dbCache->updatePlayers();
     }

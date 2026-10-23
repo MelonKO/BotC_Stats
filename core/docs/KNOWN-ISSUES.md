@@ -202,13 +202,14 @@ and show a warning instead of silently using defaults.
 ### C3. Role cache race — `open`
 
 Roles and players are fetched asynchronously while the cache is read
-synchronously when a file is opened (`ImportGamesWidget.cpp:55-57`, `:79-97`),
-which produces false "role not in database" errors; `DBCache.cpp:30,46` clears
-the cache without a message. `DBCache.h:13-29` declares a signal without
-`Q_OBJECT`.
+synchronously when a file is opened (`ImportGamesWidget.cpp:55-57`, `:79-97`).
+If validation reads the cache before the initial load completes, it can still
+produce false "role not in database" errors. Cache refreshes now run after
+server settings change and after imports; cache completion signals are emitted
+on success and failure.
 
-Next step: wait for the initial cache load before validating a file, surface
-fetch errors in the UI, and add the missing `Q_OBJECT`.
+Next step: wait for the initial cache load before validating a file and surface
+fetch errors in the UI.
 
 ### C4. Import is enabled despite validation errors — `open`
 

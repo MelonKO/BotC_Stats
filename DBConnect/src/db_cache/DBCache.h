@@ -12,6 +12,8 @@ namespace botc
 {
     class DBCache final : public QObject
     {
+        Q_OBJECT
+
     public:
         static DBCache* instance()
         {
@@ -19,17 +21,20 @@ namespace botc
             return &_instance;
         };
 
-        void updateRoles(const std::optional<QString>& lang) const;
+        void refreshAll();
+
+        void updateRoles(const std::optional<QString>& lang);
         const QStringList& getRolesCache() const { return m_cachedRoles; }
 
-        void updatePlayers() const;
+        void updatePlayers();
         const QStringList& getPlayersCache() const { return m_cachedPlayers; }
 
     signals:
         void onRolesCacheUpdated();
+        void onPlayersCacheUpdated();
 
     private:
-        DBCache() = default;
+        DBCache();
 
         void onRoleListFinished(const OpenAPI::OAIRolesResponse& summary,
                                 QNetworkReply::NetworkError error_type,

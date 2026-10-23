@@ -51,6 +51,43 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 Настройки сохраняются в локальный `DBConnect/config.ini`, который не попадает в Git. Шаблон для нового клона — `DBConnect/config.ini.example` (копируется автоматически при сборке, если `config.ini` ещё нет).
 
+### Сборка DBConnect вне CLion (Windows)
+
+Нужны CMake 3.25+, Ninja, C++ build tools Visual Studio и vcpkg. Установите системную переменную `VCPKG_ROOT`, указывающую на каталог vcpkg. Для Ninja откройте **Developer PowerShell for Visual Studio**, чтобы компилятор `cl.exe` был доступен в `PATH`.
+
+Скрипт `DBConnect/scripts/build.py` сам подготавливает окружение (активирует инструменты Visual Studio, выставляет `VCPKG_ROOT` на отдельную копию vcpkg, выбирает один и тот же CMake) — это рекомендуемый способ сборки вне IDE:
+
+```powershell
+python DBConnect/scripts/build.py doctor                # диагностика: тулчейн, vcpkg, ABI
+python DBConnect/scripts/build.py                       # configure + build Debug
+python DBConnect/scripts/build.py build --preset release
+python DBConnect/scripts/build.py deploy                # Release + deploy (build_release/dist/)
+python DBConnect/scripts/build.py clean --preset debug  # удалить build_debug, vcpkg_installed не трогает
+```
+
+Параметры: `--run` запускает собранный exe, `--jobs N` ограничивает параллелизм, `--dry-run` печатает команду CMake, `--cmake PATH` и `--vcpkg-root PATH` переопределяют автоопределение. Полный список — `python DBConnect/scripts/build.py --help`.
+
+Пути к инструментам для конкретной машины задаются в `DBConnect/scripts/build.ini` (в git не попадает, шаблон — `build.ini.example`): `vs_install`, `cmake`, `vcpkg_root`, `ninja` в секции `[toolchain]`, а также `preset` и `jobs` в `[build]`. Любое значение можно не указывать; приоритет: аргумент командной строки → файл конфига → переменная окружения (`VCPKG_ROOT`) → автоопределение. `build.py doctor` показывает, откуда взялся каждый путь.
+
+Те же шаги вручную:
+
+```powershell
+cd DBConnect
+cmake --list-presets
+cmake --preset debug                    # configure
+cmake --build --preset build-debug      # build
+
+# Configure + build:
+cmake --workflow --preset debug
+
+# Release deployment (build_release/dist/):
+cmake --workflow --preset deploy
+```
+
+Shared CMake presets are in `DBConnect/CMakePresets.json`; machine-specific paths are supplied through environment variables, not hard-coded into the repository. Start a new terminal after changing environment variables.
+
+**Не меняйте тулчейн без нужды.** vcpkg включает версию компилятора, триплет и версию CMake, которой собираются порты, в ABI каждого пакета. Обновление CMake (или переключение между CMake из Visual Studio, MSYS2 и CLion) помечает все пакеты устаревшими и заново собирает Qt из исходников. Не удаляйте `vcpkg_installed` ради «чистой» сборки — используйте `build.py clean`, он удаляет только `build_debug`/`build_release`, и давайте прерванной установке vcpkg завершиться.
+
 ## Project Structure
 
 ```

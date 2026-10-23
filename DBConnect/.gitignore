@@ -4,6 +4,10 @@ CMakeUserPresets.json
 vcpkg_installed/
 /generated_api/
 
+# Local build script settings — machine-specific tool paths.
+# The tracked template is scripts/build.ini.example.
+scripts/build.ini
+
 # Local connection settings — may contain a real API key.
 # The tracked template is config.ini.example.
 config.ini

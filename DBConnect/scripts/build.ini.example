@@ -1,0 +1,33 @@
+# DBConnect build script configuration.
+#
+# Copy this file to build.ini (same directory) and adjust the paths to your
+# machine. build.ini is git-ignored, this example is tracked.
+#
+# Every value is optional: leave it empty ("key =") to let build.py detect the
+# tool. Precedence for each tool: command line option, then this file, then the
+# environment (VCPKG_ROOT), then auto-detection.
+#
+# Keep the toolchain stable: vcpkg hashes the compiler, the triplet and the
+# CMake version it builds ports with into every port ABI. Changing CMake after
+# the dependencies are installed forces a full rebuild of Qt.
+
+[toolchain]
+# Visual Studio installation directory (the one containing Common7\Tools\VsDevCmd.bat).
+vs_install = C:\Program Files\Microsoft Visual Studio\2022\Community
+
+# CMake executable, version 3.25 or newer.
+cmake = C:\Program Files\CMake\bin\cmake.exe
+
+# Standalone vcpkg checkout (the one containing scripts\buildsystems\vcpkg.cmake).
+vcpkg_root = C:\vcpkg
+
+# Optional path to ninja.exe. Empty means: the Ninja shipped with Visual Studio,
+# then whatever is first on PATH.
+ninja =
+
+[build]
+# Default preset for the "build", "configure" and "clean" commands: debug or release.
+preset = debug
+
+# Parallel build jobs. Empty means the CMake/Ninja default (all cores).
+jobs =

@@ -25,14 +25,41 @@ bash scripts/create-api-key.sh create "Your Name" "contact@example.com"
 ```
 
 ### Build DBConnect (Qt6 GUI importer)
-```bash
-cd DBConnect
-cmake --preset debug          # configure
-cmake --build build_debug     # build
 
-# Windows deploy (exe + Qt DLLs → dist/):
-cmake --preset release && cmake --build build_release --target deploy
+Prerequisites: CMake 3.25+, Ninja, Visual Studio C++ build tools, and vcpkg. Set `VCPKG_ROOT` to the vcpkg checkout path (for example, `C:\vcpkg`). On Windows, use a **Developer PowerShell for Visual Studio** so `cl.exe` is available to Ninja.
+
+`DBConnect/scripts/build.py` prepares everything itself (imports the Visual Studio environment, forces `VCPKG_ROOT` to the standalone vcpkg checkout, keeps a single CMake) and is the recommended way to build outside an IDE:
+
+```powershell
+python DBConnect/scripts/build.py doctor              # toolchain, vcpkg and ABI diagnostics
+python DBConnect/scripts/build.py                     # configure + build Debug
+python DBConnect/scripts/build.py build --preset release
+python DBConnect/scripts/build.py deploy              # Release + deploy (build_release/dist/)
+python DBConnect/scripts/build.py clean --preset debug  # remove build_debug, keeps vcpkg_installed
 ```
+
+Options: `--run` starts the built executable, `--jobs N` limits parallelism, `--dry-run` prints the CMake command, `--cmake PATH` and `--vcpkg-root PATH` override auto-detection.
+
+Machine-specific tool paths live in `DBConnect/scripts/build.ini` (git-ignored, created from the tracked `build.ini.example`): `vs_install`, `cmake`, `vcpkg_root`, `ninja` in `[toolchain]`, plus `preset` and `jobs` in `[build]`. Every value is optional and the precedence is command line > config file > environment (`VCPKG_ROOT`) > auto-detection; `build.py doctor` prints where each tool came from. `build.py --help` lists all options.
+
+Same steps by hand, from a Developer PowerShell:
+
+```powershell
+cd DBConnect
+cmake --list-presets
+cmake --preset debug                    # configure
+cmake --build --preset build-debug      # build
+
+# Or configure + build in one command:
+cmake --workflow --preset debug
+
+# Windows deploy (exe + Qt DLLs → build_release/dist/):
+cmake --workflow --preset deploy
+```
+
+The shared presets are defined in `DBConnect/CMakePresets.json`. Local paths such as `VCPKG_ROOT` belong in the machine environment, not in the repository; open a new terminal after changing environment variables.
+
+**Keep the toolchain stable.** vcpkg hashes the compiler, the triplet and the CMake version it builds ports with into every port ABI. Updating CMake (or alternating between the CMake from Visual Studio, MSYS2 and CLion) marks all packages as stale and recompiles Qt from source. Never delete `vcpkg_installed` to "clean" a build: use `build.py clean`, which removes only `build_debug`/`build_release`, and let an interrupted vcpkg install finish.
 
 Open the built executable. Configure API URL and key on the **Settings** tab, then import via **Import Games** or **Import Roles** tabs.
 

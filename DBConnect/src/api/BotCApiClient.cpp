@@ -5,15 +5,6 @@
 #include "OAIPlayersApi.h"
 #include "OAIRolesApi.h"
 #include "OAISystemApi.h"
-#include "QRegularExpression"
-
-namespace
-{
-    const QRegularExpression ALIGNMENT_WIN_PATTERN("^(добро|зло|ничья)$");
-    const QRegularExpression ALIGNMENT_END_PATTERN("^(добро|зло|нейтральный)$");
-    const QRegularExpression VALID_ROLE_ALIGNMENT("^(good|evil|neutral)$");
-    const QRegularExpression VALID_ROLE_TYPE("^(Townsfolk|Outsider|Minion|Demon|Traveller)$");
-}
 
 namespace botc::api
 {

@@ -102,7 +102,8 @@ BEGIN
 
     -- Step 2: Map Russian alignment → English (validate + convert)
     -- alignment_win_ru: 'добро' → 'good', 'зло' → 'evil', 'ничья' → 'draw'
-    -- alignment_end_ru: 'добро' → 'good', 'зло' → 'evil', 'нейтральный' → 'neutral'
+    -- alignment_end_ru: 'добро' → 'good', 'зло' → 'evil'
+    -- (a player's end side is always good or evil, see core/docs/SIDES.md)
 
     -- Step 3: Process each unique game session from staging
     FOR rec IN

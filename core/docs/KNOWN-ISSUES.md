@@ -11,7 +11,6 @@ product/domain choice; `deferred` — consciously postponed; `fixed` — resolve
 ## Open questions
 
 ### Q1. `alignment_start` for players — `deferred`
-
 The start side of a player is not stored anywhere in the import pipeline: the
 CSV (`test_sample.csv`) has no such column, `GamesCsvParser::PlayerRecord`
 (`DBConnect/src/utils/games/parser/GamesCsvParser.h:9-16`) has only
@@ -46,13 +45,12 @@ existing rows can only come from roles with `good`/`evil` sides — rows with a
 `neutral` start role stay `NULL`, which forces a decision about `NULL` vs
 `NOT NULL`.
 
-### Q2. Keep the historical name `alignment` or rename it to `side` — `needs decision`
+### Q2. Keep the historical name `alignment` or rename it to `side` — `fixed`
 
-`alignment` means the side of the conflict, not "выравнивание"
-(`core/docs/SIDES.md`). The name is kept in the schema, the API and both
-clients. Renaming would touch `01-schema.sql`, the analytical views, the OpenAPI
-contract and the generated clients, so it is only worth doing together with
-another breaking change to the API.
+Decision (2026-10-23): keep `alignment`. It is treated as the project's term for
+the side of the conflict (`core/docs/SIDES.md`), so no schema, API or client
+renaming happens. Only the documentation explains the meaning; `neutral` and
+`draw` remain valid only in the contexts listed there.
 
 ### Q3. How draws affect win rate — `needs decision`
 
@@ -71,7 +69,24 @@ actual side (`gp.alignment_end`) or stay reported per role.
 
 ## Contract inconsistencies
 
-### I1. `нейтральный` is accepted for a player's end side but rejected by the database — `open`
+### I1. `нейтральный` is accepted for a player's end side but rejected by the database — `fixed`
+
+Fixed on 2026-10-23, a player's end side is now `добро`/`зло` everywhere:
+
+- `games_import_staging.alignment_end_ru` is restricted in
+  `core/init-scripts/01-schema.sql`, and
+  `core/init-scripts/98-migrate-alignment-end.sql` applies the same change to
+  existing databases (staged rows with a neutral side are discarded).
+- The OpenAPI contract narrows `alignment_end` to `^(добро|зло)$` and explains
+  why, and `core/api/app/models.py` was regenerated (`npm run bundle`,
+  `generate.py`, `sync.py`).
+- The unused alignment regexes were removed from
+  `DBConnect/src/api/BotCApiClient.cpp`; the CSV parser already allowed only
+  `добро`/`зло`.
+- `core/api/app/tests/test_schemas.py` now asserts that `добро`/`зло` pass and
+  `нейтральный` is rejected, plus the whole suite stays green (93 tests).
+
+Original report, kept for context:
 
 - `games_import_staging.alignment_end_ru` allows `нейтральный`
   (`core/init-scripts/01-schema.sql:175`) and the mapping comment promises
@@ -88,10 +103,9 @@ violation on insert. FastAPI validates the whole batch, so one such player
 aborts the entire request with HTTP 500 and an error that does not name the
 field. The GUI cannot trigger it today, which is why tests do not catch it.
 
-Next step: restrict the staging check and the mapping to `добро`/`зло`, narrow
-the `alignment_end` pattern in `openapi/api/openapi.yaml`, regenerate the
-clients, remove the dead constants, and add a test that a neutral end side is
-rejected with a clear message.
+Resolution: the import now fails at the API boundary with 422 instead of an
+obscure 500 from the database, because the staging check, the contract and the
+client all allow only `добро`/`зло`.
 
 ### I2. Duplicate game is reported as a successful import — `open`
 

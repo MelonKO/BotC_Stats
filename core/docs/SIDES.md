@@ -73,12 +73,11 @@ accepts it — the per-field constraints above are the source of truth.
 
 ## Known inconsistencies
 
-Places where the model above is not yet implemented are tracked in
-[`KNOWN-ISSUES.md`](KNOWN-ISSUES.md): contract item `I1` (a player's end side
-accepts `нейтральный` in staging, the OpenAPI contract and the DBConnect
-constants, while the database allows only `good`/`evil`) and question `Q1`
-(the missing `alignment_start` field). Keep that list up to date instead of
-repeating the details here.
+The alignment fields now follow the model above. Open questions around it are
+tracked in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md): `Q1` (the missing
+`alignment_start` field, deferred) and `Q3`/`Q4` (how draws and Travellers are
+counted in the statistics). Keep that list up to date instead of repeating the
+details here.
 
 ## Rules for new fields and endpoints
 

@@ -102,6 +102,7 @@ python -m pytest app/tests/ -v
 - ❌ Forgetting to run `generate-cert.sh` → Nginx fails to start
 - ❌ `SSL_VERIFY = false` not set in local `DBConnect/config.ini` → DBConnect fails TLS verification against self-signed cert
 - ❌ Using `alignment_win: "нейтральный"` → only `"добро"`, `"зло"` or `"ничья"` allowed
+- ❌ Sending `alignment_end: "нейтральный"` → a player's end side is only `"добро"`/`"зло"`; `neutral` is a role side (Traveller), decided by the storyteller
 - ❌ Mixing English and Russian in gameplay fields → CSV parser expects Russian for alignment and role names
 - ❌ Assuming PostgreSQL is reachable on host port → only SSH tunnel works for admin access
 

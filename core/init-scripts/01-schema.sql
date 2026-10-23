@@ -172,7 +172,7 @@ CREATE TABLE games_import_staging (
     seat_number         INTEGER,
     role_start_name_ru  TEXT NOT NULL,
     role_end_name_ru    TEXT NOT NULL,
-    alignment_end_ru    TEXT NOT NULL CHECK (alignment_end_ru IN ('добро', 'зло', 'нейтральный')),
+    alignment_end_ru    TEXT NOT NULL CHECK (alignment_end_ru IN ('добро', 'зло')),
     is_alive            BOOLEAN NOT NULL
 );
 
@@ -227,8 +227,9 @@ BEGIN
     END IF;
 
     -- Step 2: Map Russian alignment → English (validate + convert)
-    -- alignment_win_ru: 'добро' → 'good', 'зло' → 'evil'
-    -- alignment_end_ru: 'добро' → 'good', 'зло' → 'evil', 'нейтральный' → 'neutral'
+    -- alignment_win_ru: 'добро' → 'good', 'зло' → 'evil', 'ничья' → 'draw'
+    -- alignment_end_ru: 'добро' → 'good', 'зло' → 'evil'
+    -- (a player's end side is always good or evil, see core/docs/SIDES.md)
 
     -- Step 3: Process each unique game session from staging
     FOR rec IN

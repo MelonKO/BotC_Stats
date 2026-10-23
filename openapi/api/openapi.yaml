@@ -339,7 +339,11 @@ components:
           example: "Дамочка"
         alignment_end:
           type: string
-          pattern: "^(добро|зло|нейтральный)$"
+          description: >-
+            Side the player played for at the end of the game. Only good or evil:
+            a role whose side is neutral (for example a Traveller) is assigned a
+            side by the storyteller, so the player still ends as good or evil.
+          pattern: "^(добро|зло)$"
           example: "добро"
         is_alive:
           type: boolean

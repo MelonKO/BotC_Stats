@@ -65,8 +65,8 @@ class TestPlayerImportRequest:
             )
 
     def test_valid_alignments_end(self):
-        """All valid alignment_end values pass."""
-        for align in ("добро", "зло", "нейтральный"):
+        """A player's end side is only 'добро' or 'зло'."""
+        for align in ("добро", "зло"):
             player = PlayerImportRequest(
                 name="Игрок",
                 role_start="Роль",
@@ -75,6 +75,17 @@ class TestPlayerImportRequest:
                 is_alive=True,
             )
             assert player.alignment_end == align
+
+    def test_neutral_alignment_end_rejected(self):
+        """'нейтральный' is a role side, not a player side, so it is rejected."""
+        with pytest.raises(Exception):
+            PlayerImportRequest(
+                name="Игрок",
+                role_start="Странник",
+                role_end="Странник",
+                alignment_end="нейтральный",
+                is_alive=True,
+            )
 
     def test_seat_number_none(self):
         """seat_number can be None."""

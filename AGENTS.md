@@ -88,7 +88,7 @@ python -m pytest app/tests/ -v
 7. **Test fixtures**: 
    - Core API tests mock asyncpg pool (see `core/api/app/tests/conftest.py`)
 
-8. **Git workflow**: Work by git-flow. All commit messages in English.
+8. **Git workflow**: Work by git-flow. All commit messages in English. Do not push commits or other changes to a remote until the work is complete and verified, you have reported what changed and how it was checked, and the user has had an opportunity to review it and explicitly approved the push. Never push automatically as part of implementation or after committing locally.
 
 9. **Code style**: Comments/documentation in English only.
 

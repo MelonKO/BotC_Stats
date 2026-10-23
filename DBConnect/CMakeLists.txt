@@ -1,6 +1,12 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 project(DBConnect VERSION 1.0.0 LANGUAGES CXX)
+
+# Keep executable and generated runtime configuration files beside each other.
+# Presets set this explicitly; the fallback also supports direct CMake invocations.
+if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif ()
 
 # ─── Qt6 ──────────────────────────────────────────────────────────────────────
 # Find Qt6 packages via vcpkg toolchain (Core and Widgets are sufficient for basic GUI)

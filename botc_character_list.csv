@@ -1,4 +1,4 @@
-name,alignment,role_type,description,ru_name,ru_description
+﻿name,alignment,role_type,description,ru_name,ru_description
 Flowergirl,good,Townsfolk,"Each night*, you learn if a Demon voted today.",Цветочница,
 Dreamer,good,Townsfolk,"Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.",Сновидец,
 Acrobat,good,Townsfolk,"Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.",Акробат,
@@ -115,7 +115,7 @@ Xaan,evil,Minion,"On night X, all Townsfolk are poisoned until dusk. [X Outsider
 Al-Hadikhia,evil,Demon,"Each night*, you may choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.",Аль-Адихия,
 Imp,evil,Demon,"Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp.",Чёрт,
 Organ Grinder,evil,Minion,"All players keep their eyes closed when voting and the vote tally is secret. Each night, choose if you are drunk until dusk.",Шарманщик,
-Lleech,evil,Demon,"Each night*, choose a player: they die. You start by choosing a player: they are poisoned. You die if & only if they are dead. ",Пиявка,
+Lleech,evil,Demon,"Each night*, choose a player: they die. You start by choosing a player: they are poisoned. You die if & only if they are dead. ",Пиявица,
 Leviathan,evil,Demon,"If more than 1 good player is executed, evil wins. All players know you are in play. After day 5, evil wins.",Левиафан,
 Legion,evil,Demon,"Each night*, a player might die. Executions fail if only evil voted. You register as a Minion too. [Most players are Legion]",Легион,
 Kazali,evil,Demon,"Each night*, choose a player: they die. [You choose which players are which Minions. -? to +? Outsiders]",Казали,
@@ -134,9 +134,28 @@ Lil' Monsta,evil,Demon,"Each night, Minions choose who babysits Lil' Monsta & 'i
 Lord of Typhon,evil,Demon,"Each night*, choose a player: they die. [Evil characters are in a line. You are in the middle. +1 Minion. -? to +? Outsiders]",Владыка Тифон,
 No Dashii,evil,Demon,"Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.",Но Даши,
 Riot,evil,Demon,"On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.",Мятежник,
-Gunslinger,evil,Traveller,"Each day, after the 1st vote has been tallied, you may choose a player that voted: they die.",Гангстер,
+Gunslinger,neutral,Traveller,"Each day, after the 1st vote has been tallied, you may choose a player that voted: they die.",Гангстер,
 Banjoist,good,Townsfolk,"Each day, you may publicly challenge a player to banjo duel and play roshambo: the loser is drunk until dawn. If only 2 players live, your team wins.",Банджоист,"Каждый день вы можете публично вызвать игрока на дуэль на банджо и сыграть в КНБ: проигравший будет пьян до рассвета. Если в живых осталось только 2 игрока, ваша команда побеждает."
 Great Pumpkin,evil,Minion,"To good players, you register as the Demon & he Demon registers as a Minion.",Пугало,"Для хороших игроков вы определяетесь как Демон, а Демон определяется как Приспешник."
 Princess,good,Townsfolk,"On your 1st day, if you nominated & executed a player, the Demon doesn’t kill tonight.",Принцесса,"В ваш первый день: если вы номинировали и казнили игрока, Демон не убивает ближайшей ночью."
 Vixen,evil,Minion,The Vixen charms a player to join the evil side if the Vixen dies.,Лисица,
 Deviant,neutral,Traveller,"If you were funny today, you cannot die by exile.",Юродивый,
+Quiet,good,Townsfolk,TODO,Тихоня,
+Cultist,evil,Minion,TODO,Сектант,
+Leper,good,Outsider,TODO,Прокажённый,
+Yin,evil,Demon,TODO,Инь,
+Yang,evil,Demon,TODO,Янь,
+Marshal,good,Townsfolk,TODO,Маршал,
+Missionary,good,Townsfolk,TODO,Миссионер,
+Sacrifice,good,Townsfolk,TODO,Жертва,
+Madman,good,Townsfolk,TODO,Городской сумасшедший,
+Truth‑seeker,evil,Minion,TODO,Правдолюб,
+Alien,evil,Demon,TODO,Чужой,
+Infector,evil,Minion,TODO,Заразитель,
+Poison Master,good,Townsfolk,TODO,Мастер по ядам,
+Pastor,good,Townsfolk,TODO,Пастор,
+Identity thief,evil,Minion,TODO,Вор личностей,
+Bureaucrat,neutral,Traveller,"Each night, choose a player (not yourself): their vote counts as 3 votes tomorrow.",Бюрократ,
+Butcher,neutral,Traveller,"Each day, after the 1st execution, you may nominate again.",Мясник,
+Thief,neutral,Traveller,"Each night, choose a player (not yourself): their vote counts negatively tomorrow.",Вор,
+Apprentice,neutral,Traveller,"On your 1st night, you gain a Townsfolk ability (if good) or a Minion ability (if evil).",Ученик

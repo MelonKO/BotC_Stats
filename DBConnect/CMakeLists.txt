@@ -82,7 +82,15 @@ if (DEFINED VCPKG_INST)
 endif ()
 
 # ─── config.ini ───────────────────────────────────────────────────────────────
-configure_file(config.ini ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.ini COPYONLY)
+# config.ini holds local connection settings (including the API key) and is
+# git-ignored. Fresh clones fall back to the tracked config.ini.example, so the
+# configure step never fails; real settings are entered on the Settings tab.
+set(BOTC_CONFIG_INI "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
+if (NOT EXISTS "${BOTC_CONFIG_INI}")
+    message(STATUS "config.ini not found — using config.ini.example as the initial config")
+    set(BOTC_CONFIG_INI "${CMAKE_CURRENT_SOURCE_DIR}/config.ini.example")
+endif ()
+configure_file("${BOTC_CONFIG_INI}" "${CMAKE_CURRENT_BINARY_DIR}/config.ini" COPYONLY)
 
 # ─── Deploy target (только Windows, только Release) ───────────────────────────
 # Launch: cmake --build . --target deploy
@@ -114,9 +122,9 @@ if (WIN32)
                 COMMAND ${CMAKE_COMMAND} -E copy
                 "$<TARGET_FILE:${PROJECT_NAME}>"
                 "${CMAKE_BINARY_DIR}/dist/"
-                # Copying config.ini
+                # Copying config.ini generated at configure time
                 COMMAND ${CMAKE_COMMAND} -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
+                "${CMAKE_CURRENT_BINARY_DIR}/config.ini"
                 "${CMAKE_BINARY_DIR}/dist/"
                 # vcpkg applocal places third-party runtime DLLs (zlib, pcre2,
                 # harfbuzz, openssl, ...) next to the built exe; windeployqt

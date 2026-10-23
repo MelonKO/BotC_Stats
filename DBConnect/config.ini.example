@@ -1,0 +1,9 @@
+; BotC API Configuration — TEMPLATE
+;
+; Copy this file to config.ini and fill in your connection settings,
+; or edit them on the Settings tab of DBConnect (they are saved to config.ini).
+; config.ini is ignored by Git: never commit a real API key.
+[Connection]
+API_URL = https://localhost:443
+API_KEY =
+SSL_VERIFY = false

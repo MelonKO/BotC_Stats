@@ -77,7 +77,7 @@ CSV files → DBConnect (Qt6) → POST /api/games/import or /api/roles/import
 - `db.py` — asyncpg connection pool; use the `get_db()` async context manager
 - `import_logic.py` — business logic for game/role imports
 
-**`DBConnect/`** — Qt6 desktop app. `src/main.cpp` initialises `ConfigManager`, `BotCApiClient`, and `MainWindow`. Tabbed UI: Settings (API URL/key/SSL), Import Games, Import Roles, with player list caching via `DBCache`. Uses the auto-generated OpenAPI C++ client in `generated_api/`. Configuration persisted in `config.ini`.
+**`DBConnect/`** — Qt6 desktop app. `src/main.cpp` initialises `ConfigManager`, `BotCApiClient`, and `MainWindow`. Tabbed UI: Settings (API URL/key/SSL), Import Games, Import Roles, with player list caching via `DBCache`. Uses the auto-generated OpenAPI C++ client in `generated_api/`. Configuration persisted in local `config.ini` (git-ignored; template: `config.ini.example`).
 
 **`openapi/api/openapi.yaml`** — source of truth for the API contract. Edit this first, then regenerate `models.py` and the C++ client.
 

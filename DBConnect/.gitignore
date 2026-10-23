@@ -3,3 +3,7 @@ build_release/
 CMakeUserPresets.json
 vcpkg_installed/
 /generated_api/
+
+# Local connection settings — may contain a real API key.
+# The tracked template is config.ini.example.
+config.ini

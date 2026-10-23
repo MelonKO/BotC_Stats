@@ -5,7 +5,7 @@
 | Directory | Purpose | Key Files |
 |-----------|---------|-----------|
 | `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx | `docker-compose.yml`, `api/` |
-| `DBConnect/` | Qt6 GUI for CSV→API import (games, roles, players) | `src/main.cpp`, `CMakeLists.txt`, `config.ini` |
+| `DBConnect/` | Qt6 GUI for CSV→API import (games, roles, players) | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
 
 ## Developer Commands
 
@@ -52,7 +52,7 @@ python -m pytest app/tests/ -v
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 
-4. **SSL**: Local dev uses self-signed cert. `DBConnect/config.ini` has `SSL_VERIFY = false` — required for self-signed cert. For production, replace `core/nginx/ssl/` certs.
+4. **SSL**: Local dev uses self-signed cert. Local `DBConnect/config.ini` (created from the tracked `config.ini.example`) has `SSL_VERIFY = false` — required for self-signed cert. For production, replace `core/nginx/ssl/` certs.
 
 5. **Database access**: PostgreSQL port 5432 is **not exposed externally**. Admin access only via SSH tunnel: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>`.
 
@@ -69,8 +69,9 @@ python -m pytest app/tests/ -v
 
 ## Common Pitfalls
 
+- ❌ Committing `DBConnect/config.ini` → it holds a real API key; the file is git-ignored, commit only `config.ini.example`
 - ❌ Forgetting to run `generate-cert.sh` → Nginx fails to start
-- ❌ `SSL_VERIFY = false` not set in `DBConnect/config.ini` → DBConnect fails TLS verification against self-signed cert
+- ❌ `SSL_VERIFY = false` not set in local `DBConnect/config.ini` → DBConnect fails TLS verification against self-signed cert
 - ❌ Using `alignment_win: "нейтральный"` → only `"добро"`, `"зло"` or `"ничья"` allowed
 - ❌ Mixing English and Russian in gameplay fields → CSV parser expects Russian for alignment and role names
 - ❌ Assuming PostgreSQL is reachable on host port → only SSH tunnel works for admin access
@@ -164,7 +165,7 @@ docker-compose exec db psql -U postgres botc_stats < backup.sql
 | Container not starting | `docker-compose logs db` → check errors |
 | Database not initializing | `docker-compose down -v && docker-compose up -d` |
 | API connection error | Check `docker-compose ps`, `api` container status |
-| `Invalid API key` | Check `config.ini` key, create new one |
-| SSL error in DBConnect | Set `SSL_VERIFY = false` in `DBConnect/config.ini` |
+| `Invalid API key` | Check the key on the Settings tab (stored in local `config.ini`), create new one |
+| SSL error in DBConnect | Set `SSL_VERIFY = false` in local `DBConnect/config.ini` |
 | Missing roles | Add roles to `roles` table before import |
 | PostgreSQL port 5432 not accessible | Use SSH tunnel only: `ssh -L 5432:localhost:5432 botc-ssh@<SERVER_IP>` |

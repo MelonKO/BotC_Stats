@@ -49,6 +49,8 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 Открыть приложение DBConnect. На вкладке **Settings** указать API URL и API key, сохранить. На вкладках **Import Games** / **Import Roles** выбрать CSV-файл и нажать **Import**.
 
+Настройки сохраняются в локальный `DBConnect/config.ini`, который не попадает в Git. Шаблон для нового клона — `DBConnect/config.ini.example` (копируется автоматически при сборке, если `config.ini` ещё нет).
+
 ## Project Structure
 
 ```
@@ -70,7 +72,8 @@ BotC/
 │   ├── src/
 │   ├── generated_api/          # Auto-generated OpenAPI C++ client
 │   ├── CMakeLists.txt
-│   └── config.ini
+│   ├── config.ini.example      # Шаблон локальных настроек (без ключа)
+│   └── config.ini              # Локальные настройки, не отслеживается Git
 ```
 
 ## Database Schema

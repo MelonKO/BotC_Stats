@@ -94,6 +94,8 @@ python -m pytest app/tests/ -v
 
 10. **Database permissions**: When adding new tables, always check `api_service` (and `botc_user`) permissions. Define exact operations needed (SELECT, INSERT, UPDATE, DELETE), not just read access. Example: `role_translations` needs INSERT+UPDATE for upsert via API, not just SELECT.
 
+11. **Sides of the conflict**: `alignment` in the schema means the *side* (сторона), not "выравнивание". A role's side allows `good|evil|neutral` (neutral = decided by the storyteller, e.g. Traveller), the winning side allows `good|evil|draw`, and a player's end side allows only `good|evil`. Read `core/docs/SIDES.md` before adding or changing an alignment field.
+
 ## Common Pitfalls
 
 - ❌ Committing `DBConnect/config.ini` → it holds a real API key; the file is git-ignored, commit only `config.ini.example`
@@ -107,6 +109,8 @@ python -m pytest app/tests/ -v
 
 - Core API docs: `core/docs/API-ACCESS.md`
 - SSH setup: `core/docs/SSH-ACCESS.md`
+- Sides of the conflict (`alignment` fields): `core/docs/SIDES.md`
+- Known issues and open questions: `core/docs/KNOWN-ISSUES.md`
 - Role CSV format: see `test_roles.csv` + `botc_character_list.csv` schema
 
 ## Database Schema Overview

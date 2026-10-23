@@ -9,18 +9,24 @@ int main(int argc, char* argv[])
     const QApplication app(argc, argv);
 
     // init ConfigManager and load config
-    const auto* configManager = botc::config::ConfigManager::instance();
+    auto* configManager = botc::config::ConfigManager::instance();
+    const auto serverSettings = configManager->getServerSettings();
 
     // init api client
     auto* apiClient = botc::api::BotCApiClient::instance();
-    apiClient->init(configManager->getApiUrl(), configManager->getApiKey(), configManager->getSslVerify());
+    apiClient->init(serverSettings.apiUrl, serverSettings.apiKey, serverSettings.bSslVerify);
 
-    QObject::connect(configManager, &botc::config::ConfigManager::apiUrlChanged,
-                     apiClient, &botc::api::BotCApiClient::setBaseUrl);
-    QObject::connect(configManager, &botc::config::ConfigManager::apiKeyChanged,
-                     apiClient, &botc::api::BotCApiClient::setApiKey);
-    QObject::connect(configManager, &botc::config::ConfigManager::sslVerifyChanged,
-                     apiClient, &botc::api::BotCApiClient::setSslVerify);
+    // Apply a saved settings tab to the client. Slots of one signal run in the
+    // order of their connections, and this connection is made before the window
+    // exists, so the client is updated before anyone reloads its caches.
+    QObject::connect(configManager, &botc::config::ConfigManager::serverSettingsChanged,
+                     apiClient,
+                     [apiClient](const botc::config::ServerSettings& settings)
+                     {
+                         apiClient->setBaseUrl(settings.apiUrl);
+                         apiClient->setApiKey(settings.apiKey);
+                         apiClient->setSslVerify(settings.bSslVerify);
+                     });
 
     // Create main window widget
     botc::ui::MainWindow window;

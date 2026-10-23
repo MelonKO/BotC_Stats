@@ -4,6 +4,17 @@
 
 namespace botc::config
 {
+    // Everything that selects and authenticates against a server. Kept as one
+    // value so that saving the settings tab is a single, atomic change.
+    struct ServerSettings
+    {
+        QString apiUrl;
+        QString apiKey;
+        bool bSslVerify = false;
+
+        bool operator==(const ServerSettings& other) const = default;
+    };
+
     class ConfigManager final : public QObject
     {
         Q_OBJECT
@@ -15,36 +26,14 @@ namespace botc::config
             return &_instance;
         };
 
-        [[nodiscard]] QString getApiUrl() const
-        {
-            return m_settings.value("connection/api_url", "https://localhost:443").toString();
-        }
+        [[nodiscard]] ServerSettings getServerSettings() const;
 
-        [[nodiscard]] QString getApiKey() const { return m_settings.value("connection/api_key", "").toString(); }
-        [[nodiscard]] bool getSslVerify() const { return m_settings.value("connection/ssl_verify", false).toBool(); }
-
-        void setApiUrl(const QString& in_newValue)
-        {
-            m_settings.setValue("connection/api_url", in_newValue);
-            emit apiUrlChanged(in_newValue);
-        }
-
-        void setApiKey(const QString& in_newValue)
-        {
-            m_settings.setValue("connection/api_key", in_newValue);
-            emit apiKeyChanged(in_newValue);
-        }
-
-        void setSslVerify(const bool b_inNewValue)
-        {
-            m_settings.setValue("connection/ssl_verify", b_inNewValue);
-            emit sslVerifyChanged(b_inNewValue);
-        }
+        // Writes all server settings and emits serverSettingsChanged() once, or
+        // does nothing when the values are unchanged.
+        void setServerSettings(const ServerSettings& settings);
 
     signals:
-        void apiUrlChanged(const QString& in_newValue);
-        void apiKeyChanged(const QString& in_newValue);
-        void sslVerifyChanged(bool b_inNewValue);
+        void serverSettingsChanged(const botc::config::ServerSettings& settings);
 
     private:
         ConfigManager() : m_settings(m_iniPath, QSettings::IniFormat)

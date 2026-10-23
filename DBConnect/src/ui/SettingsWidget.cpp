@@ -139,17 +139,21 @@ namespace botc::ui
 
     void SettingsWidget::loadSettings() const
     {
-        const auto ConfigManager = config::ConfigManager::instance();
-        ui->apiUrlEdit->setText(ConfigManager->getApiUrl());
-        ui->apiKeyEdit->setText(ConfigManager->getApiKey());
-        ui->sslVerifyCheckBox->setChecked(ConfigManager->getSslVerify());
+        const auto settings = config::ConfigManager::instance()->getServerSettings();
+        ui->apiUrlEdit->setText(settings.apiUrl);
+        ui->apiKeyEdit->setText(settings.apiKey);
+        ui->sslVerifyCheckBox->setChecked(settings.bSslVerify);
     }
 
     void SettingsWidget::saveSettings() const
     {
-        const auto ConfigManager = config::ConfigManager::instance();
-        ConfigManager->setApiUrl(ui->apiUrlEdit->text().trimmed());
-        ConfigManager->setApiKey(ui->apiKeyEdit->text().trimmed());
-        ConfigManager->setSslVerify(ui->sslVerifyCheckBox->isChecked());
+        // One call per save: the manager stores all values and emits a single
+        // serverSettingsChanged(), so receivers reload their caches once.
+        config::ServerSettings settings;
+        settings.apiUrl = ui->apiUrlEdit->text().trimmed();
+        settings.apiKey = ui->apiKeyEdit->text().trimmed();
+        settings.bSslVerify = ui->sslVerifyCheckBox->isChecked();
+
+        config::ConfigManager::instance()->setServerSettings(settings);
     }
 } // botc::ui

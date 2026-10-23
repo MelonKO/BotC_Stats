@@ -7,33 +7,17 @@
 #include "db_cache/DBCache.h"
 #include "../config/ConfigManager.h"
 
-#include <QTimer>
-
 namespace botc::ui
 {
     MainWindow::MainWindow(QWidget* parent) :
-        QMainWindow(parent), ui(new Ui::MainWindow), m_cacheRefreshTimer(new QTimer(this))
+        QMainWindow(parent), ui(new Ui::MainWindow)
     {
         ui->setupUi(this);
 
-        m_cacheRefreshTimer->setSingleShot(true);
-        m_cacheRefreshTimer->setInterval(200);
-        const auto* configManager = config::ConfigManager::instance();
-        const auto scheduleCacheRefresh = [this]
-        {
-            m_cacheRefreshTimer->start();
-        };
-        connect(configManager, &config::ConfigManager::apiUrlChanged,
-                this, scheduleCacheRefresh);
-        connect(configManager, &config::ConfigManager::apiKeyChanged,
-                this, scheduleCacheRefresh);
-        connect(configManager, &config::ConfigManager::sslVerifyChanged,
-                this, scheduleCacheRefresh);
-        connect(m_cacheRefreshTimer, &QTimer::timeout,
-                this, []
-                {
-                    DBCache::instance()->refreshAll();
-                });
+        // One saved settings tab is one change: the API client picks up the new
+        // URL, key and TLS policy first (see main()), then the caches reload.
+        connect(config::ConfigManager::instance(), &config::ConfigManager::serverSettingsChanged,
+                DBCache::instance(), &DBCache::refreshAll);
 
         auto* tabs = new QTabWidget(this);
 

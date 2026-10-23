@@ -6,6 +6,8 @@
 |-----------|---------|-----------|
 | `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx + Metabase | `docker-compose.yml`, `api/` |
 | `DBConnect/` | Qt6 GUI for CSV→API import (games and roles; players are created by game imports) | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
+| `openapi/` | API contract and client generation | `api/openapi.yaml`, `generate.py`, `sync.py` |
+| `scripts/` | Repository-wide task runner | `project.py`, `project.ini.example` |
 
 ## Developer Commands
 
@@ -23,6 +25,24 @@ cd core
 bash scripts/create-api-key.sh create "Your Name" "contact@example.com"
 # Output contains: sk-<32-hex-chars> — save it securely
 ```
+
+### Routine tasks (`scripts/project.py`)
+
+`scripts/project.py` is the single entry point for the everyday work. It regenerates the API clients from the spec, copies them into the live code, builds DBConnect and runs the tests:
+
+```powershell
+python scripts/project.py doctor              # tools, npm state and whether the live code is fresh
+python scripts/project.py setup               # npm install + generator requirements
+python scripts/project.py generate            # spec → Pydantic models + C++ client → live code
+python scripts/project.py generate --check    # fail if the live code does not match the spec
+python scripts/project.py sync [--dry-run]    # copy the generated files only
+python scripts/project.py build [options]     # forwarded to DBConnect/scripts/build.py
+python scripts/project.py deploy [options]    # Release + build_release/dist/
+python scripts/project.py test [-k EXPR]      # core API pytest suite
+python scripts/project.py verify              # generate --check, then test
+```
+
+Everything after `build` or `deploy` is forwarded to `DBConnect/scripts/build.py`, so the CMake/vcpkg logic has a single implementation. Tool paths can be pinned in `scripts/project.ini` (git-ignored, template `project.ini.example`); precedence is command line > config file > environment (`BOTC_PYTHON`, `BOTC_NPM`) > auto-detection.
 
 ### Build DBConnect (Qt6 GUI importer)
 
@@ -65,7 +85,10 @@ Open the built executable. Configure API URL and key on the **Settings** tab, th
 
 ### Run tests
 ```bash
-# Core API tests
+# Via the project task runner (recommended)
+python scripts/project.py test
+
+# Core API tests directly
 cd core/api && venv\Scripts\activate  # Windows
 cd core/api && source venv/bin/activate  # Linux/macOS
 python -m pytest app/tests/ -v
@@ -75,7 +98,7 @@ python -m pytest app/tests/ -v
 
 1. **CSV format for games**: `test_sample.csv` has the exact schema. Each row = one player's role in a game. Multiple rows per game are grouped by `(game_date, scenario_name, storyteller_name, alignment_win, location, game_number)`.
 
-2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles). **All code text must be English: comments, docstrings, and `Field(description=...)` values in models.** `models.py` and `DBConnect/generated_api/` are auto-generated — fix issues in the OpenAPI spec (`openapi/api/openapi.yaml`) and run `npm run generate` (bundles, regenerates both clients, and syncs them into the live code).
+2. **Language**: Russian for gameplay data (`alignment_win`, `alignment_end`, role names). English for system data (`name`, `alignment`, `role_type` in roles). **All code text must be English: comments, docstrings, and `Field(description=...)` values in models.** `models.py` and `DBConnect/generated_api/` are auto-generated — fix issues in the OpenAPI spec (`openapi/api/openapi.yaml`) and run `python scripts/project.py generate` (bundles the spec, regenerates both clients, and syncs them into the live code). `python scripts/project.py verify` checks that the committed generated code matches the spec.
 
 3. **API authentication**: `X-API-Key: sk-<key>` header. Keys stored as SHA-256 hashes in `api_keys` table.
 

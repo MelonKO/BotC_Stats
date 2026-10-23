@@ -53,6 +53,24 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 Приложение читает и сохраняет `config.ini` относительно текущего рабочего каталога; не добавляйте в Git файл с реальным API-ключом. При каждой конфигурации CMake в каталог сборки копируется `DBConnect/config.ini`, если он существует, иначе — `DBConnect/config.ini.example`. Поэтому изменения только в копии каталога сборки могут быть перезаписаны при следующей конфигурации; для локальных настроек задайте исходный `DBConnect/config.ini` и запускайте приложение из каталога с нужным `config.ini`.
 
+### Повседневные задачи (`scripts/project.py`)
+
+Для повседневных операций есть единая точка входа — `scripts/project.py`. Он собирает DBConnect, перегенерирует клиентов из OpenAPI-спецификации, копирует их в рабочий код и запускает тесты:
+
+```powershell
+python scripts/project.py doctor            # какие инструменты найдены и актуален ли сгенерированный код
+python scripts/project.py setup             # npm install + зависимости генератора
+python scripts/project.py generate          # спецификация → Pydantic-модели и C++-клиент → рабочий код
+python scripts/project.py generate --check  # проверить, что рабочий код соответствует спецификации
+python scripts/project.py sync              # только скопировать сгенерированные файлы
+python scripts/project.py build             # сборка DBConnect (аргументы уходят в build.py)
+python scripts/project.py deploy            # Release + build_release/dist/
+python scripts/project.py test              # тесты core API
+python scripts/project.py verify            # generate --check + test
+```
+
+Аргументы после `build` и `deploy` передаются в `DBConnect/scripts/build.py` без изменений: `python scripts/project.py build --preset release --jobs 4`. Пути к инструментам можно закрепить в `scripts/project.ini` (в git не попадает, шаблон — `scripts/project.ini.example`); приоритет: аргумент → конфиг → переменная окружения (`BOTC_PYTHON`, `BOTC_NPM`) → автоопределение.
+
 ### Сборка DBConnect вне CLion (Windows)
 
 Нужны CMake 3.25+, Ninja, C++ build tools Visual Studio и vcpkg. Установите системную переменную `VCPKG_ROOT`, указывающую на каталог vcpkg. Для Ninja откройте **Developer PowerShell for Visual Studio**, чтобы компилятор `cl.exe` был доступен в `PATH`.
@@ -107,6 +125,8 @@ BotC/
 │   ├── nginx/
 │   ├── scripts/
 │   └── docs/                   # SSH and API access documentation
+├── openapi/                    # Источник контракта API и генерация клиентов
+├── scripts/                    # Единая точка входа (project.py)
 ├── DBConnect/                  # Qt6 GUI importer (games, roles, players)
 │   ├── src/
 │   ├── generated_api/          # Auto-generated OpenAPI C++ client

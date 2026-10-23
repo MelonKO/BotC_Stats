@@ -5,10 +5,9 @@ Sources (produced by `npm run generate:python` / `npm run generate:cpp`):
   python_gen/models.py  ->  core/api/app/models.py
   cpp_gen/client/       ->  DBConnect/generated_api/   (mirror: stale files deleted)
 
-Run with --dry-run to see what would change without touching anything.
+Run with --dry-run to see what would change without touching anything, or with
+--check to exit non-zero when the live code does not match the generated files.
 """
-import filecmp
-import shutil
 import sys
 from pathlib import Path
 
@@ -18,7 +17,8 @@ PY_DST = ROOT / "core" / "api" / "app" / "models.py"
 CPP_SRC = Path(__file__).parent / "cpp_gen" / "client"
 CPP_DST = ROOT / "DBConnect" / "generated_api"
 
-dry_run = "--dry-run" in sys.argv
+check = "--check" in sys.argv
+dry_run = check or "--dry-run" in sys.argv
 
 
 def fail(msg: str):
@@ -26,17 +26,38 @@ def fail(msg: str):
     sys.exit(1)
 
 
-def sync_python():
+def normalized(path: Path) -> bytes:
+    """File content with LF line endings.
+
+    The generators write CRLF on Windows while Git checks the tracked files
+    out with LF (see .gitattributes), so a raw byte comparison would report a
+    stale file right after a normal checkout. Sync writes LF for the same
+    reason: the tracked files stay identical on every platform.
+    """
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
+def matches(source: Path, target: Path) -> bool:
+    return target.is_file() and normalized(source) == normalized(target)
+
+
+def copy_normalized(source: Path, target: Path) -> None:
+    target.write_bytes(normalized(source))
+
+
+def sync_python() -> bool:
+    """Copy the Python models; return True when the live file is out of date."""
     if not PY_SRC.is_file() or PY_SRC.stat().st_size == 0:
         fail(f"{PY_SRC} is missing or empty — run `npm run generate:python` first")
 
-    if PY_DST.is_file() and filecmp.cmp(PY_SRC, PY_DST, shallow=False):
+    if matches(PY_SRC, PY_DST):
         print(f"models.py: up to date ({PY_DST})")
-        return
+        return False
 
     print(f"models.py: {'would copy' if dry_run else 'copying'} {PY_SRC} -> {PY_DST}")
     if not dry_run:
-        shutil.copyfile(PY_SRC, PY_DST)
+        copy_normalized(PY_SRC, PY_DST)
+    return True
 
 
 def cpp_manifest_names():
@@ -55,7 +76,8 @@ def cpp_manifest_names():
     }
 
 
-def sync_cpp():
+def sync_cpp() -> bool:
+    """Copy the C++ client; return True when the live directory is out of date."""
     if not CPP_SRC.is_dir() or not any(CPP_SRC.glob("*.h")):
         fail(f"{CPP_SRC} is missing or has no headers — run `npm run generate:cpp` first")
 
@@ -69,12 +91,12 @@ def sync_cpp():
     added = sorted(src_files - dst_files)
     changed = sorted(
         name for name in src_files & dst_files
-        if not filecmp.cmp(CPP_SRC / name, CPP_DST / name, shallow=False)
+        if not matches(CPP_SRC / name, CPP_DST / name)
     )
 
     if not (stale or added or changed):
         print(f"generated_api: up to date ({CPP_DST})")
-        return
+        return False
 
     verb = "would " if dry_run else ""
     for name in stale:
@@ -89,11 +111,19 @@ def sync_cpp():
         for name in stale:
             (CPP_DST / name).unlink()
         for name in added + changed:
-            shutil.copyfile(CPP_SRC / name, CPP_DST / name)
+            copy_normalized(CPP_SRC / name, CPP_DST / name)
 
     print(f"generated_api: {len(added)} added, {len(changed)} updated, {len(stale)} deleted")
+    return True
 
 
-sync_python()
-sync_cpp()
-print("Dry run — nothing was written." if dry_run else "Sync complete.")
+outdated = sync_python()
+outdated = sync_cpp() or outdated
+
+if check:
+    if outdated:
+        print("Generated code is out of date — run `python scripts/project.py generate`.")
+        sys.exit(1)
+    print("Generated code is up to date.")
+else:
+    print("Dry run — nothing was written." if dry_run else "Sync complete.")

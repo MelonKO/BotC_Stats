@@ -20,6 +20,9 @@ result = subprocess.run(
         "--output-model-type", "pydantic_v2.BaseModel",
         "--use-annotated",
         "--field-constraints",
+        # Keep the output byte-for-byte stable so `sync --check` can tell a real
+        # model change from a mere regeneration timestamp.
+        "--disable-timestamp",
     ],
     check=False,
 )

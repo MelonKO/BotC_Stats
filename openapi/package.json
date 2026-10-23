@@ -8,6 +8,7 @@
     "generate:python": "python generate.py",
     "sync": "python sync.py",
     "sync:dry": "python sync.py --dry-run",
+    "sync:check": "python sync.py --check",
     "generate": "npm run bundle && npm run generate:python && npm run generate:cpp && npm run sync"
   },
   "devDependencies": {

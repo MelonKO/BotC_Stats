@@ -78,6 +78,8 @@ docker-compose down -v     # stop + remove data
 
 ## Running Tests
 
+Из корня репозитория: `python scripts/project.py test`.
+
 ```bash
 # Из каталога core/ перейти в директорию API
 cd api

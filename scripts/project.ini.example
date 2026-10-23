@@ -1,0 +1,23 @@
+# Project task runner configuration.
+#
+# Copy this file to project.ini (same directory) and adjust the values to your
+# machine. project.ini is git-ignored, this example is tracked.
+#
+# Every value is optional: leave it empty ("key =") to let the script detect
+# the tool. Precedence for each tool: command line option, then this file, then
+# the environment (BOTC_PYTHON, BOTC_NPM), then auto-detection.
+
+[tools]
+# Interpreter used for the OpenAPI models and the core API tests. Empty means:
+# the repository virtual environment (.venv), then the current interpreter.
+python =
+
+# npm executable. Empty means: npm from PATH.
+npm =
+
+[generate]
+# Skip a generation step by default (useful when openapi-generator is slow).
+# --skip-cpp / --skip-python force a step off, --with-cpp / --with-python
+# force it on again regardless of these values.
+skip_cpp = false
+skip_python = false

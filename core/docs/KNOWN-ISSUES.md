@@ -244,18 +244,18 @@ The games import progress dialog ignores its cancel button
 
 Next step: check `wasCanceled()` after each game, mirroring the roles dialog.
 
-### C8. A hung list request pauses the cache refresh — `open`
+### C8. A hung list request pauses the cache refresh — `fixed`
 
 `DBCache` sends at most one list request per resource at a time
 (`DBConnect/src/db_cache/DBCache.cpp:31-68`): a refresh requested while a reply
 is in flight is queued and sent right after it, so a slower earlier reply can no
-longer overwrite newer data. The queue only moves when a reply arrives, and
-`BotCApiClient` sets no request timeout, so a request that never completes stops
-refreshes of that resource until the process restarts. Nginx bounds the server
-side of a hang; a silently dropped connection does not.
-
-Next step: set a timeout for the roles and players APIs
-(`BotCApiClient.cpp:125-164`) and keep long game imports unaffected.
+longer overwrite newer data. The queue only moves when a reply arrives, so a
+request that never completes would stop refreshes of that resource. The health,
+roles and players APIs now time out after 30 s
+(`DBConnect/src/api/BotCApiClient.cpp:18`, `:103`, `:143`, `:169`); the generated
+client turns that into a `TimeoutError` reply, which releases the queue. Game
+imports are left without a limit (`:119`) because a large batch may legitimately
+run longer.
 
 ## Security
 

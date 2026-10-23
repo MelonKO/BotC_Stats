@@ -9,6 +9,15 @@
 
 namespace botc::api
 {
+    namespace
+    {
+        // Health, roles and players answer small payloads, so a stuck request has
+        // to fail instead of keeping a cache from refreshing (KNOWN-ISSUES C8).
+        // Game imports are deliberately left without a timeout: a large batch may
+        // legitimately take longer than any fixed limit.
+        constexpr int kRequestTimeoutMs = 30000;
+    }
+
     void BotCApiClient::init(const QString& baseUrl, const QString& apiKey, const bool bSslVerify)
     {
         m_baseUrl    = baseUrl;
@@ -91,6 +100,7 @@ namespace botc::api
         m_systemAPI->setNetworkAccessManager(m_networkManager);
         m_systemAPI->addHeaders("X-API-Key", m_apiKey);
         m_systemAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        m_systemAPI->setTimeOut(kRequestTimeoutMs);
         connect(m_systemAPI, &OpenAPI::OAISystemApi::healthSignal,
                 this, [this](const OpenAPI::OAIHealthResponse& summary)
                 {
@@ -106,6 +116,7 @@ namespace botc::api
         m_gameAPI->setNetworkAccessManager(m_networkManager);
         m_gameAPI->addHeaders("X-API-Key", m_apiKey);
         m_gameAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        // No timeout here on purpose: see kRequestTimeoutMs.
         connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGameSignalError,
                 this, &BotCApiClient::handleGameImportReply);
         connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGameSignal,
@@ -128,6 +139,8 @@ namespace botc::api
         m_rolesAPI->setNetworkAccessManager(m_networkManager);
         m_rolesAPI->addHeaders("X-API-Key", m_apiKey);
         m_rolesAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        // Role import shares this API object; its payload is a small list as well.
+        m_rolesAPI->setTimeOut(kRequestTimeoutMs);
 
         //listRoles
         connect(m_rolesAPI, &OpenAPI::OAIRolesApi::listRolesSignalError,
@@ -153,6 +166,7 @@ namespace botc::api
         m_playersAPI->setNetworkAccessManager(m_networkManager);
         m_playersAPI->addHeaders("X-API-Key", m_apiKey);
         m_playersAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        m_playersAPI->setTimeOut(kRequestTimeoutMs);
 
         connect(m_playersAPI, &OpenAPI::OAIPlayersApi::listPlayersSignalError,
                 this, &BotCApiClient::handlePlayersListReply);

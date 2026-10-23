@@ -21,6 +21,8 @@ namespace OpenAPI
 
 namespace botc::api
 {
+    class BotCNetworkAccessManager;
+
     class BotCApiClient final : public QObject
     {
         Q_OBJECT
@@ -91,7 +93,8 @@ namespace botc::api
     private:
         QString m_baseUrl{};
         QString m_apiKey{};
-        bool m_bSslVerify = false;
+        // Owns the TLS certificate policy; see BotCNetworkAccessManager.
+        BotCNetworkAccessManager* m_networkManager = nullptr;
 
         OpenAPI::OAIGamesApi* m_gameAPI      = nullptr;
         OpenAPI::OAIRolesApi* m_rolesAPI     = nullptr;

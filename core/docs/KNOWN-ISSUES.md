@@ -165,16 +165,30 @@ player listed twice in one game, not a duplicate game.
 
 ## DBConnect client
 
-### C1. TLS verification cannot be re-enabled — `open`
+### C1. TLS verification cannot be re-enabled — `fixed`
 
-`BotCApiClient::setSslVerify()` only disables verification, and the settings
-checkbox promises a toggle (`DBConnect/src/api/BotCApiClient.cpp:58-71`). The
-connection test ignores the setting as well (`SettingsWidget.cpp:89` is
-commented out), so a user cannot tell which certificate policy is in effect.
+The verification policy used to be applied through
+`QSslConfiguration::setDefaultConfiguration(VerifyNone)`, which changes TLS for
+the whole process, while `setSslVerify(true)` only updated the stored flag, so
+the checkbox could not turn certificate checks back on
+(`DBConnect/src/api/BotCApiClient.cpp`).
 
-Next step: make the toggle two-way — restore the default verification
-configuration when it is enabled, never switch verification off for the whole
-application — and apply the setting in the connection test.
+Resolution: `QNetworkAccessManager` has no per-manager TLS configuration in
+Qt 6.10, so the policy now lives in `BotCNetworkAccessManager`, which applies it
+to every request it issues (`DBConnect/src/api/BotCNetworkAccessManager.cpp`).
+The four generated API objects receive that manager through
+`setNetworkAccessManager()`, and the connection test in Settings opens its own
+manager with the state of the checkbox, so it neither ignores the setting nor
+changes the application-wide client
+(`DBConnect/src/ui/SettingsWidget.cpp:87-96`). A policy change drops cached
+connections, so a socket accepted with `VerifyNone` is not reused after
+verification is enabled again.
+
+`SSL_VERIFY` still defaults to `false`: only the production server has a
+certificate, so local and test servers rely on `VerifyNone`
+(`DBConnect/config.ini.example:9`, `DBConnect/src/config/ConfigManager.h:24`).
+With the setting off an untrusted, expired or hostname-mismatched certificate
+is accepted, so check it before importing into the shared database.
 
 ### C2. Config path is relative to the working directory — `open`
 

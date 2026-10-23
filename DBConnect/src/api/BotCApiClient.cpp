@@ -1,5 +1,6 @@
 #include "BotCApiClient.h"
 
+#include "BotCNetworkAccessManager.h"
 #include "OAIGamesApi.h"
 #include "OAIGamesImportStatusResponse.h"
 #include "OAIPlayersApi.h"
@@ -12,14 +13,14 @@ namespace botc::api
     {
         m_baseUrl    = baseUrl;
         m_apiKey     = apiKey;
-        m_bSslVerify = bSslVerify;
 
-        if (!m_bSslVerify)
+        // The certificate policy is applied per request by this manager instead of
+        // changing Qt's global default configuration (see BotCNetworkAccessManager).
+        if (nullptr == m_networkManager)
         {
-            QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-            config.setPeerVerifyMode(QSslSocket::VerifyNone);
-            QSslConfiguration::setDefaultConfiguration(config);
+            m_networkManager = new BotCNetworkAccessManager{this};
         }
+        m_networkManager->setPeerVerificationEnabled(bSslVerify);
 
         initSystemAPI();
         initRolesAPI();
@@ -48,16 +49,9 @@ namespace botc::api
 
     void BotCApiClient::setSslVerify(const bool bSslVerify)
     {
-        if (m_bSslVerify != bSslVerify)
+        if (nullptr != m_networkManager)
         {
-            m_bSslVerify = bSslVerify;
-            // TODO:: switch SSL verify
-            if (!m_bSslVerify)
-            {
-                QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-                config.setPeerVerifyMode(QSslSocket::VerifyNone);
-                QSslConfiguration::setDefaultConfiguration(config);
-            }
+            m_networkManager->setPeerVerificationEnabled(bSslVerify);
         }
     }
 
@@ -94,6 +88,7 @@ namespace botc::api
     void BotCApiClient::initSystemAPI()
     {
         m_systemAPI = new OpenAPI::OAISystemApi{};
+        m_systemAPI->setNetworkAccessManager(m_networkManager);
         m_systemAPI->addHeaders("X-API-Key", m_apiKey);
         m_systemAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
         connect(m_systemAPI, &OpenAPI::OAISystemApi::healthSignal,
@@ -108,6 +103,7 @@ namespace botc::api
     void BotCApiClient::initGameAPI()
     {
         m_gameAPI = new OpenAPI::OAIGamesApi{};
+        m_gameAPI->setNetworkAccessManager(m_networkManager);
         m_gameAPI->addHeaders("X-API-Key", m_apiKey);
         m_gameAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
         connect(m_gameAPI, &OpenAPI::OAIGamesApi::importGameSignalError,
@@ -129,6 +125,7 @@ namespace botc::api
     void BotCApiClient::initRolesAPI()
     {
         m_rolesAPI = new OpenAPI::OAIRolesApi{};
+        m_rolesAPI->setNetworkAccessManager(m_networkManager);
         m_rolesAPI->addHeaders("X-API-Key", m_apiKey);
         m_rolesAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
 
@@ -153,6 +150,7 @@ namespace botc::api
     void BotCApiClient::initPlayersAPI()
     {
         m_playersAPI = new OpenAPI::OAIPlayersApi{};
+        m_playersAPI->setNetworkAccessManager(m_networkManager);
         m_playersAPI->addHeaders("X-API-Key", m_apiKey);
         m_playersAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
 

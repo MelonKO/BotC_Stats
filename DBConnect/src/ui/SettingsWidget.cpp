@@ -6,6 +6,7 @@
 #include "OAISystemApi.h"
 #include "ui_SettingsWidget.h"
 #include "../api/BotCApiClient.h"
+#include "../api/BotCNetworkAccessManager.h"
 #include "../config/ConfigManager.h"
 
 namespace botc::ui
@@ -86,7 +87,12 @@ namespace botc::ui
         auto* systemAPI = new OpenAPI::OAISystemApi{};
         systemAPI->addHeaders("X-API-Key", ui->apiKeyEdit->text().trimmed());
         systemAPI->setNewServerForAllOperations(QUrl(ui->apiUrlEdit->text().trimmed()));
-        /*m_apiClient->setSslVerify(ui->sslVerifyCheckBox->isChecked());*/
+
+        // The test must use the certificate policy shown on the tab, but must not
+        // change the policy of the application-wide API client.
+        auto* networkManager = new api::BotCNetworkAccessManager{systemAPI};
+        networkManager->setPeerVerificationEnabled(ui->sslVerifyCheckBox->isChecked());
+        systemAPI->setNetworkAccessManager(networkManager);
 
         connect(systemAPI, &OpenAPI::OAISystemApi::healthSignalError,
                 this,

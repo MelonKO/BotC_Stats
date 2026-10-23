@@ -21,6 +21,8 @@ set(SOURCES
         src/main.cpp
         src/api/BotCApiClient.cpp
         src/api/BotCApiClient.h
+        src/api/BotCNetworkAccessManager.cpp
+        src/api/BotCNetworkAccessManager.h
         src/config/ConfigManager.cpp
         src/config/ConfigManager.h
         src/ui/MainWindow.cpp

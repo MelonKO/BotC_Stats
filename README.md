@@ -10,23 +10,24 @@
 ┌───────────────────────────────────────────────────────────┐
 │                    BotC Monorepo                           │
 ├──────────────┬──────────────┬─────────────────────────────┤
-│   core/      │  DBConnect/  │  (future)                   │
-│  Docker +    │  Qt6 GUI     │  telegram-bot, web-ui, ...  │
-│  PostgreSQL  │  CSV → API   │                             │
-│  + FastAPI   │              │                             │
-│  + Nginx     │              │                             │
-└──────┬───────┴──────┬───────┴─────────────────────────────┘
+│   core/      │  DBConnect/  │  Future integrations        │
+│  Docker:     │  Qt6 GUI     │  e.g. bot or web UI          │
+│  PostgreSQL  │  CSV → API   │                              │
+│  + FastAPI   │              │                              │
+│  + Nginx     │              │                              │
+│  + Metabase  │              │                              │
+└──────┬───────┴──────┬───────┴──────────────────────────────┘
        │              │
        ▼              ▼
-  PostgreSQL DB ←── POST /api/import
+ PostgreSQL DB ←── POST /api/games/import
 ```
 
 ## Components
 
 | Компонент | Описание | Подробности |
 |-----------|----------|-------------|
-| **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx. База данных + REST API. | [core/README.md](core/README.md) |
-| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI для импорта CSV (игры, роли, игроки). Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
+| **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx и Metabase. REST API, база данных и аналитические панели. | [core/README.md](core/README.md) |
+| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI для импорта партий и ролей из CSV. Новые игроки создаются при импорте партий. Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
 
 ## Quick Start
 
@@ -35,6 +36,7 @@
 ```bash
 cd core
 cp .env.example .env
+# Edit .env: set unique passwords, the Metabase secret, and SERVER_IP.
 bash scripts/generate-cert.sh
 docker-compose up -d
 ```
@@ -49,7 +51,7 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 Открыть приложение DBConnect. На вкладке **Settings** указать API URL и API key, сохранить. На вкладках **Import Games** / **Import Roles** выбрать CSV-файл и нажать **Import**.
 
-Настройки сохраняются в локальный `DBConnect/config.ini`, который не попадает в Git. Шаблон для нового клона — `DBConnect/config.ini.example` (копируется автоматически при сборке, если `config.ini` ещё нет).
+Приложение читает и сохраняет `config.ini` относительно текущего рабочего каталога; не добавляйте в Git файл с реальным API-ключом. При каждой конфигурации CMake в каталог сборки копируется `DBConnect/config.ini`, если он существует, иначе — `DBConnect/config.ini.example`. Поэтому изменения только в копии каталога сборки могут быть перезаписаны при следующей конфигурации; для локальных настроек задайте исходный `DBConnect/config.ini` и запускайте приложение из каталога с нужным `config.ini`.
 
 ### Сборка DBConnect вне CLion (Windows)
 
@@ -98,7 +100,7 @@ BotC/
 ├── botc_character_list.csv     # Полный список ролей (EN + RU переводы)
 ├── test_sample.csv             # Пример CSV для импорта партий
 ├── test_roles.csv              # Пример CSV для импорта ролей
-├── core/                       # Docker stack (DB + API + Nginx)
+├── core/                       # Docker stack (DB + API + Nginx + Metabase)
 │   ├── docker-compose.yml
 │   ├── init-scripts/
 │   ├── api/
@@ -123,10 +125,12 @@ BotC/
 | `roles` | Справочник ролей (английское название, alignment, тип) |
 | `role_translations` | Переводы имён ролей на разные языки (ru, en, ...) |
 | `role_type_translations` | Переводы типов ролей (Townsfolk → Горожанин и т.д.) |
-| `alignment_translations` | Переводы align-ментов (good → добро и т.д.) |
+| `alignment_translations` | Переводы сторон (good → добро, draw → ничья и т.д.) |
 | `languages` | Поддерживаемые языки |
-| `games` | Метаданные партий (дата, сценарий, рассказчик, победитель) |
-| `game_players` | Раскладка партии (связь игрок-роль, выживание) |
+| `games` | Метаданные партий (дата, сценарий, место, победившая сторона) |
+| `game_storytellers` | Связь партий с одним или несколькими рассказчиками |
+| `game_players` | Раскладка партии (связь игрок-роль, сторона в конце игры, выживание) |
+| `games_import_staging` | Временные строки импорта CSV (русские названия и значения) |
 | `api_keys` | Хранение хешей API-ключей для аутентификации |
 
 ### Аналитические представления
@@ -136,6 +140,7 @@ BotC/
 | `v_player_stats` | Статистика игрока: игры, победы, винрейт, выживаемость |
 | `v_role_stats` | Эффективность ролей: винрейт, выживаемость, частота смены ролей |
 | `v_game_summary` | Сводка по партии: состав, победитель, количество выживших |
+| `v_role_type_stats` | Статистика по типу роли и стороне |
 
 ### Импорт ролей
 
@@ -154,7 +159,7 @@ BotC/
 }
 ```
 
-Поле `translations` опционально. Без него импортируется только английская роль.
+Поле `translations` опционально. Без него импортируется только английская роль. Значения `alignment` для роли: `good`, `evil` или `neutral`; для стороны победителя допустимы `good`, `evil` и `draw`, а сторона игрока в конце партии — только `good` или `evil`. Подробнее: [core/docs/SIDES.md](core/docs/SIDES.md).
 
 ## Security
 
@@ -166,7 +171,7 @@ BotC/
 | REST API (HTTPS) | Внешние импортеры | 443 | API-ключ (SHA-256 хеш) |
 | Docker network | Внутренние сервисы | — | Прямое подключение |
 
-Порт PostgreSQL **не проброшен наружу** — доступен только внутри Docker network.
+Порт PostgreSQL опубликован на `127.0.0.1:5432` хоста и недоступен напрямую из внешней сети; администраторы подключаются через SSH-туннель. Внутри Docker база доступна сервисам compose.
 
 ### Многопользовательская модель БД
 
@@ -174,7 +179,9 @@ BotC/
 |--------------|-------|------------|
 | `postgres` | Суперпользователь | Администрирование |
 | `botc_user` | CRUD (SELECT, INSERT, UPDATE, DELETE) | Приложение |
-| `api_service` | INSERT/UPDATE/SELECT на игры/players/roles/staging/role_translations, SELECT на views | API-сервис импорта |
+| `api_service` | Только необходимые API-операции: чтение/создание игроков и партий, запись staging, обновление ролей/переводов, чтение справочников и аналитических представлений | API-сервис импорта |
+
+Точные права по таблицам перечислены в [`core/init-scripts/03-grant-privileges.sql`](core/init-scripts/03-grant-privileges.sql).
 
 ## Useful Queries
 

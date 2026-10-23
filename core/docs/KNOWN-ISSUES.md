@@ -88,7 +88,18 @@ Fixed on 2026-10-23, a player's end side is now `добро`/`зло` everywhere
   `DBConnect/src/api/BotCApiClient.cpp`; the CSV parser already allowed only
   `добро`/`зло`.
 - `core/api/app/tests/test_schemas.py` now asserts that `добро`/`зло` pass and
-  `нейтральный` is rejected, plus the whole suite stays green (93 tests).
+  `нейтральный` is rejected.
+
+`98-migrate-alignment-end.sql` is run automatically only when PostgreSQL
+initializes a fresh data volume; Docker does not rerun init scripts on an
+existing database. Apply it manually to an existing deployment from the
+repository root (it removes invalid transient staging rows):
+
+```bash
+cd core
+docker exec -i botc-postgres psql -U postgres -d botc_stats \
+  -v ON_ERROR_STOP=1 < init-scripts/98-migrate-alignment-end.sql
+```
 
 Original report, kept for context:
 

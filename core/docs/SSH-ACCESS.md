@@ -13,7 +13,7 @@
 │  ┌──────────────────┐         ┌─────────────────────┐       │
 │  │   SSH-сервер     │────────▶│  Docker-контейнер   │       │
 │  │   порт 22        │ туннель │  PostgreSQL :5432   │       │
-│  │   botc-ssh       │         │  (только localhost) │       │
+│  │   botc-ssh       │         │  (127.0.0.1 on host) │       │
 │  └──────────────────┘         └─────────────────────┘       │
 └─────────────────────────────────────────────────────────────┘
          ▲
@@ -27,53 +27,47 @@
 ```
 
 **Принцип работы:**
-- PostgreSQL слушает **только 127.0.0.1** — порт не доступен извне
-- Подключение возможно только через SSH-туннель
-- SSH-пользователь `botc-ssh` ограничен только туннелированием (нет shell, нет TTY)
+- Docker публикует порт PostgreSQL только на `127.0.0.1:5432` хоста. Внутри контейнера PostgreSQL слушает Docker-интерфейсы (`listen_addresses=*`), но хостовый порт недоступен напрямую из внешней сети.
+- Удалённое администрирование PostgreSQL выполняется через SSH-туннель.
+- SSH-пользователь `botc-ssh` ограничен туннелированием (нет shell, нет TTY); запускайте SSH с `-N`, чтобы не запрашивать shell-сессию.
 
 ---
 
 ## 🚀 Быстрая настройка
 
-### Шаг 1: Создание SSH-пользователя на сервере
+### Шаг 1: Генерация SSH-ключа на клиенте
 
-На удалённом сервере выполните:
+Рекомендуется создать ключ на клиентской машине, чтобы закрытый ключ никогда не попадал на сервер:
 
 ```bash
-# Вариант A: С генерацией ключа на сервере
-sudo bash scripts/setup-ssh-user.sh botc-ssh
+ssh-keygen -t ed25519 -C "botc-tunnel" -f ~/.ssh/botc-tunnel
+```
 
-# Вариант B: С готовым публичным ключом клиента
-sudo bash scripts/setup-ssh-user.sh botc-ssh ~/.ssh/my-botc-key.pub
+Передайте на сервер только публичный ключ `~/.ssh/botc-tunnel.pub` (например, через защищённый административный SSH-сеанс).
+
+### Шаг 2: Создание SSH-пользователя на сервере
+
+На удалённом сервере, из каталога `core/`, запустите setup-скрипт с путём к публичному ключу:
+
+```bash
+sudo bash scripts/setup-ssh-user.sh botc-ssh /path/to/botc-tunnel.pub
 ```
 
 Скрипт автоматически:
 1. Создаёт пользователя `botc-ssh` с ограниченным доступом
 2. Настраивает `authorized_keys` для подключения по ключу
-3. Ограничивает SSH только туннелированием к `localhost:5432`
+3. Ограничивает SSH туннелированием к `localhost:5432`
 4. Запрещает TTY и интерактивный shell
 
-### Шаг 2: Генерация SSH-ключа на клиенте (если ещё нет)
-
-```bash
-# На клиентской машине
-ssh-keygen -t ed25519 -C "botc-tunnel" -f ~/.ssh/botc-tunnel -N ""
-```
-
-Публичный ключ (`~/.ssh/botc-tunnel.pub`) нужно передать на сервер и добавить в `authorized_keys`:
-
-```bash
-# На сервере
-echo "<содержимое botc-tunnel.pub>" >> /home/botc-ssh/.ssh/authorized_keys
-```
+Если запустить скрипт без публичного ключа, он создаст пару ключей на сервере и сохранит закрытый ключ в `/tmp/botc-ssh-key-botc-ssh`. В этом случае безопасно перенесите закрытый ключ на клиентскую машину и сразу удалите его копию с сервера.
 
 ### Шаг 3: Запуск Docker-контейнера
 
 ```bash
-# На сервере
-cd /path/to/docker-botc
+# On the server, from the core/ directory
+cd /path/to/BotC/core
 cp .env.example .env
-# Измените пароли в .env
+# Set unique passwords/secrets and configure SERVER_IP in .env.
 docker-compose up -d
 ```
 
@@ -81,7 +75,7 @@ docker-compose up -d
 
 ```bash
 # На клиентской машине — создать туннель
-ssh -i ~/.ssh/botc-tunnel -L 5432:localhost:5432 botc-ssh@<SERVER_IP>
+ssh -i ~/.ssh/botc-tunnel -N -o ExitOnForwardFailure=yes -L 5432:localhost:5432 botc-ssh@<SERVER_IP>
 
 # В ДРУГОМ ТЕРМИНАЛЕ — подключиться к БД
 psql -h localhost -p 5432 -U botc_user -d botc_stats
@@ -96,19 +90,17 @@ psql -h localhost -p 5432 -U botc_user -d botc_stats
 Если вы предпочитаете настроить пользователя вручную:
 
 ```bash
-# 1. Создать пользователя без shell
-sudo useradd --system --no-create-home --shell /bin/false botc-ssh
+# 1. Create a restricted user and its SSH directory
+sudo useradd --system --no-create-home --home-dir /home/botc-ssh --shell /bin/false botc-ssh
+sudo install -d -m 700 -o botc-ssh /home/botc-ssh
+sudo install -d -m 700 -o botc-ssh /home/botc-ssh/.ssh
 
-# 2. Создать .ssh директорию
-sudo mkdir -p /home/botc-ssh/.ssh
-sudo chmod 700 /home/botc-ssh/.ssh
-
-# 3. Добавить публичный ключ клиента
-sudo echo "ssh-ed25519 AAAA... client@machine" > /home/botc-ssh/.ssh/authorized_keys
+# 2. Add the client's public key (replace the example key)
+printf '%s\n' 'ssh-ed25519 AAAA... client@machine' | sudo tee -a /home/botc-ssh/.ssh/authorized_keys >/dev/null
+sudo chown botc-ssh /home/botc-ssh/.ssh/authorized_keys
 sudo chmod 600 /home/botc-ssh/.ssh/authorized_keys
-sudo chown -R botc-ssh:botc-ssh /home/botc-ssh/.ssh
 
-# 4. Добавить ограничение в sshd_config
+# 3. Add tunnel-only restrictions in sshd_config
 sudo tee /etc/ssh/sshd_config.d/botc-ssh.conf << 'EOF'
 Match User botc-ssh
     ForceCommand /bin/false
@@ -118,7 +110,7 @@ Match User botc-ssh
     X11Forwarding no
 EOF
 
-# 5. Перезапустить SSH
+# 4. Restart the SSH service
 sudo systemctl restart sshd
 ```
 
@@ -140,7 +132,7 @@ Host botc-db
 Теперь подключение одной командой:
 
 ```bash
-ssh botc-db
+ssh -N botc-db
 ```
 
 ---
@@ -258,7 +250,7 @@ conn = psycopg2.connect(
 
 | Уровень | Мера |
 |---------|------|
-| Сеть | Порт 5432 не проброшен наружу |
+| Сеть | Порт 5432 опубликован только на loopback хоста (`127.0.0.1`) |
 | SSH | Аутентификация только по ключу |
 | SSH | Запрещён TTY и интерактивный shell |
 | SSH | Разрешён туннель только к `localhost:5432` |
@@ -280,8 +272,9 @@ conn = psycopg2.connect(
 # Проверить открытые порты
 sudo ss -tlnp | grep -E '22|5432'
 
-# Если 5432 виден на 0.0.0.0 — это проблема!
-# Должно быть только 127.0.0.1:5432
+# On the Docker host, the published port should be 127.0.0.1:5432,
+# not 0.0.0.0:5432. Inside the PostgreSQL container, listen_addresses=*
+# is expected; external access is restricted by the host port binding.
 ```
 
 ---
@@ -290,22 +283,24 @@ sudo ss -tlnp | grep -E '22|5432'
 
 ### Туннель не устанавливается
 
+Пользователь `botc-ssh` намеренно не имеет shell-доступа, поэтому команды `docker` нельзя выполнять через него. Проверяйте туннель с клиентской машины:
+
 ```bash
-# Проверить SSH-доступ
-ssh -v -i ~/.ssh/botc-tunnel botc-ssh@<SERVER_IP>
+# Запустить туннель в отдельном терминале
+ssh -vv -i ~/.ssh/botc-tunnel -N -o ExitOnForwardFailure=yes \
+  -L 15432:localhost:5432 botc-ssh@<SERVER_IP>
 
-# Проверить, что PostgreSQL запущен
-ssh botc-ssh@<SERVER_IP> "docker ps | grep botc"
-
-# Проверить, что PostgreSQL слушает localhost
-ssh botc-ssh@<SERVER_IP> "docker exec botc-postgres netstat -tlnp | grep 5432"
+# В другом терминале проверить доступность PostgreSQL через туннель
+psql -h 127.0.0.1 -p 15432 -U botc_user -d botc_stats
 ```
+
+Состояние Docker и порт хоста проверяйте на сервере через административную учётную запись, а не через `botc-ssh`.
 
 ### Ошибка «Connection refused»
 
-- Убедитесь, что Docker-контейнер запущен: `docker-compose ps`
-- Проверьте, что PostgreSQL слушает: `docker-compose exec db netstat -tlnp | grep 5432`
-- Проверьте `listen_addresses` в конфиге контейнера
+- На сервере (с административной учётной записью) проверьте `docker-compose ps` и `docker-compose exec db pg_isready -U postgres -d botc_stats`.
+- Убедитесь, что порт опубликован только на loopback хоста: `sudo ss -ltnp | grep ':5432'` должно показывать `127.0.0.1:5432`.
+- Внутри контейнера `listen_addresses=*` ожидаемо; ограничение внешнего доступа обеспечивается привязкой порта хоста к `127.0.0.1`.
 
 ### Ошибка «Permission denied (publickey)»
 

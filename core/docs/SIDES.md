@@ -34,12 +34,16 @@ Values: `good | evil`. Nothing else.
 
 ## 4. Player side at the start
 
-Not stored as a column. It is derived from `roles.alignment` of
-`game_players.role_start_id`:
+Not stored as a column. The current role side can be looked up through
+`game_players.role_start_id -> roles.alignment`, but it is not a historical
+snapshot of the player's side at the start of that game:
 
-- exact for `good` and `evil` roles;
-- unknown for `neutral` roles — only the storyteller knows which side that
-  player took, and the import format does not carry it.
+- `good` and `evil` describe the role's current catalog side, which may have
+  changed since the game was imported;
+- `neutral` does not identify the player's side — only the storyteller knows
+  which side that player took, and the import format does not carry it;
+- `roles.alignment` is nullable in the database schema, so a direct database
+  write can also leave the role side unknown. The API requires a non-null value.
 
 If start-side statistics are ever needed, add an explicit `alignment_start`
 column with the same `CHECK (alignment_start IN ('good', 'evil'))` constraint
@@ -49,7 +53,7 @@ instead of guessing it from a `neutral` role.
 
 | Field | Allowed values |
 |---|---|
-| `roles.alignment` | `good`, `evil`, `neutral` |
+| `roles.alignment` | `good`, `evil`, `neutral` (or `NULL` in the database) |
 | `games.alignment_win` | `good`, `evil`, `draw` |
 | `game_players.alignment_end` | `good`, `evil` |
 | `games_import_staging.alignment_win_ru` | `добро`, `зло`, `ничья` |

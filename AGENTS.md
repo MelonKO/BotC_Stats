@@ -4,8 +4,8 @@
 
 | Directory | Purpose | Key Files |
 |-----------|---------|-----------|
-| `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx | `docker-compose.yml`, `api/` |
-| `DBConnect/` | Qt6 GUI for CSV→API import (games, roles, players) | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
+| `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx + Metabase | `docker-compose.yml`, `api/` |
+| `DBConnect/` | Qt6 GUI for CSV→API import (games and roles; players are created by game imports) | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
 
 ## Developer Commands
 
@@ -147,7 +147,7 @@ python -m pytest app/tests/ -v
 |------|-------------|---------|
 | `postgres` | Superuser | Administration |
 | `botc_user` | CRUD (SELECT, INSERT, UPDATE, DELETE) | Application |
-| `api_service` | INSERT on games/players/roles/staging, SELECT on views | API import service |
+| `api_service` | Scoped import permissions on staging, roles/translations, players and game tables; SELECT on analytics views | API import service |
 
 ## SQL Analytics Examples
 

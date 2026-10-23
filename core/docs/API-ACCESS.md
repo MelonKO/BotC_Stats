@@ -11,10 +11,12 @@ API позволяет удалённо импортировать данные 
 | Параметр | Значение |
 |----------|----------|
 | **URL** | `https://<SERVER_IP>` |
-| **Протокол** | HTTPS (TLS 1.2+) |
-| **Аутентификация** | API-ключ в заголовке `X-API-Key` |
+| **Протокол** | HTTPS (TLS 1.2 или TLS 1.3) |
+| **Аутентификация** | API-ключ в заголовке `X-API-Key` для `/api/*`; `GET /health`, `/docs` и `/openapi.json` открыты без ключа |
 | **Формат** | JSON |
-| **Сертификат** | Самоподписанный (используйте `verify=False`) |
+| **Сертификат** | Для локальной разработки используется self-signed сертификат; production должен использовать доверенный сертификат |
+
+В примерах с `verify=False` и `curl -k` отключена проверка подлинности сертификата сервера. Используйте их только для локальной разработки с self-signed сертификатом; в production настройте доверие к сертификату и оставьте проверку включённой.
 
 ---
 
@@ -35,11 +37,11 @@ sk-EXAMPLE_DO_NOT_USE
 
 ## 📡 Эндпоинты
 
-### `POST /api/import` — Импорт партии
+### `POST /api/games/import` — Импорт одной партии
 
 > Поле `alignment_end` — это сторона игрока к концу партии и допускает только `добро`/`зло`. У роли (`roles.alignment`) сторон три, а у победившей стороны (`alignment_win`) есть `ничья`. Полная модель — в [`SIDES.md`](SIDES.md).
 
-Отправляет данные одной партии в базу данных.
+Отправляет данные одной партии в базу данных. Запрос требует API-ключа.
 
 **Заголовки:**
 ```
@@ -97,7 +99,7 @@ Content-Type: application/json
 | `alignment_win` | string | ✅ | Победивший alignment: `добро`, `зло` или `ничья` |
 | `location` | string | ✅ | Место проведения |
 | `game_number` | int | ✅ | Номер партии в рамках встречи |
-| `duration` | string | | Длительность (HH:MM:SS) |
+| `duration` | string | | Длительность (`HH:MM:SS` или `D HH:MM:SS`, например `1 02:30:00`) |
 | `notes` | string | | Заметки к партии |
 | `players` | array | ✅ | Список игроков (мин. 1, макс. 30) |
 
@@ -120,7 +122,7 @@ Content-Type: application/json
 }
 ```
 
-**Ответ (ошибка валидации, 400):**
+**Ответ (ошибка импорта, 400):**
 ```json
 {
     "detail": {
@@ -143,6 +145,38 @@ Content-Type: application/json
     "detail": "API key has been revoked"
 }
 ```
+
+---
+
+### `POST /api/games/import_batch` — Пакетный импорт партий
+
+Принимает объект с массивом `games`; каждый элемент имеет тот же формат, что и запрос к `/api/games/import`.
+
+```json
+{
+  "games": [
+    {
+      "game_date": "2026-01-15",
+      "scenario_name": "Вселенная зла",
+      "storyteller_names": ["МелонКО"],
+      "alignment_win": "добро",
+      "location": "Москва",
+      "game_number": 1,
+      "players": [
+        {
+          "name": "Мая Вишневская",
+          "role_start": "Дамочка",
+          "role_end": "Дамочка",
+          "alignment_end": "добро",
+          "is_alive": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+Успешный HTTP-ответ содержит массив результатов в `games`. Ошибка импорта отдельной партии отражается в её `status` и `errors`; неожиданная ошибка базы данных может прервать запрос. Ошибки структуры запроса возвращаются как HTTP 422.
 
 ---
 
@@ -196,7 +230,7 @@ Content-Type: application/json
 | `alignment` | string | ✅ | `good`, `evil` или `neutral` |
 | `role_type` | string | ✅ | `Townsfolk`, `Outsider`, `Minion`, `Demon` или `Traveller` |
 | `description` | string | | Описание на английском |
-| `translations` | object | | Словарь переводов по языкам (`"ru"`, `"de"`, ...) |
+| `translations` | object | | Словарь переводов по языкам; в новой базе доступны `en` и `ru` |
 | `translations.<lang>.name` | string | ✅ (если перевод указан) | Имя роли на языке |
 | `translations.<lang>.description` | string | | Описание на языке |
 
@@ -221,6 +255,8 @@ Content-Type: application/json
     }
 }
 ```
+
+Новая база содержит языки `en` и `ru`. Для добавления другого языка сначала зарегистрируйте его в таблице `languages`.
 
 **Пример на Python:**
 ```python
@@ -249,7 +285,7 @@ response = requests.post(
     API_URL,
     headers={"X-API-Key": API_KEY, "Content-Type": "application/json"},
     json=data,
-    verify=False,
+    verify=False,  # Development only; use a trusted certificate in production.
 )
 
 result = response.json()
@@ -277,7 +313,7 @@ curl -k -X POST "https://<SERVER_IP>/api/roles/import" \
 
 ### `GET /api/roles` — Список доступных ролей
 
-Возвращает все роли, которые можно использовать при импорте.
+Возвращает все роли, которые можно использовать при импорте. Необязательный параметр `lang` (например, `ru`) добавляет перевод в поле `translation`; если перевода нет, поле будет `null`. Требуется API-ключ.
 
 **Заголовки:**
 ```
@@ -296,6 +332,20 @@ X-API-Key: <ваш_ключ>
         {"name": "Pukka", "alignment": "evil", "role_type": "Demon"},
         {"name": "Slayer", "alignment": "evil", "role_type": "Minion"}
     ]
+}
+```
+
+---
+
+### `GET /api/players` — Список игроков
+
+Требует API-ключ. Возвращает игроков, зарегистрированных в базе:
+
+```json
+{
+  "players": [
+    {"id": "b1c2d3e4-f5a6-7890-abcd-1234567890ef", "name": "Мая Вишневская"}
+  ]
 }
 ```
 
@@ -322,7 +372,7 @@ X-API-Key: <ваш_ключ>
 ```python
 import requests
 
-API_URL = "https://<SERVER_IP>/api/import"
+API_URL = "https://<SERVER_IP>/api/games/import"
 API_KEY = "sk-EXAMPLE_DO_NOT_USE"  # Ваш API-ключ
 
 data = {
@@ -398,7 +448,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 response = requests.post(
-    "https://<SERVER_IP>/api/import",
+    "https://<SERVER_IP>/api/games/import",
     headers={"X-API-Key": API_KEY},
     json=data,
     verify=False
@@ -408,7 +458,7 @@ response = requests.post(
 ### cURL
 
 ```bash
-curl -k -X POST "https://<SERVER_IP>/api/import" \
+curl -k -X POST "https://<SERVER_IP>/api/games/import" \
   -H "X-API-Key: sk-EXAMPLE_DO_NOT_USE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -437,33 +487,36 @@ curl -k -X POST "https://<SERVER_IP>/api/import" \
 
 | HTTP-код | Причина | Что делать |
 |----------|---------|------------|
-| `400` | Ошибка валидации данных | Проверьте формат запроса, имена ролей |
-| `401` | Невалидный API-ключ | Проверьте ключ, обратитесь к администратору |
+| `400` | Ошибка импорта, возвращённая логикой API (например, неизвестная роль) | Проверьте имена ролей и данные партии |
+| `401` | Неизвестный API-ключ | Проверьте ключ, обратитесь к администратору |
 | `403` | Ключ отозван | Обратитесь к администратору за новым ключом |
-| `429` | Rate limit (10 запросов/мин) | Подождите и повторите |
-| `500` | Ошибка сервера | Сообщите администратору |
+| `422` | Тело запроса не проходит проверку схемы (включая отсутствующий обязательный заголовок) | Проверьте обязательные поля, значения и наличие `X-API-Key` |
+| `500` | Ошибка сервера или базы данных | Сообщите администратору |
+| `502` | Nginx не получил корректный ответ от API-сервиса | Сообщите администратору |
+| `503` | Превышен настроенный лимит запросов Nginx | Подождите и повторите запрос позже |
+| `504` | API-сервис не ответил за отведённое Nginx время | Повторите запрос позже или сообщите администратору |
 
 ---
 
 ## 🔒 Безопасность
 
-- Все запросы передаются по HTTPS (TLS 1.2+)
+- Все запросы передаются по HTTPS (TLS 1.2 или TLS 1.3)
 - API-ключи хранятся в БД только как SHA-256 хеши
-- Rate limiting: 10 запросов в минуту на один IP
+- Nginx применяет лимиты на IP: до 30 запросов/мин для импортов (burst 20) и 120 запросов/мин для остальных `/api/` маршрутов (burst 30); превышение лимита возвращает 503 при стандартной конфигурации Nginx.
 - Не передавайте API-ключ в URL, логах или публичных репозиториях
 
 ---
 
 ## 📄 Автоматическая документация (Swagger/OpenAPI)
 
-FastAPI автоматически генерирует интерактивную документацию:
+FastAPI предоставляет Swagger UI и OpenAPI-схему:
 
 ```
-https://<SERVER_IP>/docs      — Swagger UI
-https://<SERVER_IP>/redoc     — ReDoc
+https://<SERVER_IP>/docs         — Swagger UI
+https://<SERVER_IP>/openapi.json — OpenAPI JSON
 ```
 
-> **Примечание:** Эти эндпоинты доступны только внутри сервера или через SSH-туннель.
+Оба адреса доступны публично через Nginx без API-ключа; не передавайте им секреты. ReDoc не публикуется через текущую конфигурацию Nginx.
 
 ---
 

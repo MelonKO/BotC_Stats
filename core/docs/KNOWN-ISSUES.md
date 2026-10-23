@@ -8,9 +8,13 @@ Status values: `open` — confirmed, not fixed; `needs decision` — blocked on 
 product/domain choice; `deferred` — consciously postponed; `fixed` — resolved
 (keep the entry until the release notes mention it).
 
+Items `I2`, `I3`, `I4`, `C1`, `C4` and `T1`–`T2` were first reported in the
+2026-10 improvement list; `I1` and `Q2` from that list are already fixed.
+
 ## Open questions
 
 ### Q1. `alignment_start` for players — `deferred`
+
 The start side of a player is not stored anywhere in the import pipeline: the
 CSV (`test_sample.csv`) has no such column, `GamesCsvParser::PlayerRecord`
 (`DBConnect/src/utils/games/parser/GamesCsvParser.h:9-16`) has only
@@ -116,6 +120,11 @@ game (`core/api/app/import_logic.py:120-142`), so DBConnect shows "game imported
 players created: 0" (`DBConnect/src/ui/ImportGamesWidget.cpp:384-397`) while the
 new data is silently dropped.
 
+Next step: return a distinct result for an existing game (a separate status such
+as `already_exists` together with the existing id) or compare the submitted
+payload with the stored game and report the differing fields as a conflict.
+DBConnect should show the game as skipped, not as imported.
+
 ### I3. Any database exception other than a duplicate aborts the whole batch — `open`
 
 `core/api/app/import_logic.py:104-106` re-raises, and the batch loop
@@ -124,6 +133,11 @@ does not roll back the others" (`main.py:115`, `import_logic.py:170-171`) is not
 true: a check/FK/connection error returns HTTP 500 and the remaining games are
 not imported.
 
+Next step: handle failures per game — wrap each import in `try/except`, collect
+the failed games with their error text in the batch response, and let the
+remaining games continue; align the docstrings and the OpenAPI response schema
+with that behaviour.
+
 ### I4. `import_roles` is not transactional — `open`
 
 `core/api/app/import_logic.py:261-311` commits each `execute` separately and
@@ -131,6 +145,10 @@ writes translations after the role, so a failure in the middle leaves partially
 imported roles while the client is told the import failed. The
 `UniqueViolationError` branch (`:306-307`) is practically unreachable because the
 statement uses `ON CONFLICT DO UPDATE`.
+
+Next step: run the whole role import inside a single transaction (with an
+advisory lock, as the games import does), so a failure leaves neither roles nor
+translations behind.
 
 ### I5. Staging table is global and can keep stale rows — `open`
 
@@ -147,57 +165,131 @@ player listed twice in one game, not a duplicate game.
 
 ## DBConnect client
 
-- **TLS verification cannot be re-enabled** — `BotCApiClient::setSslVerify()`
-  only disables verification, and the settings checkbox promises a toggle
-  (`DBConnect/src/api/BotCApiClient.cpp:58-71`). The connection test ignores the
-  setting as well (`SettingsWidget.cpp:89` is commented out). — `open`
-- **Config path is relative to the working directory** —
-  `DBConnect/src/config/ConfigManager.h:55` opens `config.ini` from the CWD, so
-  starting the executable from another folder silently falls back to
-  `https://localhost:443`. — `open`
-- **Role cache race** — roles and players are fetched asynchronously while the
-  cache is read synchronously when a file is opened
-  (`ImportGamesWidget.cpp:55-57`, `:79-97`), which produces false "role not in
-  database" errors; `DBCache.cpp:30,46` clears the cache without a message.
-  `DBCache.h:13-29` declares a signal without `Q_OBJECT`. — `open`
-- **Import is enabled despite validation errors** — `ImportGamesWidget.cpp:212-221`
-  keeps the button active, and the API validates the batch as a whole, so one
-  bad game yields HTTP 422 shown as "network error". — `open`
-- **Durations above 24 hours are lost** — `GamesCsvParser.cpp:117` parses with
-  `hh:mm:ss`, while the API supports longer games
-  (`core/api/app/models.py:101`); the preview shows "-". — `open`
-- **CSV parser details** — the error message drops `errorString()`
-  (`CsvParser.cpp:18-20`), a trailing empty field is discarded (`:82-85`),
-  multi-line quoted fields are not supported (`:38-41`), and `notes` are copied
-  to every player of a game (`GamesCsvParser.cpp:119-128`). — `open`
-- **Cancel button is inert** in the games import progress dialog
-  (`ImportGamesWidget.cpp:107-112`, unlike roles at `:90-96`). — `open`
+### C1. TLS verification cannot be re-enabled — `open`
+
+`BotCApiClient::setSslVerify()` only disables verification, and the settings
+checkbox promises a toggle (`DBConnect/src/api/BotCApiClient.cpp:58-71`). The
+connection test ignores the setting as well (`SettingsWidget.cpp:89` is
+commented out), so a user cannot tell which certificate policy is in effect.
+
+Next step: make the toggle two-way — restore the default verification
+configuration when it is enabled, never switch verification off for the whole
+application — and apply the setting in the connection test.
+
+### C2. Config path is relative to the working directory — `open`
+
+`DBConnect/src/config/ConfigManager.h:55` opens `config.ini` from the CWD, so
+starting the executable from another folder silently falls back to
+`https://localhost:443`.
+
+Next step: resolve the file next to the executable or through `QStandardPaths`
+and show a warning instead of silently using defaults.
+
+### C3. Role cache race — `open`
+
+Roles and players are fetched asynchronously while the cache is read
+synchronously when a file is opened (`ImportGamesWidget.cpp:55-57`, `:79-97`),
+which produces false "role not in database" errors; `DBCache.cpp:30,46` clears
+the cache without a message. `DBCache.h:13-29` declares a signal without
+`Q_OBJECT`.
+
+Next step: wait for the initial cache load before validating a file, surface
+fetch errors in the UI, and add the missing `Q_OBJECT`.
+
+### C4. Import is enabled despite validation errors — `open`
+
+`ImportGamesWidget.cpp:212-221` keeps the import button active while rows have
+validation errors, and the API validates the batch as a whole, so one bad game
+yields HTTP 422 shown as a "network error".
+
+Next step: keep the button disabled until validation passes and list the
+offending rows and fields next to the error messages.
+
+### C5. Durations above 24 hours are lost — `open`
+
+`GamesCsvParser.cpp:117` parses with `hh:mm:ss`, while the API supports longer
+games (`core/api/app/models.py:101`); the preview shows "-".
+
+Next step: parse the same `[days ]hh:mm:ss` form the API accepts.
+
+### C6. CSV parser details — `open`
+
+The error message drops `errorString()` (`CsvParser.cpp:18-20`), a trailing
+empty field is discarded (`:82-85`), multi-line quoted fields are not supported
+(`:38-41`), and `notes` are copied to every player of a game
+(`GamesCsvParser.cpp:119-128`).
+
+Next step: fix the message, keep trailing fields, support quoted multi-line
+values, and store notes once per game.
+
+### C7. Cancel button is inert — `open`
+
+The games import progress dialog ignores its cancel button
+(`ImportGamesWidget.cpp:107-112`, unlike roles at `:90-96`).
+
+Next step: check `wasCanceled()` after each game, mirroring the roles dialog.
 
 ## Security
 
-- **API key and server IP are still in git history** — the file is untracked now
-  and `config.ini.example` is tracked, but rotation of the exposed key was never
-  confirmed. — `open`
-- **SQL injection in the key-issuing script** —
-  `core/scripts/create-api-key.sh:66-67` interpolates `owner_name` and
-  `owner_contact` into SQL inside quotes. — `open`
-- **`SECURITY DEFINER` without a fixed `search_path`** —
-  `01-schema.sql:338`, `99-migrate-storyteller-draw.sql:212`. — `open`
-- **Weak defaults and exposed surfaces** — `core/docker-compose.yml:14-18`
-  falls back to `change_me` without `.env`; Swagger UI and `/openapi.json` are
-  public (`core/nginx/nginx.conf:104-112`). — `open`
-- **No import audit** — `validate_api_key` returns the key owner
-  (`core/api/app/auth.py:44-48`) but the import functions ignore it, so the
-  database does not record who imported a game. — `open`
+### S1. API key and server IP are still in git history — `open`
+
+The file is untracked now and `config.ini.example` is tracked, but rotation of
+the exposed key was never confirmed.
+
+Next step: rotate the key, confirm the old one is rejected, and keep the new one
+only in the local `config.ini`.
+
+### S2. SQL injection in the key-issuing script — `open`
+
+`core/scripts/create-api-key.sh:66-67` interpolates `owner_name` and
+`owner_contact` into SQL inside quotes.
+
+Next step: pass the values as `psql` variables (`-v`) or build the statement with
+`format()` and quote literals.
+
+### S3. `SECURITY DEFINER` without a fixed `search_path` — `open`
+
+`01-schema.sql:338`, `99-migrate-storyteller-draw.sql:212`.
+
+Next step: add `SET search_path = public, pg_temp` to both functions.
+
+### S4. Weak defaults and exposed surfaces — `open`
+
+`core/docker-compose.yml:14-18` falls back to `change_me` without `.env`;
+Swagger UI and `/openapi.json` are public (`core/nginx/nginx.conf:104-112`).
+
+Next step: fail fast when a password is unset and restrict the docs endpoints.
+
+### S5. No import audit — `open`
+
+`validate_api_key` returns the key owner (`core/api/app/auth.py:44-48`) but the
+import functions ignore it, so the database does not record who imported a game.
+
+Next step: pass the key owner into the import and store it with the game.
 
 ## Tests and CI
 
-- No tests for the batch import path (`POST /api/games/import_batch`), for
-  `get_all_roles(lang)`, for `process_games_import()`, staging or the views; all
-  existing tests mock asyncpg (`core/api/app/tests/conftest.py:91-96`). — `open`
-- A test asserts behaviour that the database does not have: repeated import is
-  expected to raise `UniqueViolationError`
-  (`core/api/app/tests/test_import_logic.py:156-171`), while the SQL function
-  skips the game and returns empty `errors`. — `open`
-- CI builds and tests only `core/api` (`.github/workflows/ci.yml:9-36`);
-  DBConnect is never compiled. — `open`
+### T1. Import paths have no tests against a real database — `open`
+
+No tests for the batch import path (`POST /api/games/import_batch`), for
+`get_all_roles(lang)`, for `process_games_import()`, staging or the views; all
+existing tests mock asyncpg (`core/api/app/tests/conftest.py:91-96`).
+
+Next step: add PostgreSQL-backed integration tests for the import scenarios —
+duplicate game, neutral end side, per-game failure isolation, role import
+rollback — plus the analytical views, and run them in CI with a service
+container.
+
+### T2. A test asserts behaviour the database does not have — `open`
+
+Repeated import is expected to raise `UniqueViolationError`
+(`core/api/app/tests/test_import_logic.py:156-171`), while the SQL function
+skips the game and returns empty `errors`. Whatever `I2` decides, this test has
+to follow the real behaviour.
+
+### T3. CI does not build DBConnect — `open`
+
+CI builds and tests only `core/api` (`.github/workflows/ci.yml:9-36`); DBConnect
+is never compiled.
+
+Next step: build the GUI on a Windows runner with the shared CMake presets.

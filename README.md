@@ -262,12 +262,16 @@ v4.0.0
 
 ## Releases
 
-Релиз запускается пушем тега `vX.Y.Z`: workflow собирает Windows-архив DBConnect, публикует
-образы `core` в GitHub Container Registry и создаёт GitHub Release.
+Релиз запускается пушем тега `vX.Y.Z` после мержа релизного PR в `main`: workflow собирает
+Windows-архив DBConnect, публикует образы `core` в GitHub Container Registry и создаёт
+GitHub Release. Прямой пуш в `main` запрещён — изменения принимаются через PR.
 
 ```bash
+# после мержа PR release/1.2.3 -> main
+git switch main
+git pull --ff-only
 git tag -a v1.2.3 -m "BotC Stats 1.2.3"
-git push origin main --follow-tags
+git push origin v1.2.3
 ```
 
 Что попадает в релиз, как поднять версию и как развернуть core из опубликованных образов —

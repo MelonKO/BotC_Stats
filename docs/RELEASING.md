@@ -38,9 +38,12 @@
    доступны без авторизации: откройте пакет в профиле/организации → *Package settings* →
    *Change visibility* → *Public*. Для приватных образов на сервере нужен
    `docker login ghcr.io` с токеном, у которого есть `read:packages`.
-3. **Защита тегов (рекомендуется).** Settings → Rules → Rulesets → новый tag ruleset на
+3. **Защита ветки `main`.** Требуется PR, force-push запрещён, merge-коммиты разрешены;
+   требование линейной истории выключено — иначе релизный PR нельзя было бы смержить
+   merge-коммитом. Настройка: Settings → Rules / Rulesets → `main`.
+4. **Защита тегов (рекомендуется).** Settings → Rules → Rulesets → новый tag ruleset на
    `v*` с запретом удаления/перезаписи тегов.
-4. **Подпись exe (опционально).** Сейчас сборка не подписывается, поэтому Windows SmartScreen
+5. **Подпись exe (опционально).** Сейчас сборка не подписывается, поэтому Windows SmartScreen
    покажет предупреждение при первом запуске. Для подписи понадобится сертификат и отдельный
    шаг в job `dbconnect` (секреты репозитория).
 
@@ -73,12 +76,6 @@ git add DBConnect/CMakeLists.txt DBConnect/vcpkg.json openapi/api/openapi.yaml
 git commit -m "chore(release): 1.2.3"
 ```
 
-Ветку можно отправить в origin и открыть PR в `main`, чтобы прогнать CI до мержа:
-
-```bash
-git push -u origin release/1.2.3
-```
-
 ### 3. Проверить локально
 
 ```powershell
@@ -90,53 +87,61 @@ python DBConnect/scripts/build.py deploy   # опционально: прове�
 Тег должен указывать на коммит, в котором есть `scripts/project.py`: workflow вызывает его
 в job `verify`.
 
-### 4. Влить в main и поставить тег
+### 4. Влить в main через PR
+
+`main` защищена: прямые пуши запрещены, изменения принимаются только через pull request.
+Merge-коммиты разрешены, требование линейной истории выключено, поэтому релизную ветку
+сливаем способом **Create a merge commit** (не squash/rebase) — так в истории `main`
+останется связь с релизной веткой.
+
+```bash
+git switch release/1.2.3
+git push -u origin release/1.2.3
+```
+
+Откройте на GitHub PR `release/1.2.3 → main` и выберите **Create a merge commit**.
+
+### 5. Поставить тег на merge-коммит в main
 
 ```bash
 git switch main
 git pull --ff-only
-git merge --no-ff release/1.2.3 -m "Merge branch 'release/1.2.3'"
 
 git tag -a v1.2.3 -m "BotC Stats 1.2.3"
-git push origin main --follow-tags
+git push origin v1.2.3
 ```
 
-`--follow-tags` отправляет `main` и достижимые аннотированные теги. Если тег нужно отправить
-отдельно: `git push origin v1.2.3`. Именно пуш тега запускает релиз.
+Тег ставится на merge-коммит, появившийся после мержа PR. Именно пуш тега запускает релиз.
+`git push origin main --follow-tags` не подойдёт: прямой пуш в `main` запрещён правилами.
 
-### 5. Вернуть изменения в develop
+### 6. Вернуть изменения в develop
 
 ```bash
 git switch develop
-git merge --no-ff release/1.2.3 -m "Merge branch 'release/1.2.3' into develop"
+git pull --ff-only
+git merge --ff-only release/1.2.3
 git push origin develop
+
 git branch -d release/1.2.3
-git push origin --delete release/1.2.3   # если ветка отправлялась
+git push origin --delete release/1.2.3
 ```
 
-### 6. Проверить релиз
+Релизная ветка ответвлена от `develop`, поэтому слияние обычно проходит как fast-forward.
+Если `develop` успел уйти вперёд, используйте обычный `git merge release/1.2.3`
+(merge-коммиты в `develop` разрешены) или PR.
+
+### 7. Проверить релиз
 
 1. Actions → workflow **Release** завершился успешно.
 2. В GitHub Release лежат `DBConnect-1.2.3-win64.zip` и `SHA256SUMS.txt`.
 3. Образы доступны: `docker pull ghcr.io/<owner>/botc-stats-api:1.2.3`.
 4. Сервер обновлён на новую версию (см. «Развёртывание core из опубликованных образов»).
 
-## Если main защищён
+## Если правила main нужно обойти
 
-Прямой merge в `main` может быть запрещён. Тогда:
-
-```bash
-git switch release/1.2.3
-git push -u origin release/1.2.3
-# открыть PR release/1.2.3 -> main и смержить его
-
-git switch main
-git pull --ff-only
-git tag -a v1.2.3 -m "BotC Stats 1.2.3"
-git push origin v1.2.3
-```
-
-Тег ставится на merge-коммит в `main` уже после мержа PR.
+Правила защиты можно временно обойти правами администратора, но для обычного релиза это не
+нужно: PR — штатный путь. Обход используйте только для исправления самой ветки или истории
+и сразу возвращайте правила после операции.
 
 ## Хотфикс
 
@@ -151,15 +156,19 @@ git switch -c hotfix/1.2.4
 git add -A
 git commit -m "fix: ..."
 
+git push -u origin hotfix/1.2.4
+# PR hotfix/1.2.4 -> main, способ слияния "Create a merge commit"
+
 git switch main
-git merge --no-ff hotfix/1.2.4 -m "Merge branch 'hotfix/1.2.4'"
+git pull --ff-only
 git tag -a v1.2.4 -m "BotC Stats 1.2.4"
-git push origin main --follow-tags
+git push origin v1.2.4
 
 git switch develop
-git merge --no-ff hotfix/1.2.4 -m "Merge branch 'hotfix/1.2.4' into develop"
+git merge --ff-only hotfix/1.2.4
 git push origin develop
 git branch -d hotfix/1.2.4
+git push origin --delete hotfix/1.2.4
 ```
 
 ## Pre-release
@@ -177,11 +186,11 @@ Pre-release удобно использовать как первую обкат
 
 - [ ] версия поднята в `DBConnect/CMakeLists.txt` и совпадает с будущим тегом;
 - [ ] `python scripts/project.py verify` проходит;
-- [ ] релизная ветка влита в `main` через `--no-ff`;
-- [ ] аннотированный тег `vX.Y.Z` стоит на коммите в `main`;
-- [ ] тег отправлен (`git push origin vX.Y.Z` или `--follow-tags`);
+- [ ] PR `release/X.Y.Z → main` смержен способом **Create a merge commit**;
+- [ ] аннотированный тег `vX.Y.Z` стоит на merge-коммите в `main`;
+- [ ] тег отправлен (`git push origin vX.Y.Z`);
 - [ ] workflow **Release** зелёный, ассеты и образы на месте;
-- [ ] изменения влиты обратно в `develop`;
+- [ ] изменения возвращены в `develop`;
 - [ ] сервер обновлён и `/health` отвечает.
 
 ## Как устроен workflow

@@ -44,7 +44,12 @@
    покажет предупреждение при первом запуске. Для подписи понадобится сертификат и отдельный
    шаг в job `dbconnect` (секреты репозитория).
 
-## Подготовка релиза
+## Процесс релиза
+
+Процесс следует git-flow (релизы уходят в `main`, разработка идёт в `develop`), но утилита
+`git flow` не нужна: все шаги выполняются обычными командами Git.
+
+### 1. Подготовить версию
 
 Версия хранится в `DBConnect/CMakeLists.txt`:
 
@@ -56,31 +61,128 @@ Workflow сравнивает тег с этим значением и пада�
 обновить `version-string` в `DBConnect/vcpkg.json` и `info.version` в `openapi/api/openapi.yaml` —
 на сборку это не влияет, но сохраняет версии компонентов консистентными (workflow их не проверяет).
 
-Порядок по git-flow:
+### 2. Создать релизную ветку
 
 ```bash
-git flow release start 1.2.3
+git switch develop
+git pull --ff-only
+git switch -c release/1.2.3
 
-# 1. Поднять версию в DBConnect/CMakeLists.txt (и, при желании, в DBConnect/vcpkg.json)
-git commit -am "chore(release): 1.2.3"
-
-# 2. Завершить release-ветку без автоматического тега git-flow
-git flow release finish -n 1.2.3
-
-# 3. Поставить тег на merge-коммит в main
-git tag -a v1.2.3 -m "BotC Stats 1.2.3"
-
-# 4. Отправить main вместе с тегом — это запускает релиз
-git push origin main --follow-tags
-git push origin develop
+# поднять версию в DBConnect/CMakeLists.txt (и, при желании, в vcpkg.json/openapi.yaml)
+git add DBConnect/CMakeLists.txt DBConnect/vcpkg.json openapi/api/openapi.yaml
+git commit -m "chore(release): 1.2.3"
 ```
 
-Тег должен указывать на коммит в `main`. Локальную проверку можно сделать до пуша:
+Ветку можно отправить в origin и открыть PR в `main`, чтобы прогнать CI до мержа:
+
+```bash
+git push -u origin release/1.2.3
+```
+
+### 3. Проверить локально
 
 ```powershell
-python scripts/project.py verify    # generated-код актуален + тесты core API
-python DBConnect/scripts/build.py deploy
+python scripts/project.py setup            # один раз: npm-зависимости и генератор моделей
+python scripts/project.py verify           # generated-код актуален + тесты core API
+python DBConnect/scripts/build.py deploy   # опционально: проверить Windows-сборку
 ```
+
+Тег должен указывать на коммит, в котором есть `scripts/project.py`: workflow вызывает его
+в job `verify`.
+
+### 4. Влить в main и поставить тег
+
+```bash
+git switch main
+git pull --ff-only
+git merge --no-ff release/1.2.3 -m "Merge branch 'release/1.2.3'"
+
+git tag -a v1.2.3 -m "BotC Stats 1.2.3"
+git push origin main --follow-tags
+```
+
+`--follow-tags` отправляет `main` и достижимые аннотированные теги. Если тег нужно отправить
+отдельно: `git push origin v1.2.3`. Именно пуш тега запускает релиз.
+
+### 5. Вернуть изменения в develop
+
+```bash
+git switch develop
+git merge --no-ff release/1.2.3 -m "Merge branch 'release/1.2.3' into develop"
+git push origin develop
+git branch -d release/1.2.3
+git push origin --delete release/1.2.3   # если ветка отправлялась
+```
+
+### 6. Проверить релиз
+
+1. Actions → workflow **Release** завершился успешно.
+2. В GitHub Release лежат `DBConnect-1.2.3-win64.zip` и `SHA256SUMS.txt`.
+3. Образы доступны: `docker pull ghcr.io/<owner>/botc-stats-api:1.2.3`.
+4. Сервер обновлён на новую версию (см. «Развёртывание core из опубликованных образов»).
+
+## Если main защищён
+
+Прямой merge в `main` может быть запрещён. Тогда:
+
+```bash
+git switch release/1.2.3
+git push -u origin release/1.2.3
+# открыть PR release/1.2.3 -> main и смержить его
+
+git switch main
+git pull --ff-only
+git tag -a v1.2.3 -m "BotC Stats 1.2.3"
+git push origin v1.2.3
+```
+
+Тег ставится на merge-коммит в `main` уже после мержа PR.
+
+## Хотфикс
+
+Хотфикс делается от `main` и поднимает patch-версию:
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c hotfix/1.2.4
+
+# исправление + версия 1.2.4 в DBConnect/CMakeLists.txt
+git add -A
+git commit -m "fix: ..."
+
+git switch main
+git merge --no-ff hotfix/1.2.4 -m "Merge branch 'hotfix/1.2.4'"
+git tag -a v1.2.4 -m "BotC Stats 1.2.4"
+git push origin main --follow-tags
+
+git switch develop
+git merge --no-ff hotfix/1.2.4 -m "Merge branch 'hotfix/1.2.4' into develop"
+git push origin develop
+git branch -d hotfix/1.2.4
+```
+
+## Pre-release
+
+Pre-release — это тег с суффиксом, например `v1.2.3-rc.1`. Версия в `DBConnect/CMakeLists.txt`
+должна быть `1.2.3` (суффикс workflow отбрасывает). Такой тег:
+
+- создаёт GitHub pre-release;
+- публикует образы с тегами `1.2.3-rc.1` и `sha-…`, но не двигает `1.2` и `latest`.
+
+Pre-release удобно использовать как первую обкатку пайплайна: если сборка упала, тег можно
+удалить и поставить заново, не трогая стабильную версию.
+
+## Чек-лист
+
+- [ ] версия поднята в `DBConnect/CMakeLists.txt` и совпадает с будущим тегом;
+- [ ] `python scripts/project.py verify` проходит;
+- [ ] релизная ветка влита в `main` через `--no-ff`;
+- [ ] аннотированный тег `vX.Y.Z` стоит на коммите в `main`;
+- [ ] тег отправлен (`git push origin vX.Y.Z` или `--follow-tags`);
+- [ ] workflow **Release** зелёный, ассеты и образы на месте;
+- [ ] изменения влиты обратно в `develop`;
+- [ ] сервер обновлён и `/health` отвечает.
 
 ## Как устроен workflow
 

@@ -1,0 +1,121 @@
+# Production stack assembled from the images published by the release workflow.
+#
+# Local development keeps using docker-compose.yml, which builds the API from
+# core/api and mounts the nginx configuration from the checkout.
+#
+# Usage:
+#   cp .env.example .env          # set the secrets and SERVER_IP
+#   # add BOTC_VERSION=<version> to .env (defaults to latest)
+#   bash scripts/generate-cert.sh
+#   docker compose -f docker-compose.release.yml pull
+#   docker compose -f docker-compose.release.yml up -d
+#
+# init-scripts/ and nginx/ssl/ are still mounted from the checkout: the first
+# one initialises a fresh database, the second is per-installation TLS material
+# that must never be baked into an image.
+
+services:
+  # ============================================================
+  #  PostgreSQL — database
+  # ============================================================
+  db:
+    image: postgres:16
+    container_name: botc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-botc_stats}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      BOTC_USER_PASSWORD: ${BOTC_USER_PASSWORD:-change_me}
+      API_SERVICE_PASSWORD: ${API_SERVICE_PASSWORD:-change_me}
+      METABASE_META_PASSWORD: ${METABASE_META_PASSWORD:-change_me}
+      METABASE_READONLY_PASSWORD: ${METABASE_READONLY_PASSWORD:-change_me}
+    # Reachable only through an SSH tunnel, never from the outside.
+    ports:
+      - "127.0.0.1:5432:5432"
+    command: ["postgres", "-c", "listen_addresses=*"]
+    volumes:
+      - botc_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  FastAPI — REST API (published image)
+  # ============================================================
+  api:
+    image: ${BOTC_API_IMAGE:-ghcr.io/melonko/botc-stats-api}:${BOTC_VERSION:-latest}
+    container_name: botc-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://api_service:${API_SERVICE_PASSWORD:-change_me}@db:5432/botc_stats
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Nginx — reverse proxy + TLS (published image)
+  # ============================================================
+  nginx:
+    image: ${BOTC_NGINX_IMAGE:-ghcr.io/melonko/botc-stats-nginx}:${BOTC_VERSION:-latest}
+    container_name: botc-nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      # nginx.conf and html/ are baked into the image; certificates are not.
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      metabase:
+        condition: service_started
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Metabase — dashboards and analytics UI
+  # ============================================================
+  metabase:
+    image: ${METABASE_IMAGE:-metabase/metabase:v0.53.5}
+    container_name: botc-metabase
+    restart: unless-stopped
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase_meta_user
+      MB_DB_PASS: ${METABASE_META_PASSWORD:-change_me}
+      MB_DB_HOST: db
+      MB_EMBEDDING_SECRET_KEY: ${METABASE_EMBEDDING_SECRET:-change_me_use_random_32chars}
+      MB_SITE_URL: https://${SERVER_IP:-localhost}/stats
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks:
+      - botc_internal
+
+volumes:
+  botc_data:
+
+networks:
+  botc_internal:
+    driver: bridge

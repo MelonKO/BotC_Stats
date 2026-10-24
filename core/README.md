@@ -38,6 +38,8 @@ docker-compose up -d
 | `METABASE_READONLY_PASSWORD` | Пароль пользователя чтения аналитики |
 | `METABASE_EMBEDDING_SECRET` | Секрет для подписанных embed-токенов |
 | `SERVER_IP` | Адрес, используемый в URL Metabase |
+| `BOTC_VERSION` | Версия опубликованных образов для `docker-compose.release.yml` (по умолчанию `latest`) |
+| `BOTC_API_IMAGE` / `BOTC_NGINX_IMAGE` | Переопределение имён образов API и nginx |
 
 ## API Endpoints
 
@@ -66,6 +68,23 @@ docker-compose up -d
 - **SSH access:** [docs/SSH-ACCESS.md](docs/SSH-ACCESS.md)
 - **REST API:** [docs/API-ACCESS.md](docs/API-ACCESS.md)
 - **Metabase:** `https://<SERVER_IP>/stats/`; публичные embed-страницы размещаются под `/view/`.
+
+## Deploy from published images
+
+Релизные образы API и nginx публикуются в GHCR, поэтому на сервере не нужно собирать их
+локально:
+
+```bash
+cp .env.example .env
+# заполните секреты, SERVER_IP и добавьте BOTC_VERSION=<версия>
+bash scripts/generate-cert.sh
+docker compose -f docker-compose.release.yml pull
+docker compose -f docker-compose.release.yml up -d
+```
+
+`docker-compose.yml` остаётся локальным вариантом: он собирает API из `./api` и монтирует
+конфигурацию nginx из checkout. Подробности и откат версии — в
+[docs/RELEASING.md](../docs/RELEASING.md).
 
 ## Management
 

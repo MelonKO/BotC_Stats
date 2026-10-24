@@ -1,0 +1,321 @@
+name: Release
+
+# A release is driven by a semver tag: v1.2.3 for a stable release,
+# v1.2.3-rc.1 for a pre-release. The tag must match the DBConnect project
+# version in DBConnect/CMakeLists.txt; see docs/RELEASING.md.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      major_minor: ${{ steps.meta.outputs.major_minor }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate the tag against the project version
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a release tag like v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+
+          version="${tag#v}"
+          base_version="${version%%-*}"
+          major_minor="${base_version%.*}"
+          prerelease=false
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          fi
+
+          project_version="$(sed -nE 's/^project\(DBConnect VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' DBConnect/CMakeLists.txt | head -n1)"
+          if [[ -z "$project_version" ]]; then
+            echo "::error::Could not read the project version from DBConnect/CMakeLists.txt"
+            exit 1
+          fi
+          if [[ "$project_version" != "$base_version" ]]; then
+            echo "::error::Tag $tag does not match DBConnect/CMakeLists.txt (project version $project_version)"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "major_minor=$major_minor" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version (major.minor $major_minor, prerelease: $prerelease)"
+
+  verify:
+    name: Verify sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-release-${{ hashFiles('core/api/requirements.txt', 'openapi/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-release-
+
+      - name: Install core API dependencies
+        run: pip install -r core/api/requirements.txt
+
+      - name: Run core API tests
+        working-directory: core/api
+        run: python -m pytest app/tests/ -v
+
+      # DBConnect/generated_api is not tracked: the C++ client is rebuilt from
+      # the OpenAPI spec and handed to the Windows job as an artifact.
+      - name: Install OpenAPI generator dependencies
+        run: python scripts/project.py setup
+
+      - name: Generate API clients
+        run: python scripts/project.py generate
+
+      - name: Fail when the committed models are stale
+        run: git diff --exit-code -- core/api/app/models.py
+
+      - name: Upload the generated C++ client
+        uses: actions/upload-artifact@v6
+        with:
+          name: generated-cpp-client
+          path: DBConnect/generated_api
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Validate compose files
+        run: |
+          cp core/.env.example core/.env
+          docker compose -f core/docker-compose.yml config --quiet
+          BOTC_VERSION=0.0.0-test docker compose -f core/docker-compose.release.yml config --quiet
+
+  dbconnect:
+    name: Build DBConnect (Windows)
+    runs-on: windows-latest
+    needs: [version, verify]
+    timeout-minutes: 180
+    env:
+      # vcpkg ships with the Windows runner; the manifest pins the baseline.
+      VCPKG_ROOT: C:\vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-cache
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}\.vcpkg-cache,readwrite
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download the generated C++ client
+        uses: actions/download-artifact@v7
+        with:
+          name: generated-cpp-client
+          path: DBConnect/generated_api
+
+      # Qt is built from source by vcpkg, so the binary cache is what keeps
+      # later releases short. The key follows the manifest (vcpkg.json).
+      - name: Restore the vcpkg binary cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ github.workspace }}\.vcpkg-cache
+          key: vcpkg-x64-windows-${{ hashFiles('DBConnect/vcpkg.json') }}
+          restore-keys: |
+            vcpkg-x64-windows-
+
+      - name: Prepare vcpkg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (-not (Test-Path "$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake")) {
+            throw "vcpkg toolchain not found under $env:VCPKG_ROOT"
+          }
+
+          $manifest = Get-Content "DBConnect/vcpkg.json" -Raw | ConvertFrom-Json
+          $baseline = $manifest.'builtin-baseline'
+          if (Test-Path "$env:VCPKG_ROOT\.git") {
+            git -C "$env:VCPKG_ROOT" cat-file -e "$baseline^{commit}" 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Fetching vcpkg baseline $baseline"
+              git -C "$env:VCPKG_ROOT" fetch --no-tags origin $baseline
+              if ($LASTEXITCODE -ne 0) { throw "Could not fetch the vcpkg baseline $baseline" }
+            }
+          } else {
+            Write-Host "$env:VCPKG_ROOT has no git history; the manifest baseline is used as is"
+          }
+
+          if (-not (Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
+            & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+            if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed" }
+          }
+
+          New-Item -ItemType Directory -Force "$env:VCPKG_DEFAULT_BINARY_CACHE" | Out-Null
+          & "$env:VCPKG_ROOT\vcpkg.exe" version
+
+      - name: Build and package DBConnect
+        shell: pwsh
+        run: |
+          python DBConnect/scripts/build.py deploy --jobs $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check the package
+        shell: pwsh
+        run: |
+          $dist = "DBConnect/build_release/dist"
+          if (-not (Test-Path "$dist\DBConnect.exe")) {
+            throw "DBConnect.exe was not produced"
+          }
+          if (-not (Test-Path "$dist\platforms\qwindows.dll")) {
+            throw "The Qt platform plugin is missing from dist/"
+          }
+          $config = Get-Content "$dist\config.ini" -Raw
+          if ($config -match '(?m)^\s*API_KEY\s*=\s*\S+') {
+            throw "dist/config.ini contains an API key"
+          }
+          Get-ChildItem $dist | Measure-Object | Select-Object -ExpandProperty Count
+
+      - name: Create the release archive
+        shell: pwsh
+        run: |
+          $version = "${{ needs.version.outputs.version }}"
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          Compress-Archive -Path "DBConnect/build_release/dist/*" `
+            -DestinationPath "release-assets/DBConnect-$version-win64.zip" `
+            -CompressionLevel Optimal
+          Get-ChildItem release-assets | Select-Object Name, Length
+
+      - name: Upload the release archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: dbconnect-win64
+          path: release-assets/DBConnect-*-win64.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  images:
+    name: Publish core images
+    runs-on: ubuntu-latest
+    needs: [version, verify]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: botc-stats-api
+            context: core/api
+            dockerfile: core/api/Dockerfile
+          - image: botc-stats-nginx
+            context: core/nginx
+            dockerfile: core/nginx/Dockerfile
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compute image tags
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GHCR requires a lowercase repository path.
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/${owner}/${{ matrix.image }}"
+          version="${{ needs.version.outputs.version }}"
+          {
+            echo "image=$image"
+            echo "tags<<EOF"
+            echo "$image:$version"
+            echo "$image:sha-${GITHUB_SHA::12}"
+            # Stable aliases must never point at a pre-release.
+            if [[ "${{ needs.version.outputs.prerelease }}" == "false" ]]; then
+              echo "$image:${{ needs.version.outputs.major_minor }}"
+              echo "$image:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [version, verify, images, dbconnect]
+    permissions:
+      contents: write
+    steps:
+      - name: Download the DBConnect archive
+        uses: actions/download-artifact@v7
+        with:
+          name: dbconnect-win64
+          path: release-assets
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: |
+          sha256sum -- *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.version.outputs.version }}"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          notes="Container images:
+          - \`ghcr.io/${owner}/botc-stats-api:${version}\`
+          - \`ghcr.io/${owner}/botc-stats-nginx:${version}\`"
+
+          # A re-run after a transient failure finds the release already created.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* \
+              --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            prerelease_args=()
+            if [[ "${{ needs.version.outputs.prerelease }}" == "true" ]]; then
+              prerelease_args+=(--prerelease)
+            fi
+            gh release create "$GITHUB_REF_NAME" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "BotC Stats $version" \
+              --generate-notes \
+              --notes "$notes" \
+              "${prerelease_args[@]}"
+          fi

@@ -1,6 +1,7 @@
 # Blood on the Clocktower Statistics — Project
 
 [![CI](https://github.com/MelonKO/BotC_Stats/actions/workflows/ci.yml/badge.svg)](https://github.com/MelonKO/BotC_Stats/actions/workflows/ci.yml)
+[![Release](https://github.com/MelonKO/BotC_Stats/actions/workflows/release.yml/badge.svg)](https://github.com/MelonKO/BotC_Stats/actions/workflows/release.yml)
 
 **Blood on the Clocktower Statistics (BotC Stats)** — система учёта партий настольной игры Blood on the Clocktower с базой данных PostgreSQL, REST API и набором инструментов для импорта и аналитики.
 
@@ -258,6 +259,19 @@ v4.0.0
   core:      BREAKING — changed API endpoint to /api/v2/import
   DBConnect: updated to use new /api/v2/import
 ```
+
+## Releases
+
+Релиз запускается пушем тега `vX.Y.Z`: workflow собирает Windows-архив DBConnect, публикует
+образы `core` в GitHub Container Registry и создаёт GitHub Release.
+
+```bash
+git tag -a v1.2.3 -m "BotC Stats 1.2.3"
+git push origin main --follow-tags
+```
+
+Что попадает в релиз, как поднять версию и как развернуть core из опубликованных образов —
+в [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 

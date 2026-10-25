@@ -61,7 +61,9 @@
    Одна метка тоже допустима, но тогда её нужно заключить в кавычки: `"windows-latest"`.
    Если переменная не задана или пуста, используется `windows-latest`. Машина раннера должна
    иметь Visual Studio C++ build tools, CMake 3.25+, Ninja и vcpkg в `C:\vcpkg` (путь
-   зашит в `VCPKG_ROOT` этой job).
+   зашит в `VCPKG_ROOT` этой job). Кеш vcpkg на такой машине хранится в `C:\vcpkg-cache` и
+   переживает запуски, поэтому Qt собирается один раз при неизменном тулчейне; чистить
+   каталог не нужно.
 
 ## Процесс релиза
 
@@ -226,12 +228,13 @@ Pre-release удобно использовать как первую обкат
 
 - `DBConnect/generated_api/` не хранится в git, поэтому Windows-job получает его артефактом
   из `verify`. Локально этот каталог создаёт `python scripts/project.py generate`.
-- Первая сборка Qt 6.10.2 через vcpkg занимает десятки минут. Бинарный кеш vcpkg хранится в
-  GitHub Actions cache (ключ — хеш `DBConnect/vcpkg.json`). GitHub не разделяет кеш между
-  тегами: запуск на теге видит только кеш default-ветки, поэтому кеш ускоряет *повторный*
-  запуск того же тега (например, после сбоя упаковки), а новый тег может снова собрать Qt.
-  Если это станет проблемой, прогрейте кеш отдельным запуском сборки на `main` или
-  перейдите на NuGet-кеш vcpkg в GitHub Packages (нужен PAT с `packages:write`).
+- Первая сборка Qt 6.10.2 через vcpkg занимает десятки минут, поэтому job держит бинарный кеш
+  vcpkg в двух вариантах, в зависимости от раннера. На `windows-latest` кеш лежит в workspace
+  (`.vcpkg-cache`) и переносится между запусками через GitHub Actions cache с ключом по
+  хешу `DBConnect/vcpkg.json`; GitHub не разделяет кеш между тегами, поэтому там он ускоряет
+  в основном повторный запуск того же тега (прогреть кеш можно сборкой на `main`). На
+  self-hosted раннере Actions cache не используется: кеш живёт в постоянном каталоге
+  `C:\vcpkg-cache`, поэтому любой тег берёт уже собранные бинарники.
 - Pre-release тег (`v1.2.3-rc.1`) создаёт GitHub pre-release и не двигает `1.2` и `latest`.
 - Раннер для `dbconnect` выбирается переменной `BOTC_DBCONNECT_RUNNER`: по умолчанию
   `fromJSON(vars.BOTC_DBCONNECT_RUNNER || '["windows-latest"]')`. Значение читается в момент
@@ -406,6 +409,8 @@ BOTC_API_IMAGE=botc-stats-api BOTC_NGINX_IMAGE=botc-stats-nginx BOTC_DB_IMAGE=bo
 | схема не обновилась после `up -d` | init-скрипты выполняются только на пустом томе; изменения в работающей базе применяет `db-migrate` |
 | `db-migrate` не видит базу | база не запущена: `docker compose -f docker-compose.release.yml up -d db` |
 | Сборка DBConnect идёт больше часа | пустой кеш vcpkg (первый запуск, смена образа runner или `vcpkg.json`). Это ожидаемо |
+| Шаг `Restore the vcpkg binary cache` пропущен | так и должно быть на self-hosted раннере: там кеш берётся из `C:\vcpkg-cache` и GitHub Actions cache не участвует |
+| Qt пересобирается на self-hosted раннере при каждом запуске | сменился ABI (другая версия CMake/компилятора) или `C:\vcpkg-cache` недоступен на запись. В логе шага `Prepare vcpkg` виден фактический путь кеша, состояние тулчейна показывает `python DBConnect/scripts/build.py doctor` |
 | job `dbconnect` висит в статусе Queued | self-hosted раннер offline; job ждёт до 24 часов. Поставьте `BOTC_DBCONNECT_RUNNER` = `"windows-latest"`, отмените run и запустите его заново |
 | `Unexpected end of JSON input` в job `dbconnect` | значение `BOTC_DBCONNECT_RUNNER` не JSON: одна метка — `"windows-latest"`, несколько — `["self-hosted","windows","x64"]` |
 | `Could not find a baseline commit` в vcpkg | в checkout vcpkg нет нужного baseline; workflow пытается до-фетчить его, при повторной ошибке обновите `builtin-baseline` и `qtbase` в `DBConnect/vcpkg.json` |

@@ -124,9 +124,10 @@ jobs:
     timeout-minutes: 180
     env:
       # vcpkg ships with the Windows runner; the manifest pins the baseline.
+      # VCPKG_DEFAULT_BINARY_CACHE and VCPKG_BINARY_SOURCES are exported by the
+      # "Prepare vcpkg" step: they depend on runner.environment, which is not
+      # available in a job-level env.
       VCPKG_ROOT: C:\vcpkg
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-cache
-      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}\.vcpkg-cache,readwrite
     steps:
       - uses: actions/checkout@v6
 
@@ -136,9 +137,12 @@ jobs:
           name: generated-cpp-client
           path: DBConnect/generated_api
 
-      # Qt is built from source by vcpkg, so the binary cache is what keeps
-      # later releases short. The key follows the manifest (vcpkg.json).
+      # A GitHub-hosted runner is a fresh VM on every job, so the vcpkg binary
+      # cache travels through the Actions cache (Qt is built from source by
+      # vcpkg). A self-hosted runner keeps it in a persistent directory instead,
+      # see "Prepare vcpkg". The key follows the manifest (vcpkg.json).
       - name: Restore the vcpkg binary cache
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}\.vcpkg-cache
@@ -150,6 +154,24 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+
+          # The binary cache lives in the workspace for a GitHub-hosted runner
+          # (restored by actions/cache) and in a machine directory for a
+          # self-hosted one, where it survives across runs and tags. Exported
+          # through GITHUB_ENV so the build step sees the same paths.
+          $runnerEnvironment = "${{ runner.environment }}"
+          $cacheDir = if ($runnerEnvironment -eq 'self-hosted') {
+            'C:\vcpkg-cache'
+          } else {
+            Join-Path $env:GITHUB_WORKSPACE '.vcpkg-cache'
+          }
+          New-Item -ItemType Directory -Force $cacheDir | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value @(
+            "VCPKG_DEFAULT_BINARY_CACHE=$cacheDir",
+            "VCPKG_BINARY_SOURCES=clear;files,$cacheDir,readwrite"
+          )
+          Write-Host "vcpkg binary cache: $cacheDir ($runnerEnvironment runner)"
+
           if (-not (Test-Path "$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake")) {
             throw "vcpkg toolchain not found under $env:VCPKG_ROOT"
           }
@@ -172,7 +194,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed" }
           }
 
-          New-Item -ItemType Directory -Force "$env:VCPKG_DEFAULT_BINARY_CACHE" | Out-Null
           & "$env:VCPKG_ROOT\vcpkg.exe" version
 
       - name: Build and package DBConnect

@@ -24,6 +24,8 @@ services:
     command: ["postgres", "-c", "listen_addresses=*"]
     volumes:
       - botc_data:/var/lib/postgresql/data
+      # Init scripts run only when the data directory is empty. Schema changes
+      # for an existing database are migrations: see core/migrations/README.md.
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
@@ -99,6 +101,35 @@ services:
         condition: service_healthy
     expose:
       - "3000"
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Миграции — разовый запуск (профиль migrate)
+  # ============================================================
+  # Применяет migrations/*.sql к уже работающей БД, повторный запуск безопасен:
+  #
+  #   docker compose --profile migrate run --rm db-migrate
+  db-migrate:
+    # Локально используется базовый postgres:16, runner монтируется из checkout;
+    # в релизном compose тот же скрипт запечён в образ БД.
+    image: postgres:16
+    profiles: ["migrate"]
+    restart: "no"
+    entrypoint: ["/bin/bash", "/usr/local/bin/botc-migrate"]
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      PGDATABASE: ${POSTGRES_DB:-botc_stats}
+      BOTC_MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./db/migrate.sh:/usr/local/bin/botc-migrate:ro
+      - ./migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - botc_internal
 

@@ -1,12 +1,18 @@
 -- ============================================================
---  Manual migration for an already-deployed database
+--  Migration: multiple storytellers and the draw side
 -- ============================================================
 --
--- init-scripts/*.sql only run automatically on a FRESH Docker volume
--- (first `docker-compose up`). This file is NOT executed automatically —
--- it must be run by hand against the live database, e.g.:
+-- This file lives outside init-scripts/ on purpose: init-scripts/* only run
+-- once, when PostgreSQL initialises an EMPTY data volume. A migration changes
+-- an already-deployed database, so it must be applied explicitly. Either use
+-- the migration runner (it records applied files in public.schema_migrations):
+--
+--   docker compose -f docker-compose.release.yml run --rm db-migrate
+--
+-- or apply the file by hand against the live database:
+--
 --   docker exec -i botc-postgres psql -U postgres -d botc_stats \
---     -v ON_ERROR_STOP=1 < 99-migrate-storyteller-draw.sql
+--     -v ON_ERROR_STOP=1 < migrations/99-migrate-storyteller-draw.sql
 --
 -- It brings an existing database created from the pre-multi-storyteller
 -- / pre-draw schema up to date with 01-schema.sql: creates the
@@ -14,6 +20,10 @@
 -- drops the old column, widens alignment_win to allow 'draw'/'ничья',
 -- and re-creates process_games_import() and v_game_summary.
 -- The whole migration runs in a single transaction. Review before running.
+--
+-- Safe to run on a fresh database: 01-schema.sql already creates the current
+-- schema, the backfill is skipped when games.storyteller_id is absent and every
+-- other statement is idempotent, so the migration degrades to a no-op.
 
 BEGIN;
 
@@ -27,9 +37,23 @@ CREATE TABLE IF NOT EXISTS game_storytellers (
 CREATE INDEX IF NOT EXISTS idx_gst_game   ON game_storytellers (game_id);
 CREATE INDEX IF NOT EXISTS idx_gst_player ON game_storytellers (player_id);
 
-INSERT INTO game_storytellers (game_id, player_id)
-SELECT id, storyteller_id FROM games
-ON CONFLICT DO NOTHING;
+-- Backfill only when the pre-multi-storyteller column still exists. On a
+-- database created by 01-schema.sql the column is already gone, so this block
+-- does nothing instead of failing on a fresh install.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'games'
+          AND column_name = 'storyteller_id'
+    ) THEN
+        INSERT INTO game_storytellers (game_id, player_id)
+        SELECT id, storyteller_id FROM games
+        ON CONFLICT DO NOTHING;
+    END IF;
+END
+$$;
 
 -- Drop the view that depends on games.storyteller_id (re-created below)
 DROP VIEW IF EXISTS v_game_summary;

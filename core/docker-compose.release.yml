@@ -1,7 +1,8 @@
 # Production stack assembled from the images published by the release workflow.
 #
 # Local development keeps using docker-compose.yml, which builds the API from
-# core/api and mounts the nginx configuration from the checkout.
+# core/api, mounts the nginx configuration from the checkout and runs plain
+# postgres:16.
 #
 # Usage:
 #   cp .env.example .env          # set the secrets and SERVER_IP
@@ -9,17 +10,21 @@
 #   bash scripts/generate-cert.sh
 #   docker compose -f docker-compose.release.yml pull
 #   docker compose -f docker-compose.release.yml up -d
+#   docker compose -f docker-compose.release.yml run --rm db-migrate   # upgrades only
 #
-# init-scripts/ and nginx/ssl/ are still mounted from the checkout: the first
-# one initialises a fresh database, the second is per-installation TLS material
-# that must never be baked into an image.
+# nginx/ssl/ is still mounted from the checkout: it is per-installation TLS
+# material that must never be baked into an image. Migration files are mounted
+# the same way and applied on demand by the db-migrate service, never
+# automatically at startup.
 
 services:
   # ============================================================
   #  PostgreSQL — database
   # ============================================================
   db:
-    image: postgres:16
+    # postgres:16 plus core/init-scripts, which run only when the data
+    # directory is empty (a fresh botc_data volume).
+    image: ${BOTC_DB_IMAGE:-ghcr.io/melonko/botc-stats-db}:${BOTC_VERSION:-latest}
     container_name: botc-postgres
     restart: unless-stopped
     environment:
@@ -36,7 +41,6 @@ services:
     command: ["postgres", "-c", "listen_addresses=*"]
     volumes:
       - botc_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-botc_stats}"]
       interval: 10s
@@ -110,6 +114,36 @@ services:
         condition: service_healthy
     expose:
       - "3000"
+    networks:
+      - botc_internal
+
+  # ============================================================
+  #  Migrations — one-shot, opt-in (profile: migrate)
+  # ============================================================
+  # Applies core/migrations/*.sql to an existing database and records every
+  # file in public.schema_migrations. It never runs as part of `up`, and it is
+  # a no-op on a database that is already up to date:
+  #
+  #   docker compose -f docker-compose.release.yml run --rm db-migrate
+  db-migrate:
+    image: ${BOTC_DB_IMAGE:-ghcr.io/melonko/botc-stats-db}:${BOTC_VERSION:-latest}
+    profiles: ["migrate"]
+    restart: "no"
+    # The default postgres entrypoint initialises a data directory; this service
+    # only talks to the running db over the network.
+    entrypoint: ["/usr/local/bin/botc-migrate"]
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      PGDATABASE: ${POSTGRES_DB:-botc_stats}
+      BOTC_MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - botc_internal
 

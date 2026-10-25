@@ -121,7 +121,10 @@ BotC/
 ├── test_roles.csv              # Пример CSV для импорта ролей
 ├── core/                       # Docker stack (DB + API + Nginx + Metabase)
 │   ├── docker-compose.yml
-│   ├── init-scripts/
+│   ├── docker-compose.release.yml
+│   ├── init-scripts/           # Инициализация пустой базы
+│   ├── migrations/             # Миграции работающей базы (db-migrate)
+│   ├── db/                     # Образ БД и runner миграций
 │   ├── api/
 │   ├── nginx/
 │   ├── scripts/

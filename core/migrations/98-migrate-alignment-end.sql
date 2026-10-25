@@ -1,5 +1,13 @@
 -- Migration: a player's end side can only be good or evil
 --
+-- This file lives outside init-scripts/ on purpose: init-scripts/* only run
+-- once, when PostgreSQL initialises an EMPTY data volume. Apply it to an
+-- existing deployment with the migration runner
+-- (docker compose -f docker-compose.release.yml run --rm db-migrate) or by hand:
+--
+--   docker exec -i botc-postgres psql -U postgres -d botc_stats \
+--     -v ON_ERROR_STOP=1 < migrations/98-migrate-alignment-end.sql
+--
 -- Background: `alignment` is the side of the conflict, and the value set differs
 -- per context (see core/docs/SIDES.md). A role may be neutral (for example a
 -- Traveller, whose side the storyteller picks), but the player always ends the

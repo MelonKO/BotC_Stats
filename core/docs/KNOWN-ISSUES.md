@@ -79,7 +79,7 @@ Fixed on 2026-10-23, a player's end side is now `добро`/`зло` everywhere
 
 - `games_import_staging.alignment_end_ru` is restricted in
   `core/init-scripts/01-schema.sql`, and
-  `core/init-scripts/98-migrate-alignment-end.sql` applies the same change to
+  `core/migrations/98-migrate-alignment-end.sql` applies the same change to
   existing databases (staged rows with a neutral side are discarded).
 - The OpenAPI contract narrows `alignment_end` to `^(добро|зло)$` and explains
   why, and `core/api/app/models.py` was regenerated (`npm run bundle`,
@@ -90,15 +90,22 @@ Fixed on 2026-10-23, a player's end side is now `добро`/`зло` everywhere
 - `core/api/app/tests/test_schemas.py` now asserts that `добро`/`зло` pass and
   `нейтральный` is rejected.
 
-`98-migrate-alignment-end.sql` is run automatically only when PostgreSQL
-initializes a fresh data volume; Docker does not rerun init scripts on an
-existing database. Apply it manually to an existing deployment from the
-repository root (it removes invalid transient staging rows):
+`98-migrate-alignment-end.sql` lives in `core/migrations/` and is never run by the
+PostgreSQL init process: init scripts only run when a fresh data volume is created, so a
+migration of an existing deployment is always an explicit step. Run the migration runner
+from `core/` (it applies every migration file once and records it in
+`schema_migrations`):
+
+```bash
+docker compose -f docker-compose.release.yml run --rm db-migrate
+```
+
+Or apply a single file by hand (it removes invalid transient staging rows):
 
 ```bash
 cd core
 docker exec -i botc-postgres psql -U postgres -d botc_stats \
-  -v ON_ERROR_STOP=1 < init-scripts/98-migrate-alignment-end.sql
+  -v ON_ERROR_STOP=1 < migrations/98-migrate-alignment-end.sql
 ```
 
 Original report, kept for context:
@@ -288,7 +295,7 @@ Next step: pass the values as `psql` variables (`-v`) or build the statement wit
 
 ### S3. `SECURITY DEFINER` without a fixed `search_path` — `open`
 
-`01-schema.sql:338`, `99-migrate-storyteller-draw.sql:212`.
+`01-schema.sql:339`, `core/migrations/99-migrate-storyteller-draw.sql:237`.
 
 Next step: add `SET search_path = public, pg_temp` to both functions.
 

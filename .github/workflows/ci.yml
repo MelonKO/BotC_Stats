@@ -33,3 +33,31 @@ jobs:
 
       - name: Run tests
         run: python -m pytest app/tests/ -v
+
+  validate-docker:
+    name: Validate Docker stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate compose files
+        run: |
+          cp core/.env.example core/.env
+          docker compose -f core/docker-compose.yml --profile migrate config --quiet
+          BOTC_VERSION=0.0.0-test docker compose -f core/docker-compose.release.yml --profile migrate config --quiet
+
+      - name: Build the database image
+        run: docker build -t botc-stats-db:ci -f core/db/Dockerfile core
+
+      # A migration in /docker-entrypoint-initdb.d would only ever run on an
+      # empty volume, so it must not ship inside the image.
+      - name: Assert the database image ships init scripts and no migrations
+        run: |
+          listing="$(docker run --rm --entrypoint /bin/sh botc-stats-db:ci -c 'ls /docker-entrypoint-initdb.d')"
+          echo "$listing"
+          grep -q '01-schema.sql' <<< "$listing"
+          grep -q '02-create-user.sh' <<< "$listing"
+          if grep -q 'migrate' <<< "$listing"; then
+            echo "::error::migration scripts must not be baked into the database image"
+            exit 1
+          fi

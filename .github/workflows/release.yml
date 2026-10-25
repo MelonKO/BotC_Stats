@@ -109,8 +109,8 @@ jobs:
       - name: Validate compose files
         run: |
           cp core/.env.example core/.env
-          docker compose -f core/docker-compose.yml config --quiet
-          BOTC_VERSION=0.0.0-test docker compose -f core/docker-compose.release.yml config --quiet
+          docker compose -f core/docker-compose.yml --profile migrate config --quiet
+          BOTC_VERSION=0.0.0-test docker compose -f core/docker-compose.release.yml --profile migrate config --quiet
 
   dbconnect:
     name: Build DBConnect (Windows)
@@ -240,6 +240,11 @@ jobs:
           - image: botc-stats-nginx
             context: core/nginx
             dockerfile: core/nginx/Dockerfile
+          # postgres:16 plus core/init-scripts. The build context is core/ so the
+          # init scripts can be copied; migrations are not part of the image.
+          - image: botc-stats-db
+            context: core
+            dockerfile: core/db/Dockerfile
     steps:
       - uses: actions/checkout@v6
 
@@ -314,7 +319,8 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           notes="Container images:
           - \`ghcr.io/${owner}/botc-stats-api:${version}\`
-          - \`ghcr.io/${owner}/botc-stats-nginx:${version}\`"
+          - \`ghcr.io/${owner}/botc-stats-nginx:${version}\`
+          - \`ghcr.io/${owner}/botc-stats-db:${version}\`"
 
           # A re-run after a transient failure finds the release already created.
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then

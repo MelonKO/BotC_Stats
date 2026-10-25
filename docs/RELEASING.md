@@ -16,6 +16,7 @@
 | `SHA256SUMS.txt` | вложения GitHub Release | контрольные суммы архива |
 | `ghcr.io/<owner>/botc-stats-api` | GHCR | FastAPI-сервис (`core/api/Dockerfile`) |
 | `ghcr.io/<owner>/botc-stats-nginx` | GHCR | nginx с запечёнными `nginx.conf` и `html/`, сертификаты монтируются отдельно |
+| `ghcr.io/<owner>/botc-stats-db` | GHCR | `postgres:16` с запечёнными `core/init-scripts/` — схема, пользователи и гранты для пустой базы. Миграции в образ не входят |
 
 Теги образов для релиза `v1.2.3`:
 
@@ -27,7 +28,9 @@
 У pre-release (`v1.2.3-rc.1`) есть только точная версия и `sha-…`: теги `1.2` и `latest`
 всегда указывают на стабильный релиз.
 
-`postgres` и `metabase` — сторонние образы, они не пересобираются.
+`metabase` — сторонний образ, он не пересобирается. Образ БД собирается поверх официального
+`postgres:16` и содержит только init-скрипты: они выполняются исключительно при создании
+пустого каталога данных, поэтому `core/migrations/` в образ не попадает.
 
 ## Одноразовая настройка репозитория
 
@@ -134,7 +137,8 @@ git push origin --delete release/1.2.3
 
 1. Actions → workflow **Release** завершился успешно.
 2. В GitHub Release лежат `DBConnect-1.2.3-win64.zip` и `SHA256SUMS.txt`.
-3. Образы доступны: `docker pull ghcr.io/<owner>/botc-stats-api:1.2.3`.
+3. Образы доступны: `docker pull ghcr.io/<owner>/botc-stats-api:1.2.3` (то же для
+   `botc-stats-nginx` и `botc-stats-db`).
 4. Сервер обновлён на новую версию (см. «Развёртывание core из опубликованных образов»).
 
 ## Если правила main нужно обойти
@@ -191,6 +195,8 @@ Pre-release удобно использовать как первую обкат
 - [ ] тег отправлен (`git push origin vX.Y.Z`);
 - [ ] workflow **Release** зелёный, ассеты и образы на месте;
 - [ ] изменения возвращены в `develop`;
+- [ ] если релиз менял схему — миграция добавлена в `core/migrations/` и отражена в `core/init-scripts/01-schema.sql`;
+- [ ] на сервере выполнен `db-migrate` и `schema_migrations` содержит все файлы;
 - [ ] сервер обновлён и `/health` отвечает.
 
 ## Как устроен workflow
@@ -200,7 +206,7 @@ Pre-release удобно использовать как первую обкат
 | `version` | ubuntu | проверяет формат тега и совпадение с версией CMake, вычисляет `version` / `major_minor` / `prerelease` |
 | `verify` | ubuntu | тесты `core/api`, `project.py generate`, проверка что `core/api/app/models.py` не устарел, `docker compose config` для обоих compose-файлов; отдаёт сгенерированный C++-клиент как артефакт |
 | `dbconnect` | windows-latest | скачивает сгенерированный клиент, собирает Release через `DBConnect/scripts/build.py deploy`, проверяет пакет и загружает zip |
-| `images` | ubuntu | собирает и пушит `botc-stats-api` и `botc-stats-nginx` в GHCR (matrix) |
+| `images` | ubuntu | собирает и пушит `botc-stats-api`, `botc-stats-nginx` и `botc-stats-db` в GHCR (matrix) |
 | `release` | ubuntu | скачивает zip, считает `SHA256SUMS.txt`, создаёт GitHub Release с автоматическими заметками |
 
 Особенности:
@@ -218,38 +224,143 @@ Pre-release удобно использовать как первую обкат
 
 ## Развёртывание core из опубликованных образов
 
-На сервере по-прежнему нужен checkout репозитория: из него берутся `init-scripts/`
-(инициализация новой БД) и `nginx/ssl/` (сертификаты). Сам код API и конфигурация nginx
-приходят из образов.
+Все образы стека приходят из GHCR: API, nginx и база (`postgres:16` вместе с
+`core/init-scripts/`). Из checkout нужны только `docker-compose.release.yml`, `migrations/`
+и `nginx/ssl/`: сертификаты и миграции зависят от установки и от версии базы, поэтому в
+образы не запекаются.
+
+### 1. Подготовить окружение
 
 ```bash
 cd core
 cp .env.example .env
 # Заполните пароли, METABASE_EMBEDDING_SECRET и SERVER_IP.
-# Добавьте версию, которую хотите развернуть:
+# Добавьте точную версию, которую хотите развернуть:
 echo "BOTC_VERSION=1.2.3" >> .env
 
 bash scripts/generate-cert.sh          # или положите доверенный сертификат в nginx/ssl/
+```
+
+### 2. Первый запуск на пустой базе
+
+```bash
 docker compose -f docker-compose.release.yml pull
 docker compose -f docker-compose.release.yml up -d
 ```
 
-Проверка:
+При первом старте образ БД выполняет `init-scripts/` (схема, пользователи, гранты). Это
+происходит только когда том `botc_data` пуст: `init-scripts/01-schema.sql` сразу создаёт
+актуальную схему, поэтому отдельные миграции на этом шаге не нужны.
+
+### 3. Проверить
 
 ```bash
 curl -k https://localhost/health
 docker compose -f docker-compose.release.yml ps
 ```
 
-Откат — изменить `BOTC_VERSION` на предыдущую версию и повторить `pull` + `up -d`.
-Данные БД лежат в named volume `botc_data` и при смене версии не затрагиваются.
+### Обновление на новую версию
+
+```bash
+# 1. Бэкап перед изменением схемы
+docker compose -f docker-compose.release.yml exec -T db \
+  pg_dump -U postgres botc_stats > backup-before-1.3.0.sql
+
+# 2. Укажите новую версию в .env: BOTC_VERSION=1.3.0
+# 3. Скачайте образы
+docker compose -f docker-compose.release.yml pull
+
+# 4. Примените миграции (подробности — в разделе «Миграции базы данных»)
+docker compose -f docker-compose.release.yml run --rm db-migrate
+
+# 5. Пересоздайте контейнеры на новых образах
+docker compose -f docker-compose.release.yml up -d
+```
+
+Порядок важен: `db-migrate` работает с уже запущенной базой, поэтому шаг 4 идёт после `pull`
+и до `up -d`. Если стек остановлен, поднимите базу: `up -d db`.
+
+Откат — изменить `BOTC_VERSION` на предыдущую версию и повторить `pull` + `up -d`. Данные БД
+лежат в named volume `botc_data` и при смене версии не затрагиваются. Откат образа не
+отменяет миграции: если новая версия меняла схему, восстановите бэкап из шага 1.
 
 Если образы размещены не в GHCR или репозиторий форкнут, переопределите имена:
 
 ```dotenv
 BOTC_API_IMAGE=registry.example.com/botc-stats-api
 BOTC_NGINX_IMAGE=registry.example.com/botc-stats-nginx
+BOTC_DB_IMAGE=registry.example.com/botc-stats-db
 ```
+
+## Миграции базы данных
+
+Миграции меняют уже работающую базу, поэтому они никогда не выполняются автоматически:
+PostgreSQL запускает init-скрипты только на пустом каталоге данных, а приложение не имеет
+доступа к DDL. Миграции лежат в `core/migrations/` и применяются отдельным шагом.
+
+### Шаги
+
+1. Проверьте, что база запущена:
+
+   ```bash
+   docker compose -f docker-compose.release.yml ps db
+   ```
+
+2. Сделайте бэкап — перед первой миграцией новой версии это обязательно:
+
+   ```bash
+   docker compose -f docker-compose.release.yml exec -T db \
+     pg_dump -U postgres botc_stats > backup.sql
+   ```
+
+3. Запустите разовый контейнер миграций. Сервис `db-migrate` включён в профиль `migrate`,
+   поэтому обычный `up -d` его не запускает:
+
+   ```bash
+   docker compose -f docker-compose.release.yml run --rm db-migrate
+   ```
+
+   Runner применяет `migrations/*.sql` в лексикографическом порядке, останавливается на
+   первой ошибке (`ON_ERROR_STOP=1`) и записывает имя каждого успешно применённого файла в
+   `public.schema_migrations`. Повторный запуск пропускает уже применённые файлы, поэтому
+   команду можно выполнять при каждом обновлении.
+
+4. Проверьте результат:
+
+   ```bash
+   docker compose -f docker-compose.release.yml exec -T db \
+     psql -U postgres -d botc_stats \
+     -c "SELECT version, applied_at FROM schema_migrations ORDER BY version"
+
+   curl -k https://localhost/health
+   ```
+
+На пустой базе запуск по существу ничего не меняет: `01-schema.sql` уже создал актуальную
+схему, миграции ничего не меняют и просто отмечаются в журнале как применённые.
+
+### Ручной запуск одного файла
+
+Если нужно применить конкретную миграцию без runner:
+
+```bash
+docker compose -f docker-compose.release.yml exec -T db \
+  psql -U postgres -d botc_stats -v ON_ERROR_STOP=1 \
+  < migrations/99-migrate-storyteller-draw.sql
+```
+
+Такой запуск не попадает в `schema_migrations`. Миграции написаны идемпотентно, поэтому
+повторный `db-migrate` после ручного применения безопасен — запись в журнале появится
+тогда.
+
+### Правила для новых миграций
+
+- Файл `core/migrations/NNN-краткое-описание.sql`; нумерация задаёт порядок применения.
+- Миграция идемпотентна: `IF EXISTS` / `IF NOT EXISTS` / `DO`-блоки с проверкой схемы, чтобы
+  её можно было безопасно применить к новой базе и повторно.
+- Изменение схемы дублируется в `core/init-scripts/01-schema.sql`: init-скрипты описывают
+  базу с нуля, миграции доводят до этой схемы старые установки.
+- Файл не кладётся в `core/init-scripts/`: оттуда скрипты выполняются только на пустой базе
+  и никогда не доходят до работающей.
 
 ## Локальная проверка образов
 
@@ -258,10 +369,11 @@ Docker-сборку можно воспроизвести без registry:
 ```bash
 docker build -t botc-stats-api:local -f core/api/Dockerfile core/api
 docker build -t botc-stats-nginx:local core/nginx
+docker build -t botc-stats-db:local -f core/db/Dockerfile core
 
 cd core
-BOTC_API_IMAGE=botc-stats-api BOTC_NGINX_IMAGE=botc-stats-nginx BOTC_VERSION=local \
-  docker compose -f docker-compose.release.yml up -d
+BOTC_API_IMAGE=botc-stats-api BOTC_NGINX_IMAGE=botc-stats-nginx BOTC_DB_IMAGE=botc-stats-db \
+  BOTC_VERSION=local docker compose -f docker-compose.release.yml up -d
 ```
 
 ## Траблшутинг
@@ -271,6 +383,10 @@ BOTC_API_IMAGE=botc-stats-api BOTC_NGINX_IMAGE=botc-stats-nginx BOTC_VERSION=loc
 | `Tag vX.Y.Z does not match DBConnect/CMakeLists.txt` | версия в CMake не поднята или тег поставлен не на тот коммит — исправьте версию и перевыпустите тег |
 | `Resource not accessible by integration` при создании релиза | у репозитория отключены write-права `GITHUB_TOKEN` (см. «Одноразовая настройка») |
 | `denied: permission_denied` при пуше в GHCR | нет `packages: write` в job или политика организации запрещает публикацию пакетов |
+| `db-migrate` печатает `no migration files in /migrations` | команда запущена не из `core/`: каталог `./migrations` монтируется относительно compose-файла |
+| `db-migrate` падает на `relation ... does not exist` | миграция не подходит к текущей схеме — восстановите бэкап и проверьте `schema_migrations` |
+| схема не обновилась после `up -d` | init-скрипты выполняются только на пустом томе; изменения в работающей базе применяет `db-migrate` |
+| `db-migrate` не видит базу | база не запущена: `docker compose -f docker-compose.release.yml up -d db` |
 | Сборка DBConnect идёт больше часа | пустой кеш vcpkg (первый запуск, смена образа runner или `vcpkg.json`). Это ожидаемо |
 | `Could not find a baseline commit` в vcpkg | в checkout vcpkg нет нужного baseline; workflow пытается до-фетчить его, при повторной ошибке обновите `builtin-baseline` и `qtbase` в `DBConnect/vcpkg.json` |
 | `config.ini contains an API key` | в рабочей копии появился локальный `config.ini` с ключом; CI его не содержит, проверьте, что файл не попал в архив |

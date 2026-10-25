@@ -39,7 +39,7 @@ docker-compose up -d
 | `METABASE_EMBEDDING_SECRET` | Секрет для подписанных embed-токенов |
 | `SERVER_IP` | Адрес, используемый в URL Metabase |
 | `BOTC_VERSION` | Версия опубликованных образов для `docker-compose.release.yml` (по умолчанию `latest`) |
-| `BOTC_API_IMAGE` / `BOTC_NGINX_IMAGE` | Переопределение имён образов API и nginx |
+| `BOTC_API_IMAGE` / `BOTC_NGINX_IMAGE` / `BOTC_DB_IMAGE` | Переопределение имён образов API, nginx и базы |
 
 ## API Endpoints
 
@@ -60,6 +60,7 @@ docker-compose up -d
 |--------|------------|
 | `scripts/create-api-key.sh` | Создать / отозвать API-ключ |
 | `scripts/generate-cert.sh` | Сгенерировать self-signed SSL-сертификат |
+| `db/migrate.sh` | Применить `migrations/*.sql` к работающей базе (сервис `db-migrate`) |
 | `scripts/setup-ssh-user.sh` | Создать ограниченного SSH-пользователя для туннеля |
 | `nginx/nginx.conf` | HTTPS reverse proxy, rate limits и Metabase routes |
 
@@ -71,8 +72,8 @@ docker-compose up -d
 
 ## Deploy from published images
 
-Релизные образы API и nginx публикуются в GHCR, поэтому на сервере не нужно собирать их
-локально:
+Все образы публикуются в GHCR (`botc-stats-api`, `botc-stats-nginx`, `botc-stats-db`), поэтому
+на сервере не нужно ничего собирать локально:
 
 ```bash
 cp .env.example .env
@@ -82,9 +83,23 @@ docker compose -f docker-compose.release.yml pull
 docker compose -f docker-compose.release.yml up -d
 ```
 
-`docker-compose.yml` остаётся локальным вариантом: он собирает API из `./api` и монтирует
-конфигурацию nginx из checkout. Подробности и откат версии — в
-[docs/RELEASING.md](../docs/RELEASING.md).
+Образ базы (`core/db/Dockerfile`) содержит `init-scripts/`, поэтому пустой том `botc_data`
+инициализируется без checkout. Init-скрипты выполняются только на пустой базе.
+
+Миграции для уже работающей базы в образ не входят и запускаются отдельно:
+
+```bash
+docker compose -f docker-compose.release.yml run --rm db-migrate
+```
+
+Сервис `db-migrate` включён в профиль `migrate`, поэтому `up -d` его не запускает;
+применённые файлы записываются в `schema_migrations`. Подробнее —
+[`migrations/README.md`](migrations/README.md).
+
+`docker-compose.yml` остаётся локальным вариантом: он собирает API из `./api`, монтирует
+конфигурацию nginx из checkout и использует `postgres:16` с `init-scripts/` (тот же
+`db-migrate` работает и локально: `docker compose --profile migrate run --rm db-migrate`).
+Подробности, обновление и откат версии — в [docs/RELEASING.md](../docs/RELEASING.md).
 
 ## Management
 

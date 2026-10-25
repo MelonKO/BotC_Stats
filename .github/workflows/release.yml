@@ -179,6 +179,7 @@ jobs:
       - name: Check the package
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $dist = "DBConnect/build_release/dist"
           if (-not (Test-Path "$dist\DBConnect.exe")) {
             throw "DBConnect.exe was not produced"
@@ -186,8 +187,20 @@ jobs:
           if (-not (Test-Path "$dist\platforms\qwindows.dll")) {
             throw "The Qt platform plugin is missing from dist/"
           }
-          $config = Get-Content "$dist\config.ini" -Raw
-          if ($config -match '(?m)^\s*API_KEY\s*=\s*\S+') {
+
+          # A fresh checkout has no local config.ini, so the build ships the
+          # tracked template: the file must be there and its API_KEY must be empty.
+          $configPath = "$dist\config.ini"
+          if (-not (Test-Path $configPath)) {
+            throw "dist/config.ini is missing"
+          }
+          $config = Get-Content $configPath -Raw
+          if ($config -notmatch '(?m)^[ \t]*API_KEY[ \t]*=') {
+            throw "dist/config.ini has no API_KEY entry"
+          }
+          # [ \t] instead of \s: \s also matches newlines, so an empty API_KEY
+          # would swallow the line break and capture the next line's first word.
+          if ($config -match '(?m)^[ \t]*API_KEY[ \t]*=[ \t]*\S') {
             throw "dist/config.ini contains an API key"
           }
           Get-ChildItem $dist | Measure-Object | Select-Object -ExpandProperty Count

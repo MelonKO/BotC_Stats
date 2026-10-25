@@ -49,6 +49,19 @@
 5. **Подпись exe (опционально).** Сейчас сборка не подписывается, поэтому Windows SmartScreen
    покажет предупреждение при первом запуске. Для подписи понадобится сертификат и отдельный
    шаг в job `dbconnect` (секреты репозитория).
+6. **Раннер для сборки DBConnect (опционально).** По умолчанию job `dbconnect` идёт на
+   `windows-latest`. Чтобы собирать на своей машине, добавьте переменную репозитория
+   `BOTC_DBCONNECT_RUNNER` (Settings → Secrets and variables → Actions → Variables) со
+   списком меток в формате JSON:
+
+   ```text
+   ["self-hosted","windows","x64"]
+   ```
+
+   Одна метка тоже допустима, но тогда её нужно заключить в кавычки: `"windows-latest"`.
+   Если переменная не задана или пуста, используется `windows-latest`. Машина раннера должна
+   иметь Visual Studio C++ build tools, CMake 3.25+, Ninja и vcpkg в `C:\vcpkg` (путь
+   зашит в `VCPKG_ROOT` этой job).
 
 ## Процесс релиза
 
@@ -205,7 +218,7 @@ Pre-release удобно использовать как первую обкат
 |-----|--------|------------|
 | `version` | ubuntu | проверяет формат тега и совпадение с версией CMake, вычисляет `version` / `major_minor` / `prerelease` |
 | `verify` | ubuntu | тесты `core/api`, `project.py generate`, проверка что `core/api/app/models.py` не устарел, `docker compose config` для обоих compose-файлов; отдаёт сгенерированный C++-клиент как артефакт |
-| `dbconnect` | windows-latest | скачивает сгенерированный клиент, собирает Release через `DBConnect/scripts/build.py deploy`, проверяет пакет и загружает zip |
+| `dbconnect` | `windows-latest` или self-hosted (переменная `BOTC_DBCONNECT_RUNNER`) | скачивает сгенерированный клиент, собирает Release через `DBConnect/scripts/build.py deploy`, проверяет пакет и загружает zip |
 | `images` | ubuntu | собирает и пушит `botc-stats-api`, `botc-stats-nginx` и `botc-stats-db` в GHCR (matrix) |
 | `release` | ubuntu | скачивает zip, считает `SHA256SUMS.txt`, создаёт GitHub Release с автоматическими заметками |
 
@@ -220,6 +233,11 @@ Pre-release удобно использовать как первую обкат
   Если это станет проблемой, прогрейте кеш отдельным запуском сборки на `main` или
   перейдите на NuGet-кеш vcpkg в GitHub Packages (нужен PAT с `packages:write`).
 - Pre-release тег (`v1.2.3-rc.1`) создаёт GitHub pre-release и не двигает `1.2` и `latest`.
+- Раннер для `dbconnect` выбирается переменной `BOTC_DBCONNECT_RUNNER`: по умолчанию
+  `fromJSON(vars.BOTC_DBCONNECT_RUNNER || '["windows-latest"]')`. Значение читается в момент
+  постановки job в очередь, поэтому смена переменной не переносит уже запущенный job:
+  отмените run, измените переменную и перезапустите run (**Re-run all jobs**) — повторный
+  запуск возьмёт тот же коммит и тег.
 - Артефакт workflow хранится 7 дней, но файлы релиза остаются навсегда.
 
 ## Развёртывание core из опубликованных образов
@@ -388,5 +406,7 @@ BOTC_API_IMAGE=botc-stats-api BOTC_NGINX_IMAGE=botc-stats-nginx BOTC_DB_IMAGE=bo
 | схема не обновилась после `up -d` | init-скрипты выполняются только на пустом томе; изменения в работающей базе применяет `db-migrate` |
 | `db-migrate` не видит базу | база не запущена: `docker compose -f docker-compose.release.yml up -d db` |
 | Сборка DBConnect идёт больше часа | пустой кеш vcpkg (первый запуск, смена образа runner или `vcpkg.json`). Это ожидаемо |
+| job `dbconnect` висит в статусе Queued | self-hosted раннер offline; job ждёт до 24 часов. Поставьте `BOTC_DBCONNECT_RUNNER` = `"windows-latest"`, отмените run и запустите его заново |
+| `Unexpected end of JSON input` в job `dbconnect` | значение `BOTC_DBCONNECT_RUNNER` не JSON: одна метка — `"windows-latest"`, несколько — `["self-hosted","windows","x64"]` |
 | `Could not find a baseline commit` в vcpkg | в checkout vcpkg нет нужного baseline; workflow пытается до-фетчить его, при повторной ошибке обновите `builtin-baseline` и `qtbase` в `DBConnect/vcpkg.json` |
 | `config.ini contains an API key` | в рабочей копии появился локальный `config.ini` с ключом; CI его не содержит, проверьте, что файл не попал в архив |

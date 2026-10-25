@@ -114,7 +114,12 @@ jobs:
 
   dbconnect:
     name: Build DBConnect (Windows)
-    runs-on: windows-latest
+    # The runner is opt-in: set the repository variable BOTC_DBCONNECT_RUNNER to
+    # a JSON label list such as ["self-hosted","windows","x64"] to build on a
+    # self-hosted machine, or to a quoted single label like "windows-latest".
+    # Without the variable the job stays on a GitHub-hosted runner, so a missing
+    # or offline machine cannot break a release.
+    runs-on: ${{ fromJSON(vars.BOTC_DBCONNECT_RUNNER || '["windows-latest"]') }}
     needs: [version, verify]
     timeout-minutes: 180
     env:

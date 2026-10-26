@@ -445,7 +445,7 @@ Roles updated: %2</source>
         <translation>✘ Импорт завершён с ошибкой</translation>
     </message>
     <message>
-        <location line="+41"/>
+        <location line="+42"/>
         <source>(original)</source>
         <translation>(оригинал)</translation>
     </message>

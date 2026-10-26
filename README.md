@@ -116,11 +116,15 @@ Shared CMake presets are in `DBConnect/CMakePresets.json`; machine-specific path
 Исходный язык строк — английский; русский перевод лежит в `DBConnect/translations/dbconnect_ru.ts`. Каталог собирается `lrelease` и встраивается в исполняемый файл как ресурс `/i18n`, поэтому рядом с `build_release/dist/DBConnect.exe` никакие `.qm` не нужны. Инструменты `lupdate`/`lrelease` приходят из vcpkg-портов `qttools` и `qttranslations` (закреплены на версию Qt в `DBConnect/vcpkg.json`).
 
 ```powershell
-# после изменения строк в tr()/translate() обновить .ts
-cmake --build build_debug --target update_translations
-# собрать .qm (обычная сборка делает это автоматически)
-cmake --build build_debug --target release_translations
+# обновить .ts после изменения tr()/translate() и собрать .qm
+python DBConnect/scripts/build.py translations --update
+# только собрать .qm из готового .ts (без lupdate)
+python DBConnect/scripts/build.py translations
+# другой каталог сборки
+python DBConnect/scripts/build.py translations --preset release --update
 ```
+
+Команда при необходимости сначала конфигурирует выбранный preset. После правки переводов выполните обычную сборку (`python scripts/project.py build` или `deploy`) — именно она встраивает обновлённые `.qm` в exe.
 
 Чтобы добавить язык: добавьте его код в `I18N_TRANSLATED_LANGUAGES` и `TS_FILES` в `DBConnect/CMakeLists.txt`, создайте и переведите новый `.ts`. Селектор языков в приложении строится по встроенным каталогам автоматически. Сообщения валидации CSV и стандартные диалоги Qt переводятся вместе с остальным интерфейсом.
 

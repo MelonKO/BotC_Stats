@@ -26,7 +26,8 @@ vcpkg_root = C:\vcpkg
 ninja =
 
 [build]
-# Default preset for the "build", "configure" and "clean" commands: debug or release.
+# Default preset for the "build", "configure", "clean" and "translations" commands:
+# debug or release.
 preset = debug
 
 # Parallel build jobs. Empty means the CMake/Ninja default (all cores).

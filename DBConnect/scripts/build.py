@@ -13,6 +13,7 @@ Usage (from the repository root or from ``DBConnect``):
     python DBConnect/scripts/build.py build       # same, explicit
     python DBConnect/scripts/build.py build --preset release
     python DBConnect/scripts/build.py deploy      # configure Release + deploy
+    python DBConnect/scripts/build.py translations --update  # refresh and compile UI catalogs
     python DBConnect/scripts/build.py clean       # remove a build directory
 
 Tool paths can be pinned in ``DBConnect/scripts/build.ini`` (git-ignored, see
@@ -728,6 +729,53 @@ def command_clean(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_translations(args: argparse.Namespace) -> int:
+    """Compile the UI catalogs, optionally refreshing them with lupdate first."""
+    check_concurrency(args)
+    config = load_config(args.config)
+    preset = preset_name(args, config)
+    if preset not in BUILD_DIRS:
+        fail(f"the translations command needs the debug or release preset, got {preset!r}")
+
+    environment, cmake, _, _ = prepare_environment(args)
+    jobs = job_count(args, config)
+    if jobs:
+        environment["CMAKE_BUILD_PARALLEL_LEVEL"] = str(jobs)
+        log(f"[env] jobs: {jobs}")
+
+    build_dir = BUILD_DIRS[preset]
+    if not (build_dir / "CMakeCache.txt").is_file():
+        log(f"[i18n] {build_dir.name} is not configured yet; configuring the {preset} preset first")
+        exit_code = run_streaming(
+            [str(cmake), "--preset", preset],
+            environment,
+            SOURCE_DIR,
+            args.dry_run,
+        )
+        if exit_code != 0:
+            return exit_code
+
+    # update_translations runs lupdate and adds new strings to the .ts files as
+    # unfinished entries; release_translations runs lrelease and writes the .qm
+    # files the build embeds as the "/i18n" resource.
+    targets = ["update_translations"] if args.update else []
+    targets.append("release_translations")
+    for target in targets:
+        exit_code = run_streaming(
+            [str(cmake), "--build", "--preset", f"build-{preset}", "--target", target],
+            environment,
+            SOURCE_DIR,
+            args.dry_run,
+        )
+        if exit_code != 0:
+            return exit_code
+
+    if not args.dry_run:
+        log(f"[i18n] compiled catalogs are in {build_dir} (dbconnect_*.qm)")
+        log("[i18n] run 'build.py build' or 'build.py deploy' to embed them into DBConnect.exe")
+    return 0
+
+
 def launch_application(preset: str) -> int:
     build_preset = "release" if preset == "deploy" else preset
     candidates = [
@@ -782,6 +830,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  build.py\n"
             "  build.py build --preset release\n"
             "  build.py deploy --run\n"
+            "  build.py translations --update\n"
             "  build.py clean --preset debug\n"
             "  build.py build --cmake \"C:\\Program Files\\CMake\\bin\\cmake.exe\" --dry-run\n"
             f"\nTool paths can also be pinned in {CONFIG_FILE} (see build.ini.example).\n"
@@ -789,7 +838,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Run 'build.py <command> --help' for command-specific options."
         ),
     )
-    subparsers = parser.add_subparsers(dest="command", metavar="{doctor,build,configure,deploy,clean}")
+    subparsers = parser.add_subparsers(dest="command", metavar="{doctor,build,configure,deploy,translations,clean}")
 
     doctor_parser = subparsers.add_parser(
         "doctor", help="show toolchain, config and vcpkg state", parents=[common],
@@ -818,6 +867,21 @@ def build_parser() -> argparse.ArgumentParser:
     deploy_parser.add_argument("--run", action="store_true", help="start the deployed executable")
     deploy_parser.set_defaults(handler=command_build, preset="deploy")
 
+    translations_parser = subparsers.add_parser(
+        "translations", help="compile the UI translation catalogs", parents=[common],
+        description=(
+            "Compile DBConnect/translations/*.ts into .qm files with lrelease. "
+            "Pass --update to refresh the .ts files with lupdate first; new tr() "
+            "and translate() strings then appear there as unfinished entries."
+        ))
+    translations_parser.add_argument("--preset", choices=["debug", "release"],
+                                     help="build directory to use (default: from config, else debug)")
+    translations_parser.add_argument("--update", action="store_true",
+                                     help="refresh the .ts catalogs with lupdate before compiling")
+    translations_parser.add_argument("--jobs", type=int, metavar="N",
+                                     help="parallel build jobs (default: from config)")
+    translations_parser.set_defaults(handler=command_translations)
+
     clean_parser = subparsers.add_parser(
         "clean", help="remove a build directory (keeps vcpkg_installed)", parents=[common],
         description="Remove build_debug or build_release. vcpkg_installed is always kept.")
@@ -830,7 +894,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     arguments_list = list(sys.argv[1:] if argv is None else argv)
-    commands = {"doctor", "build", "configure", "deploy", "clean"}
+    commands = {"doctor", "build", "configure", "deploy", "translations", "clean"}
     if not arguments_list or (
         arguments_list[0] not in commands and arguments_list[0] not in ("-h", "--help")
     ):

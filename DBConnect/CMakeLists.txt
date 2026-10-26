@@ -18,6 +18,8 @@ qt_standard_project_setup(
         I18N_TRANSLATED_LANGUAGES ru
 )
 
+set(CMAKE_AUTORCC ON)
+
 add_subdirectory(generated_api)
 # The generated API client is not part of the UI: keep its technical messages
 # out of the translator catalog.
@@ -25,6 +27,7 @@ set_property(TARGET BotcStats PROPERTY QT_EXCLUDE_FROM_TRANSLATION ON)
 
 # ─── Sources ──────────────────────────────────────────────────────────────────
 set(SOURCES
+        resources/app_icon.qrc
         src/main.cpp
         src/api/BotCApiClient.cpp
         src/api/BotCApiClient.h
@@ -66,6 +69,8 @@ set(SOURCES
 # WIN32 remove console window in GUI-app
 if (WIN32)
     set(APP_TYPE WIN32)
+    enable_language(RC)
+    list(APPEND SOURCES resources/app.rc)
 endif ()
 
 add_executable(DBConnect ${APP_TYPE} ${SOURCES})

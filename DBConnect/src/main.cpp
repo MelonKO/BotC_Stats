@@ -1,5 +1,5 @@
 #include <QApplication>
-
+#include <QIcon>
 #include "config/ConfigManager.h"
 #include "i18n/LocalizationManager.h"
 #include "ui/MainWindow.h"
@@ -8,6 +8,7 @@ int main(int argc, char* argv[])
 {
     // Initialize Qt application and parse command-line arguments
     const QApplication app(argc, argv);
+    QApplication::setWindowIcon(QIcon(":/icons/app.png"));
 
     // init ConfigManager and load config
     auto* configManager = botc::config::ConfigManager::instance();

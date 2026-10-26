@@ -5,9 +5,11 @@ Uses httpx.AsyncClient with ASGITransport and patched DB connections.
 import hashlib
 from unittest.mock import AsyncMock
 from datetime import datetime
+from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from asyncpg.exceptions import UniqueViolationError
 from httpx import ASGITransport, AsyncClient
 
 import sys
@@ -317,6 +319,186 @@ class TestPlayersListEndpoint:
 
         response = await client.get(
             "/api/players", headers=auth_headers("sk-unknown-key"),
+        )
+
+        assert response.status_code == 401
+
+
+# ============================================================
+# Player rename endpoint
+# ============================================================
+
+PLAYER_ID = "b1c2d3e4-f5a6-7890-abcd-1234567890ef"
+
+
+def valid_api_key_row() -> dict:
+    return {
+        "id": 1, "owner_name": "Test User", "active": True,
+        "created_at": datetime(2026, 1, 1), "last_used_at": None,
+    }
+
+
+def rename_conn(stored_row, calls: list):
+    """Build a fetchrow mock answering auth and recording rename arguments."""
+    async def mock_fetchrow(query, *args):
+        if "api_keys" in query:
+            return valid_api_key_row()
+        if "update players" in query:
+            calls.append(args)
+            return stored_row
+        return None
+
+    return mock_fetchrow
+
+
+class TestPlayerRenameEndpoint:
+    @pytest.mark.asyncio
+    async def test_success(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        calls = []
+        conn.fetchrow = AsyncMock(
+            side_effect=rename_conn({"id": PLAYER_ID, "name": "Мая Вишневская-Новая"}, calls)
+        )
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "Мая Вишневская-Новая"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"id": PLAYER_ID, "name": "Мая Вишневская-Новая"}
+        # The id and the trimmed name travel to the database as parameters.
+        assert calls == [(UUID(PLAYER_ID), "Мая Вишневская-Новая")]
+
+    @pytest.mark.asyncio
+    async def test_trims_surrounding_spaces(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        calls = []
+        conn.fetchrow = AsyncMock(side_effect=rename_conn({"id": PLAYER_ID, "name": "Мая"}, calls))
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "  Мая  "},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        assert calls[0][1] == "Мая"
+
+    @pytest.mark.asyncio
+    async def test_keeps_the_same_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        calls = []
+        conn.fetchrow = AsyncMock(side_effect=rename_conn({"id": PLAYER_ID, "name": "Мая"}, calls))
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "Мая"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_unknown_player(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        calls = []
+        conn.fetchrow = AsyncMock(side_effect=rename_conn(None, calls))
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "Мая"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_name_already_taken(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        async def mock_fetchrow(query, *args):
+            if "api_keys" in query:
+                return valid_api_key_row()
+            raise UniqueViolationError('duplicate key value violates unique constraint "players_name_key"')
+
+        conn.fetchrow = AsyncMock(side_effect=mock_fetchrow)
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "Анна Никитина"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_blank_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "   "},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_empty_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": ""},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_too_long_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "я" * 201},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_invalid_player_id(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.patch(
+            "/api/players/not-a-uuid",
+            json={"name": "Мая"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_requires_auth(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.patch(f"/api/players/{PLAYER_ID}", json={"name": "Мая"})
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_invalid_api_key(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        # No api_keys row means the key is unknown.
+        conn.fetchrow = AsyncMock(return_value=None)
+
+        response = await client.patch(
+            f"/api/players/{PLAYER_ID}",
+            json={"name": "Мая"},
+            headers=auth_headers("sk-unknown-key"),
         )
 
         assert response.status_code == 401

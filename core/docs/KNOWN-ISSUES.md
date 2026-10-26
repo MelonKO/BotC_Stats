@@ -275,24 +275,26 @@ client turns that into a `TimeoutError` reply, which releases the queue. Game
 imports are left without a limit (`:119`) because a large batch may legitimately
 run longer.
 
-### C9. Players tab cannot be edited — `open`
+### C9. Players tab cannot be edited — `fixed`
 
 The players tab (`DBConnect/src/ui/PlayersWidget.cpp`) lists and searches the
-registry, and reports a failed list request instead of an empty database, but it
-cannot change anything: renaming a player is the agreed next step. The contract
-for it is already decided and is missing in every layer: `PATCH
-/api/players/{playerId}` with a `{name}` body answering 200/400/401/404/409, the
-`PlayerUpdateRequest` schema, the endpoint, the client method, and the database
-permission — `api_service` holds only `SELECT, INSERT` on `players`
-(`core/init-scripts/03-grant-privileges.sql:51`), so the update needs
-`GRANT UPDATE (name)` plus a migration for live databases.
+registry, reports a failed list request instead of an empty database, and now
+renames a player inline (double click on the name). The rename is confirmed with
+a dialog, sent as `PATCH /api/players/{playerId}` with a `{name}` body, and the
+row keeps its old name until the server accepts the change. Rejections are
+translated per status: 409 "name already taken", 404 "player not found, list
+refreshed", 422 "invalid name", plus the network error mapping.
 
-Next step: add the path and schema, the grant (init script and migration), the
-endpoint with 404/409 mapping on `UniqueViolationError`, and inline editing in
-`PlayersTableModel::flags()`/`setData()`. A rename does not rewrite game history
-(rows point at `players.id`), but it does change which player future CSV imports
-resolve to, because `process_games_import()` matches players by name
-(`01-schema.sql:277`, `:299`, `:323`).
+The database permission is column-scoped: `GRANT UPDATE (name) ON players`
+(`core/init-scripts/03-grant-privileges.sql:51`) with
+`core/migrations/100-grant-players-update.sql` for existing databases. Contact
+fields and DELETE stay out of reach of the import service.
+
+Known limitation, documented in `core/docs/API-ACCESS.md`: a rename does not
+rewrite game history (rows point at `players.id`), but it does change which
+player future CSV imports resolve to, because `process_games_import()` matches
+players by name (`01-schema.sql:277`, `:299`, `:323`). A CSV that still carries
+the old name creates a new player. Previous names are not stored anywhere.
 
 ## Security
 

@@ -2,8 +2,9 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
+from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Path, Query
 
 from app.auth import validate_api_key
 from app.db import get_pool, close_pool
@@ -13,7 +14,9 @@ from app.import_logic import (
     get_all_roles,
     import_roles,
     check_db_connection,
-    get_all_players
+    get_all_players,
+    rename_player,
+    PlayerNameConflictError,
 )
 from app.models import (
     GameImportRequest,
@@ -25,7 +28,9 @@ from app.models import (
     RolesImportResponse,
     HealthResponse,
     Status,
-    PlayersResponse
+    PlayersResponse,
+    PlayerItem,
+    PlayerUpdateRequest,
 )
 
 
@@ -152,3 +157,29 @@ async def create_roles_import(
 async def list_players(owner: dict = Depends(validate_api_key)):
     players = await get_all_players()
     return PlayersResponse(players=players)
+
+
+@app.patch("/api/players/{playerId}", response_model=PlayerItem)
+async def update_player(
+        player_id: Annotated[UUID, Path(alias="playerId")],
+        data: PlayerUpdateRequest,
+        owner: dict = Depends(validate_api_key),
+):
+    """
+    Rename an existing player.
+
+    The player id is kept, so the game history stays attached to the same
+    record. A later CSV import that still uses the old name creates a new
+    player. Requires a valid API key in the X-API-Key header.
+    """
+    try:
+        player = await rename_player(player_id, data.name)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Player name must not be blank")
+    except PlayerNameConflictError:
+        raise HTTPException(status_code=409, detail="Player name is already taken")
+
+    if player is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    return player

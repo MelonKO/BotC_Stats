@@ -45,6 +45,15 @@ namespace botc
         void updatePlayers();
         const QStringList& getPlayersCache() const { return m_cachedPlayers; }
 
+        /**
+         * Apply a confirmed rename to the cached records.
+         *
+         * The server has already accepted the new name, so the cache is patched
+         * in place: a refresh requested afterwards confirms it instead of briefly
+         * showing the old name again.
+         */
+        void applyPlayerRename(const QString& playerId, const QString& name);
+
         /** Full player records (id and name), used by the players view. */
         const QVector<PlayerEntry>& getPlayerEntries() const { return m_playerEntries; }
 

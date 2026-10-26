@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from typing import Optional
+from uuid import UUID
 
 from asyncpg.exceptions import UniqueViolationError
 
@@ -17,6 +18,14 @@ from app.models import (
 
 _IMPORT_ADVISORY_LOCK_KEY = 7391823
 logger = logging.getLogger(__name__)
+
+
+class PlayerNameConflictError(Exception):
+    """Raised when the requested player name already belongs to another player."""
+
+    def __init__(self, name: str):
+        super().__init__(f"Player name is already taken: {name}")
+        self.name = name
 
 
 def _parse_interval(value: str | None) -> timedelta | None:
@@ -341,3 +350,37 @@ async def get_all_players() -> list[PlayerItem]:
             )
             for r in rows
         ]
+
+
+async def rename_player(player_id: UUID, new_name: str) -> PlayerItem | None:
+    """Rename a player and return the stored record.
+
+    Returns None when the id does not exist. Raises PlayerNameConflictError when
+    another player already uses the name. The name is stored trimmed, without
+    changing its case: the players list and the CSV import both match names
+    exactly, so normalisation must stay predictable.
+    """
+    name = new_name.strip()
+    if not name:
+        raise ValueError("Player name must not be blank")
+
+    async with get_connection() as conn:
+        try:
+            row = await conn.fetchrow(
+                """
+                update players
+                set name = $2
+                where id = $1
+                returning id, name
+                """,
+                player_id,
+                name,
+            )
+        except UniqueViolationError as exc:
+            # Only the unique name constraint can be violated by this statement.
+            raise PlayerNameConflictError(name) from exc
+
+        if row is None:
+            return None
+
+        return PlayerItem(id=row["id"], name=row["name"])

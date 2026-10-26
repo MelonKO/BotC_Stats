@@ -62,6 +62,7 @@ docker compose -f docker-compose.release.yml exec -T db \
 |------|------------|
 | `98-migrate-alignment-end.sql` | сужает `games_import_staging.alignment_end_ru` до `добро`/`зло` |
 | `99-migrate-storyteller-draw.sql` | несколько рассказчиков (`game_storytellers`), сторона `ничья`, обновлённые `process_games_import()` и `v_game_summary` |
+| `100-grant-players-update.sql` | право `UPDATE (name)` на `players` для `api_service` (переименование игрока через `PATCH /api/players/{playerId}`) |
 
 ## Проверка состояния
 

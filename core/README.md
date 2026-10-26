@@ -51,6 +51,7 @@ docker-compose up -d
 | `POST /api/roles/import` | Импорт ролей с переводами |
 | `GET /api/roles` | Список доступных ролей (опциональный `lang`) |
 | `GET /api/players` | Список игроков |
+| `PATCH /api/players/{playerId}` | Переименование игрока |
 
 Подробная документация: [docs/API-ACCESS.md](docs/API-ACCESS.md)
 

@@ -47,8 +47,11 @@ GRANT SELECT ON role_type_translations TO api_service;
 GRANT SELECT ON alignment_translations TO api_service;
 GRANT SELECT ON languages TO api_service;
 
--- 3. Read reference data, create players if missing
+-- 3. Read reference data, create players if missing, rename a player
 GRANT SELECT, INSERT ON players TO api_service;
+# Column-scoped on purpose: PATCH /api/players/{playerId} renames a player, the
+# contact fields and DELETE stay out of reach of the import service.
+GRANT UPDATE (name) ON players TO api_service;
 
 -- 4. Write to game tables (function inserts games + game_players + game_storytellers)
 GRANT INSERT, SELECT ON games TO api_service;

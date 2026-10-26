@@ -13,14 +13,21 @@ namespace botc::ui
      * Table model over the cached player records.
      *
      * The database id is exposed through PlayerIdRole instead of a visible
-     * column, so the view stays a single "name" column while a future rename
-     * feature can still address a row by its stable id.
+     * column, so the view stays a single "name" column while a rename can still
+     * address a row by its stable id.
+     *
+     * The model never changes a name by itself: it only reports a valid edit
+     * through nameChangeRequested, and the owner applies the change once the API
+     * has accepted it.
      */
     class PlayersTableModel final : public QAbstractTableModel
     {
         Q_OBJECT
 
     public:
+        /** Longest accepted name, matching PlayerUpdateRequest in the API. */
+        static constexpr int kMaxNameLength = 200;
+
         enum Column
         {
             Name = 0,
@@ -50,6 +57,14 @@ namespace botc::ui
         QVariant data(const QModelIndex& index, int role) const override;
         QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
         Qt::ItemFlags flags(const QModelIndex& index) const override;
+        bool setData(const QModelIndex& index, const QVariant& value, int role) override;
+
+    signals:
+        /** A valid, changed name was entered; the owner has to store it. */
+        void nameChangeRequested(const QString& playerId, const QString& newName);
+
+        /** The entered value cannot be stored; the reason is user-facing. */
+        void nameChangeRejected(const QString& reason);
 
     private:
         QVector<PlayerEntry> m_players;

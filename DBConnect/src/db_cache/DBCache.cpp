@@ -1,5 +1,7 @@
 #include "DBCache.h"
 
+#include <algorithm>
+
 #include "OAIPlayersResponse.h"
 #include "OAIRolesResponse.h"
 #include "OAIRoleItem.h"
@@ -27,6 +29,28 @@ namespace botc
     {
         updateRoles(QString("ru"));
         updatePlayers();
+    }
+
+    void DBCache::applyPlayerRename(const QString& playerId, const QString& name)
+    {
+        const auto entry = std::ranges::find_if(m_playerEntries, [&playerId](const PlayerEntry& player)
+        {
+            return player.id == playerId;
+        });
+        if (entry == m_playerEntries.end()) return;
+
+        entry->name = name;
+
+        // The name list mirrors the entries, so rebuild it instead of keeping a
+        // second copy in sync by hand.
+        m_cachedPlayers.clear();
+        m_cachedPlayers.reserve(m_playerEntries.size());
+        for (const PlayerEntry& player : m_playerEntries)
+        {
+            m_cachedPlayers.append(player.name);
+        }
+
+        emit onPlayersCacheUpdated();
     }
 
     void DBCache::updateRoles(const std::optional<QString>& lang)

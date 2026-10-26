@@ -2,11 +2,13 @@
 
 #include "QNetworkReply"
 
-namespace OpenAPI
-{
-    class OAIPlayersResponse;
-    class OAIPlayersApi;
-    class OAIRolesImportRequest;
+    namespace OpenAPI
+    {
+        class OAIPlayersResponse;
+        class OAIPlayersApi;
+        class OAIPlayerItem;
+        class OAIPlayerUpdateRequest;
+        class OAIRolesImportRequest;
     class OAIRolesImportResponse;
     class OAIRolesResponse;
     class OAIGameImportStatusResponse;
@@ -50,6 +52,7 @@ namespace botc::api
         void listRoles(const std::optional<QString>& lang) const;
         void importRoles(const OpenAPI::OAIRolesImportRequest& request) const;
         void listPlayers() const;
+        void updatePlayer(const QString& playerId, const OpenAPI::OAIPlayerUpdateRequest& request) const;
 
     signals:
         // callbacks
@@ -66,6 +69,12 @@ namespace botc::api
                                  QNetworkReply::NetworkError error_type, const QString& error_str);
         void playersListFinished(const OpenAPI::OAIPlayersResponse& summary,
                                  QNetworkReply::NetworkError error_type, const QString& error_str);
+        // http_status is the HTTP response code, or 0 when no response arrived
+        // (network failure, timeout). The players view needs it to tell a taken
+        // name (409) from an unknown player (404).
+        void playerUpdateFinished(const OpenAPI::OAIPlayerItem& player,
+                                  QNetworkReply::NetworkError error_type,
+                                  int http_status, const QString& error_str);
 
     private:
         void initSystemAPI();
@@ -86,6 +95,10 @@ namespace botc::api
 
         void handlePlayersListReply(const OpenAPI::OAIPlayersResponse& summary,
                                     QNetworkReply::NetworkError error_type, const QString& error_str);
+
+        void handlePlayerUpdateReply(const OpenAPI::OAIPlayerItem& player,
+                                     QNetworkReply::NetworkError error_type,
+                                     int http_status, const QString& error_str);
 
     private:
         BotCApiClient() = default;

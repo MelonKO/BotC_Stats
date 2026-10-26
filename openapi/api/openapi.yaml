@@ -349,6 +349,20 @@ components:
           type: boolean
           example: true
 
+    PlayerUpdateRequest:
+      type: object
+      description: >-
+        Fields to change for an existing player. A rename keeps the player id,
+        so the game history stays attached to the same record.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Мая Вишневская"
+
     PlayerItem:
       type: object
       description: Player record from the database.
@@ -544,3 +558,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /api/players/{playerId}:
+    patch:
+      operationId: updatePlayer
+      summary: Rename a player
+      description: |
+        Change the name of an existing player.
+        The player id never changes, so the game history keeps pointing at the
+        same record; a later CSV import that still uses the old name creates a
+        new player instead of resolving to the renamed one.
+        Requires a valid API key in the X-API-Key header.
+      tags: [ Players ]
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          description: Player id.
+          schema:
+            type: string
+            format: uuid
+            example: "b1c2d3e4-f5a6-7890-abcd-1234567890ef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerUpdateRequest"
+      responses:
+        "200":
+          description: Player renamed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerItem"
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Unknown player id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The name is already taken by another player.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid player id or request body.

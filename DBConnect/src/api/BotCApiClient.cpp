@@ -3,6 +3,8 @@
 #include "BotCNetworkAccessManager.h"
 #include "OAIGamesApi.h"
 #include "OAIGamesImportStatusResponse.h"
+#include "OAIPlayerItem.h"
+#include "OAIPlayerUpdateRequest.h"
 #include "OAIPlayersApi.h"
 #include "OAIRolesApi.h"
 #include "OAISystemApi.h"
@@ -94,6 +96,11 @@ namespace botc::api
         m_playersAPI->listPlayers();
     }
 
+    void BotCApiClient::updatePlayer(const QString& playerId, const OpenAPI::OAIPlayerUpdateRequest& request) const
+    {
+        m_playersAPI->updatePlayer(playerId, request);
+    }
+
     void BotCApiClient::initSystemAPI()
     {
         m_systemAPI = new OpenAPI::OAISystemApi{};
@@ -175,6 +182,22 @@ namespace botc::api
                 {
                     handlePlayersListReply(summary, QNetworkReply::NetworkError::NoError, "");
                 });
+
+        connect(m_playersAPI, &OpenAPI::OAIPlayersApi::updatePlayerSignal,
+                this, [this](const OpenAPI::OAIPlayerItem& player)
+                {
+                    handlePlayerUpdateReply(player, QNetworkReply::NetworkError::NoError, 200, "");
+                });
+        // The plain error signal carries no HTTP status, so the worker variant is
+        // used to read the response code of a rejected rename.
+        connect(m_playersAPI, &OpenAPI::OAIPlayersApi::updatePlayerSignalErrorFull,
+                this, [this](OpenAPI::OAIHttpRequestWorker* worker,
+                             const QNetworkReply::NetworkError errorType,
+                             const QString& errorStr)
+                {
+                    const int httpStatus = nullptr == worker ? 0 : worker->getHttpResponseCode();
+                    handlePlayerUpdateReply(OpenAPI::OAIPlayerItem{}, errorType, httpStatus, errorStr);
+                });
     }
 
     void BotCApiClient::handleHealthCheckReply(const OpenAPI::OAIHealthResponse& summary,
@@ -212,5 +235,12 @@ namespace botc::api
                                                const QNetworkReply::NetworkError error_type, const QString& error_str)
     {
         emit playersListFinished(summary, error_type, error_str);
+    }
+
+    void BotCApiClient::handlePlayerUpdateReply(const OpenAPI::OAIPlayerItem& player,
+                                                const QNetworkReply::NetworkError error_type,
+                                                const int http_status, const QString& error_str)
+    {
+        emit playerUpdateFinished(player, error_type, http_status, error_str);
     }
 }

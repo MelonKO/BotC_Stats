@@ -75,6 +75,12 @@ class PlayerImportRequest(BaseModel):
     is_alive: Annotated[bool, Field(examples=[True])]
 
 
+class PlayerUpdateRequest(BaseModel):
+    name: Annotated[
+        str, Field(examples=['Мая Вишневская'], max_length=200, min_length=1)
+    ]
+
+
 class PlayerItem(BaseModel):
     id: Annotated[UUID, Field(examples=['b1c2d3e4-f5a6-7890-abcd-1234567890ef'])]
     name: Annotated[str, Field(examples=['Alice'])]

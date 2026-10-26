@@ -41,6 +41,7 @@ namespace botc::ui
         {
         case Qt::DisplayRole:
         case Qt::ToolTipRole:
+        case Qt::EditRole:
             return player.name;
         case PlayerIdRole:
             return player.id;
@@ -60,7 +61,33 @@ namespace botc::ui
     {
         if (!index.isValid()) return Qt::NoItemFlags;
 
-        // Editing arrives with the rename feature; the list itself is read-only.
-        return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+        return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable;
+    }
+
+    bool PlayersTableModel::setData(const QModelIndex& index, const QVariant& value, const int role)
+    {
+        if (role != Qt::EditRole || !index.isValid() || index.column() != Name) return false;
+
+        const QString playerId = playerIdAt(index.row());
+        if (playerId.isEmpty()) return false;
+
+        // The API stores the name trimmed, so that is the value to validate.
+        const QString newName = value.toString().trimmed();
+        if (newName.isEmpty())
+        {
+            emit nameChangeRejected("Имя не может быть пустым.");
+            return false;
+        }
+        if (newName.size() > kMaxNameLength)
+        {
+            emit nameChangeRejected(QString("Имя не может быть длиннее %1 символов.").arg(kMaxNameLength));
+            return false;
+        }
+        if (newName == m_players.at(index.row()).name) return false;
+
+        emit nameChangeRequested(playerId, newName);
+
+        // The row keeps its current name until the server accepts the change.
+        return false;
     }
 } // namespace botc::ui

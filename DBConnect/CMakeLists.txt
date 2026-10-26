@@ -41,6 +41,11 @@ set(SOURCES
         src/ui/ImportGamesWidget.cpp
         src/ui/ImportGamesWidget.h
         src/ui/ImportGamesWidget.ui
+        src/ui/PlayersWidget.cpp
+        src/ui/PlayersWidget.h
+        src/ui/PlayersWidget.ui
+        src/ui/PlayersTableModel.cpp
+        src/ui/PlayersTableModel.h
         src/utils/csv/CsvParser.cpp
         src/utils/csv/CsvParser.h
         src/db_cache/DBCache.cpp

@@ -28,7 +28,7 @@
 | Компонент | Описание | Подробности |
 |-----------|----------|-------------|
 | **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx и Metabase. REST API, база данных и аналитические панели. | [core/README.md](core/README.md) |
-| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI для импорта партий и ролей из CSV. Новые игроки создаются при импорте партий. Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
+| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI: импорт партий и ролей из CSV и просмотр списка игроков. Новые игроки создаются при импорте партий. Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
 
 ## Quick Start
 

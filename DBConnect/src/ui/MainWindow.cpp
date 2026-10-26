@@ -2,6 +2,7 @@
 
 #include "ImportGamesWidget.h"
 #include "ImportRolesWidget.h"
+#include "PlayersWidget.h"
 #include "SettingsWidget.h"
 #include "ui_MainWindow.h"
 #include "db_cache/DBCache.h"
@@ -26,6 +27,10 @@ namespace botc::ui
 
         auto* importGamesWidget = new ImportGamesWidget(this);
         tabs->addTab(importGamesWidget, tr("Games import"));
+
+        auto* playersWidget = new PlayersWidget(this);
+        tabs->addTab(playersWidget, tr("Players"));
+
         tabs->addTab(new SettingsWidget(this), tr("Settings"));
 
         connect(importRolesWidget, &ImportRolesWidget::onRolesImported,

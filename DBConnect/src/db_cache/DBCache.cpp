@@ -65,6 +65,10 @@ namespace botc
     void DBCache::requestPlayers()
     {
         m_playersRequestInFlight = true;
+        // Clear the previous error: the view must not report a failure that is
+        // already being retried.
+        m_playersError.clear();
+        m_playersErrorType = QNetworkReply::NoError;
         api::BotCApiClient::instance()->listPlayers();
     }
 
@@ -107,15 +111,24 @@ namespace botc
 
         // Replace the previous cache before filling it so successive refreshes cannot duplicate entries.
         m_cachedPlayers.clear();
+        m_playerEntries.clear();
         if (error_type == QNetworkReply::NoError)
         {
-            std::ranges::transform(
-                summary.getPlayers(),
-                std::inserter(m_cachedPlayers, m_cachedPlayers.end()),
-                [](const OpenAPI::OAIPlayerItem& player) -> QString
-                {
-                    return player.getName();
-                });
+            const QList<OpenAPI::OAIPlayerItem> players = summary.getPlayers();
+            m_cachedPlayers.reserve(players.size());
+            m_playerEntries.reserve(players.size());
+            for (const OpenAPI::OAIPlayerItem& player : players)
+            {
+                m_cachedPlayers.append(player.getName());
+                m_playerEntries.append(PlayerEntry{player.getId(), player.getName()});
+            }
+        }
+        else
+        {
+            // Keep the reason: an empty list without it would look like an empty
+            // database instead of an unreachable API (KNOWN-ISSUES C9).
+            m_playersError = error_str;
+            m_playersErrorType = error_type;
         }
 
         // Re-request before notifying listeners, as in onRoleListFinished().

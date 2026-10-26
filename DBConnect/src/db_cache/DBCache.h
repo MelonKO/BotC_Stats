@@ -4,6 +4,9 @@
 
 #include <optional>
 
+#include <QString>
+#include <QVector>
+
 namespace OpenAPI
 {
     class OAIPlayersResponse;
@@ -12,6 +15,17 @@ namespace OpenAPI
 
 namespace botc
 {
+    /**
+     * A player record as returned by the players list endpoint.
+     *
+     * The id is the stable database key: a name may be changed later, the id never is.
+     */
+    struct PlayerEntry
+    {
+        QString id;
+        QString name;
+    };
+
     class DBCache final : public QObject
     {
         Q_OBJECT
@@ -30,6 +44,18 @@ namespace botc
 
         void updatePlayers();
         const QStringList& getPlayersCache() const { return m_cachedPlayers; }
+
+        /** Full player records (id and name), used by the players view. */
+        const QVector<PlayerEntry>& getPlayerEntries() const { return m_playerEntries; }
+
+        /** Error of the last players list request; empty when that request succeeded. */
+        const QString& getPlayersError() const { return m_playersError; }
+
+        /** Network error of the last players list request, NoError when it succeeded. */
+        QNetworkReply::NetworkError getPlayersErrorType() const { return m_playersErrorType; }
+
+        /** True while a players list request is in flight. */
+        bool isPlayersRequestInFlight() const { return m_playersRequestInFlight; }
 
     signals:
         void onRolesCacheUpdated();
@@ -54,6 +80,11 @@ namespace botc
     private:
         QStringList m_cachedRoles{};
         QStringList m_cachedPlayers;
+        // Same rows as m_cachedPlayers, but with the player id kept alongside the
+        // name: the import widget only needs names, the players view needs ids.
+        QVector<PlayerEntry> m_playerEntries{};
+        QString m_playersError{};
+        QNetworkReply::NetworkError m_playersErrorType = QNetworkReply::NoError;
         std::optional<QString> m_rolesLang{QString("ru")};
         bool m_rolesRequestInFlight = false;
         bool m_rolesRefreshPending = false;

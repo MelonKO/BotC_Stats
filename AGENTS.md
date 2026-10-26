@@ -5,7 +5,7 @@
 | Directory | Purpose | Key Files |
 |-----------|---------|-----------|
 | `core/` | Docker stack: PostgreSQL 16 + FastAPI + Nginx + Metabase | `docker-compose.yml`, `api/` |
-| `DBConnect/` | Qt6 GUI for CSV→API import (games and roles; players are created by game imports) | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
+| `DBConnect/` | Qt6 GUI: CSV→API import (games and roles; players are created by game imports) and the read-only players list | `src/main.cpp`, `CMakeLists.txt`, `config.ini.example` |
 | `openapi/` | API contract and client generation | `api/openapi.yaml`, `generate.py`, `sync.py` |
 | `scripts/` | Repository-wide task runner | `project.py`, `project.ini.example` |
 

@@ -265,6 +265,64 @@ class TestRolesListEndpoint:
 
 
 # ============================================================
+# Players list endpoint
+# ============================================================
+
+class TestPlayersListEndpoint:
+    @pytest.mark.asyncio
+    async def test_success(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        # PlayerItem.id is a UUID in the generated models, so the mocked rows
+        # have to carry real UUID strings.
+        conn.fetch = AsyncMock(return_value=[
+            {"id": "b1c2d3e4-f5a6-7890-abcd-1234567890ef", "name": "Мая Вишневская"},
+            {"id": "a09f3ff7-0f02-485a-b0e1-87388b27face", "name": "Анна Никитина"},
+        ])
+
+        response = await client.get(
+            "/api/players", headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["players"]) == 2
+        assert data["players"][0]["name"] == "Мая Вишневская"
+        assert data["players"][0]["id"] == "b1c2d3e4-f5a6-7890-abcd-1234567890ef"
+
+    @pytest.mark.asyncio
+    async def test_empty_players(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        conn.fetch = AsyncMock(return_value=[])
+
+        response = await client.get(
+            "/api/players", headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["players"] == []
+
+    @pytest.mark.asyncio
+    async def test_requires_auth(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+
+        response = await client.get("/api/players")
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_invalid_api_key(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        # No api_keys row means the key is unknown.
+        conn.fetchrow = AsyncMock(return_value=None)
+
+        response = await client.get(
+            "/api/players", headers=auth_headers("sk-unknown-key"),
+        )
+
+        assert response.status_code == 401
+
+
+# ============================================================
 # Roles import endpoint
 # ============================================================
 

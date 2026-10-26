@@ -275,6 +275,25 @@ client turns that into a `TimeoutError` reply, which releases the queue. Game
 imports are left without a limit (`:119`) because a large batch may legitimately
 run longer.
 
+### C9. Players tab cannot be edited — `open`
+
+The players tab (`DBConnect/src/ui/PlayersWidget.cpp`) lists and searches the
+registry, and reports a failed list request instead of an empty database, but it
+cannot change anything: renaming a player is the agreed next step. The contract
+for it is already decided and is missing in every layer: `PATCH
+/api/players/{playerId}` with a `{name}` body answering 200/400/401/404/409, the
+`PlayerUpdateRequest` schema, the endpoint, the client method, and the database
+permission — `api_service` holds only `SELECT, INSERT` on `players`
+(`core/init-scripts/03-grant-privileges.sql:51`), so the update needs
+`GRANT UPDATE (name)` plus a migration for live databases.
+
+Next step: add the path and schema, the grant (init script and migration), the
+endpoint with 404/409 mapping on `UniqueViolationError`, and inline editing in
+`PlayersTableModel::flags()`/`setData()`. A rename does not rewrite game history
+(rows point at `players.id`), but it does change which player future CSV imports
+resolve to, because `process_games_import()` matches players by name
+(`01-schema.sql:277`, `:299`, `:323`).
+
 ## Security
 
 ### S1. API key and server IP are still in git history — `open`

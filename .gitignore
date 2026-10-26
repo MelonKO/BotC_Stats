@@ -18,9 +18,11 @@ venv/
 
 # IDE
 .vscode/
+.kodik/
 .idea/
 *.swp
 *.swo
+.kodikignore
 
 # OS
 .DS_Store
@@ -33,8 +35,9 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
-/scripts/project.ini
-/openapi/node_modules/
-/openapi/package-lock.json
-/openapi/cpp_gen/
-/openapi/python_gen/
+scripts/project.ini
+openapi/node_modules/
+openapi/package-lock.json
+openapi/cpp_gen/
+openapi/python_gen/
+BotC_test_samples/

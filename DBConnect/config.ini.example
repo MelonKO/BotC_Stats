@@ -7,3 +7,8 @@
 API_URL = https://localhost:443
 API_KEY =
 SSL_VERIFY = false
+
+[UI]
+; Interface language: auto = the operating system language, otherwise a
+; language code with an embedded catalog, for example en or ru.
+LANGUAGE = auto

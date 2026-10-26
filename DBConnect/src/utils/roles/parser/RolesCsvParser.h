@@ -1,6 +1,7 @@
 #pragma once
 #include <qmap.h>
 #include <QString>
+#include <QVector>
 
 namespace botc::utils
 {
@@ -12,22 +13,26 @@ namespace botc::utils
         QString description;
         // "ru" -> {name, description}
         QMap<QString, QPair<QString, QString>> translations;
-        QStringList extraColumns; // неизвестные колонки — не теряем данные
+        QStringList extraColumns; // unknown columns, kept so that no data is lost
     };
 
     struct ParseResult
     {
         QList<RoleRecord> records;
-        QStringList headers;   // оригинальные заголовки из файла
-        QStringList languages; // обнаруженные языки: "ru", "de", ...
-        QStringList errors;    // ошибки валидации: "Строка 3: поле name пустое"
+        QStringList headers;   // original headers from the file
+        QStringList languages; // detected languages: "ru", "de", ...
+        QStringList errors;    // validation errors, already translated for the UI
+        // CSV line of the matching entry in errors (1-based, header is line 1),
+        // -1 for an error that belongs to no single line. Lets the view mark
+        // broken rows without parsing the localized message text.
+        QVector<int> errorLines;
         bool success = false;
     };
 
     class RolesCsvParser
     {
     public:
-        // Допустимые значения для валидации
+        // Allowed values for validation
         static const QStringList VALID_ALIGNMENTS;
         static const QStringList VALID_ROLE_TYPES;
 

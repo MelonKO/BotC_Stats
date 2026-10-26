@@ -13,22 +13,22 @@
                 <number>10</number>
             </property>
 
-            <!-- Заголовок -->
+            <!-- Title -->
             <item>
                 <widget class="QLabel">
                     <property name="text">
-                        <string>Импорт партий</string>
+                        <string>Games import</string>
                     </property>
                     <property name="styleSheet">
-                        <string>font-size: 16px; font-weight: bold;</string>
+                        <string notr="true">font-size: 16px; font-weight: bold;</string>
                     </property>
                 </widget>
             </item>
-            <!-- Выбор файла -->
+            <!-- File selection -->
             <item>
                 <widget class="QGroupBox">
                     <property name="title">
-                        <string>Файл CSV</string>
+                        <string>CSV file</string>
                     </property>
                     <layout class="QHBoxLayout">
                         <item>
@@ -37,14 +37,14 @@
                                     <bool>true</bool>
                                 </property>
                                 <property name="placeholderText">
-                                    <string>Путь к CSV файлу...</string>
+                                    <string>Path to the CSV file...</string>
                                 </property>
                             </widget>
                         </item>
                         <item>
                             <widget class="QPushButton" name="browseButton">
                                 <property name="text">
-                                    <string>Обзор...</string>
+                                    <string>Browse...</string>
                                 </property>
                                 <property name="maximumWidth">
                                     <number>90</number>
@@ -54,7 +54,7 @@
                         <item>
                             <widget class="QPushButton" name="clearButton">
                                 <property name="text">
-                                    <string>Очистить</string>
+                                    <string>Clear</string>
                                 </property>
                                 <property name="maximumWidth">
                                     <number>90</number>
@@ -64,21 +64,21 @@
                     </layout>
                 </widget>
             </item>
-            <!-- Ошибки валидации -->
+            <!-- Validation errors -->
             <item>
                 <layout class="QHBoxLayout" name="mainLayout">
                     <item>
                         <widget class="QGroupBox" name="errorsGroup">
                             <property name="title">
-                                <string>⚠ Ошибки валидации</string>
+                                <string>⚠ Validation errors</string>
                             </property>
                             <property name="styleSheet">
-                                <string>QGroupBox { color: red; }</string>
+                                <string notr="true">QGroupBox { color: red; }</string>
                             </property>
                             <property name="visible">
                                 <bool>false</bool>
                             </property>
-                            <!-- Запрещаем растягиваться по вертикали -->
+                            <!-- Do not stretch vertically -->
                             <property name="sizePolicy">
                                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                                     <horstretch>0</horstretch>
@@ -96,15 +96,15 @@
                     <item>
                         <widget class="QGroupBox" name="infoGroup">
                             <property name="title">
-                                <string>Информация</string>
+                                <string>Information</string>
                             </property>
                             <property name="styleSheet">
-                                <string>QGroupBox{color: yellow}</string>
+                                <string notr="true">QGroupBox{color: yellow}</string>
                             </property>
                             <property name="visible">
                                 <bool>false</bool>
                             </property>
-                            <!-- Запрещаем растягиваться по вертикали -->
+                            <!-- Do not stretch vertically -->
                             <property name="sizePolicy">
                                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                                     <horstretch>0</horstretch>
@@ -122,16 +122,16 @@
                 </layout>
             </item>
 
-            <!-- Сплиттер: партии сверху, игроки снизу -->
+            <!-- Splitter: games on top, players below -->
             <item>
                 <widget class="QSplitter" name="splitter">
                     <property name="orientation">
                         <enum>Qt::Vertical</enum>
                     </property>
-                    <!-- Таблица партий -->
+                    <!-- Games table -->
                     <widget class="QGroupBox" name="partiesGroupBox">
                         <property name="title">
-                            <string>Партии</string>
+                            <string>Games</string>
                         </property>
                         <layout class="QVBoxLayout">
                             <item>
@@ -155,10 +155,10 @@
                             </item>
                         </layout>
                     </widget>
-                    <!-- Таблица игроков -->
+                    <!-- Players table -->
                     <widget class="QGroupBox" name="playersGroupBox">
                         <property name="title">
-                            <string>Игроки</string>
+                            <string>Players</string>
                         </property>
                         <layout class="QVBoxLayout">
                             <item>
@@ -182,7 +182,7 @@
 
                 </widget>
             </item>
-            <!-- Статус + кнопка -->
+            <!-- Status + button -->
             <item>
                 <layout class="QHBoxLayout">
                     <item>
@@ -202,7 +202,7 @@
                     <item>
                         <widget class="QPushButton" name="importButton">
                             <property name="text">
-                                <string>Импортировать</string>
+                                <string>Import</string>
                             </property>
                             <property name="enabled">
                                 <bool>false</bool>

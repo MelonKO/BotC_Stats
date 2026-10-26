@@ -12,24 +12,24 @@
             <property name="spacing">
                 <number>10</number>
             </property>
-            <!-- Заголовок -->
+            <!-- Title -->
             <item>
                 <widget class="QLabel">
                     <property name="text">
-                        <string>Игроки</string>
+                        <string>Players</string>
                     </property>
                     <property name="styleSheet">
-                        <string>font-size: 16px; font-weight: bold;</string>
+                        <string notr="true">font-size: 16px; font-weight: bold;</string>
                     </property>
                 </widget>
             </item>
-            <!-- Поиск и обновление списка -->
+            <!-- Search and refresh -->
             <item>
                 <layout class="QHBoxLayout">
                     <item>
                         <widget class="QLineEdit" name="searchEdit">
                             <property name="placeholderText">
-                                <string>Поиск по имени...</string>
+                                <string>Search by name...</string>
                             </property>
                             <property name="clearButtonEnabled">
                                 <bool>true</bool>
@@ -39,7 +39,7 @@
                     <item>
                         <widget class="QPushButton" name="refreshButton">
                             <property name="text">
-                                <string>Обновить</string>
+                                <string>Refresh</string>
                             </property>
                             <property name="maximumWidth">
                                 <number>120</number>
@@ -49,7 +49,7 @@
                 </layout>
             </item>
 
-            <!-- Список игроков -->
+            <!-- Players list -->
             <item>
                 <widget class="QTableView" name="playersTable">
                     <property name="minimumHeight">
@@ -67,7 +67,7 @@
                 </widget>
             </item>
 
-            <!-- Статус + счётчик -->
+            <!-- Status + counter -->
             <item>
                 <layout class="QHBoxLayout">
                     <item>

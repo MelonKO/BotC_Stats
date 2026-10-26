@@ -44,10 +44,13 @@ namespace botc::ui
     signals:
         void onRolesImported();
 
+    protected:
+        void changeEvent(QEvent* event) override;
+
     private slots:
         void onBrowseClicked();
         void onImportClicked();
-        void onLanguageChanged(const QString& lang);
+        void onLanguageChanged(int index);
         void onClearClicked();
         void onRolesImportFinished(const OpenAPI::OAIRolesImportResponse& summary,
                                    QNetworkReply::NetworkError error_type,
@@ -55,7 +58,10 @@ namespace botc::ui
 
     private:
         void showPreview(const utils::ParseResult& result);
-        void populateTable(const QString& language);
+        void populateLanguageCombo(const QStringList& languages);
+        void populateTable(const QString& languageCode);
+        void updatePreviewStatus();
+        void retranslate();
         void showErrors(const QStringList& errors) const;
         void clearAll();
         void setImportEnabled(bool enabled) const;
@@ -65,7 +71,10 @@ namespace botc::ui
         Ui::ImportRolesWidget* ui;
 
         utils::ParseResult m_lastResult;
+        // Empty string means the original (source) values, otherwise a language
+        // code such as "ru". The code, never the visible label, identifies the
+        // preview language, so translating the label cannot break the preview.
         QString m_currentLanguage;
         QProgressDialog* m_importRolesProgressDial = nullptr;
     };
-} // botc::ui
+} // namespace botc::ui

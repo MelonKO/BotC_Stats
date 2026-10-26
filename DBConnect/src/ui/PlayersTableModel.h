@@ -59,6 +59,10 @@ namespace botc::ui
         Qt::ItemFlags flags(const QModelIndex& index) const override;
         bool setData(const QModelIndex& index, const QVariant& value, int role) override;
 
+    public slots:
+        /** Announces the translated column header after a UI language change. */
+        void retranslate();
+
     signals:
         /** A valid, changed name was entered; the owner has to store it. */
         void nameChangeRequested(const QString& playerId, const QString& newName);

@@ -5,11 +5,25 @@
   "dependencies": [
     {
       "name": "qtbase"
+    },
+    {
+      "name": "qttools"
+    },
+    {
+      "name": "qttranslations"
     }
   ],
   "overrides": [
     {
       "name": "qtbase",
+      "version": "6.10.2"
+    },
+    {
+      "name": "qttools",
+      "version": "6.10.2"
+    },
+    {
+      "name": "qttranslations",
       "version": "6.10.2"
     }
   ]

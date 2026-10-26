@@ -2,11 +2,13 @@
 
 #include <algorithm>
 
+#include <QEvent>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QMessageBox>
 #include <QSortFilterProxyModel>
 
+#include "NetworkErrorMessages.h"
 #include "PlayersTableModel.h"
 #include "OAIPlayerItem.h"
 #include "OAIPlayerUpdateRequest.h"
@@ -24,30 +26,6 @@ namespace
     const QString kErrorStyle = "color: red; font-weight: bold;";
     const QString kOkStyle = "color: green;";
     const QString kMutedStyle = "color: gray;";
-
-    /**
-     * User-facing reason for a failed request.
-     *
-     * The raw error string from the client combines a technical network message
-     * with the response body, so it is shown as a tooltip instead of the status
-     * line.
-     */
-    QString describeNetworkError(const QNetworkReply::NetworkError errorType)
-    {
-        switch (errorType)
-        {
-        case QNetworkReply::TimeoutError:
-            return "Превышено время ожидания ответа от сервера.";
-        case QNetworkReply::ConnectionRefusedError:
-        case QNetworkReply::HostNotFoundError:
-            return "Нет соединения с сервером. Проверьте настройки.";
-        case QNetworkReply::AuthenticationRequiredError:
-        case QNetworkReply::ContentAccessDenied:
-            return "Сервер отклонил API-ключ.";
-        default:
-            return QString("Сетевая ошибка (код %1).").arg(static_cast<int>(errorType));
-        }
-    }
 }
 
 namespace botc::ui
@@ -97,6 +75,28 @@ namespace botc::ui
         delete ui;
     }
 
+    void PlayersWidget::changeEvent(QEvent* event)
+    {
+        if (event->type() == QEvent::LanguageChange)
+            retranslate();
+
+        QWidget::changeEvent(event);
+    }
+
+    void PlayersWidget::retranslate()
+    {
+        ui->retranslateUi(this);
+
+        m_model->retranslate();
+
+        // The last action message was formatted in the previous language.
+        m_actionMessage.clear();
+        m_actionStyle.clear();
+
+        updateCounts();
+        applyStatus();
+    }
+
     void PlayersWidget::onSearchTextChanged(const QString& text)
     {
         // A new search replaces the previous action feedback with the load state.
@@ -124,16 +124,16 @@ namespace botc::ui
         const QString currentName = currentPlayerName(playerId);
         const auto answer = QMessageBox::question(
             this,
-            "Переименование игрока",
-            QString("Переименовать игрока «%1» в «%2»?\n\n"
-                    "История партий останется у этого игрока, но CSV-файлы со старым "
-                    "именем при следующем импорте создадут нового игрока.")
+            tr("Player rename"),
+            tr("Rename the player \"%1\" to \"%2\"?\n\n"
+               "Game history stays with this player, but CSV files with the old name "
+               "will create a new player on the next import.")
             .arg(currentName, newName),
             QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No);
         if (answer != QMessageBox::Yes)
         {
-            showMessage("Переименование отменено.", kMutedStyle);
+            showMessage(tr("Rename cancelled."), kMutedStyle);
             return;
         }
 
@@ -164,24 +164,24 @@ namespace botc::ui
             // Patch the cache first: the refresh below then shows the new name
             // instead of briefly restoring the old one.
             DBCache::instance()->applyPlayerRename(playerId, player.getName());
-            showMessage(QString("✔ Игрок переименован в «%1».").arg(player.getName()), kOkStyle);
+            showMessage(tr("✔ Player renamed to \"%1\".").arg(player.getName()), kOkStyle);
             DBCache::instance()->updatePlayers();
             return;
         case 409:
-            showMessage("✘ Это имя уже занято другим игроком. Имя не изменено.", kErrorStyle);
+            showMessage(tr("✘ This name is already taken by another player. The name was not changed."), kErrorStyle);
             return;
         case 404:
-            showMessage("✘ Игрок не найден — возможно, список устарел. Список обновлён.", kErrorStyle);
+            showMessage(tr("✘ Player not found — the list may be outdated. The list has been refreshed."), kErrorStyle);
             DBCache::instance()->updatePlayers();
             return;
         case 422:
-            showMessage("✘ Недопустимое имя: от 1 до 200 символов. Имя не изменено.", kErrorStyle);
+            showMessage(tr("✘ Invalid name: 1 to 200 characters. The name was not changed."), kErrorStyle);
             return;
         default:
             break;
         }
 
-        showMessage(QString("✘ Не удалось переименовать игрока. %1").arg(describeNetworkError(errorType)),
+        showMessage(tr("✘ Failed to rename the player. %1").arg(describeNetworkError(errorType)),
                     kErrorStyle);
         ui->statusLabel->setToolTip(errorStr);
     }
@@ -235,7 +235,7 @@ namespace botc::ui
 
     void PlayersWidget::updateCounts()
     {
-        ui->countLabel->setText(QString("Игроков: %1, показано: %2")
+        ui->countLabel->setText(tr("Players: %1, shown: %2")
             .arg(m_model->rowCount())
             .arg(m_proxy->rowCount()));
     }
@@ -246,7 +246,7 @@ namespace botc::ui
         if (errorType != QNetworkReply::NoError)
         {
             ui->statusLabel->setText(
-                QString("✘ Не удалось загрузить игроков. %1").arg(describeNetworkError(errorType)));
+                tr("✘ Failed to load players. %1").arg(describeNetworkError(errorType)));
             ui->statusLabel->setStyleSheet(kErrorStyle);
             ui->statusLabel->setToolTip(DBCache::instance()->getPlayersError());
             return;
@@ -262,12 +262,12 @@ namespace botc::ui
 
         if (m_model->rowCount() == 0)
         {
-            ui->statusLabel->setText("Игроков в базе нет.");
+            ui->statusLabel->setText(tr("No players in the database."));
             ui->statusLabel->setStyleSheet(kMutedStyle);
             return;
         }
 
-        ui->statusLabel->setText("✔ Список игроков загружен.");
+        ui->statusLabel->setText(tr("✔ Players list loaded."));
         ui->statusLabel->setStyleSheet(kOkStyle);
     }
 

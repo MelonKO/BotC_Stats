@@ -1,5 +1,6 @@
 #include "RolesCsvParser.h"
 
+#include <QCoreApplication>
 #include <QRegularExpression>
 #include <QSet>
 
@@ -48,13 +49,15 @@ namespace botc::utils
         {
             if (!headerToIndexMap.contains(col))
             {
-                result.errors << QString("A required column is missing: '%1'").arg(col);
+                result.errors << QCoreApplication::translate("RolesCsvParser",
+                                                             "A required column is missing: '%1'").arg(col);
+                result.errorLines << -1;
             }
         }
         if (!result.errors.isEmpty()) return result;
 
-        // Читаем строки
-        int rowIndex = 2; // нумерация с 1, первая строка — заголовок
+        // Read the rows
+        int rowIndex = 2; // 1-based, the first line is the header
         while (parser.isCanReadNext())
         {
             QStringList row = parser.parseNextLine();
@@ -72,16 +75,18 @@ namespace botc::utils
             record.roleType    = readCell("role_type");
             record.description = readCell("description");
 
-            // Переводы: ищем колонки вида "<lang>_name", "<lang>_description"
+            // Translations: look for columns named "<lang>_name", "<lang>_description"
             for (const QString& lang : detectedLanguages)
             {
                 record.translations[lang].first  = readCell(lang + "_name");
                 record.translations[lang].second = readCell(lang + "_description");
             }
 
-            // Валидация
-            const QStringList rowErrors = validateRecord(record, rowIndex);
-            result.errors << rowErrors;
+            // Validation
+            const int errorsBefore = result.errors.size();
+            result.errors << validateRecord(record, rowIndex);
+            for (int errorIndex = errorsBefore; errorIndex < result.errors.size(); ++errorIndex)
+                result.errorLines << rowIndex;
 
             result.records << record;
             ++rowIndex;
@@ -96,7 +101,7 @@ namespace botc::utils
         QMap<QString, int> index;
         QSet<QString> langs;
 
-        // Паттерн: "<lang>_name" или "<lang>_description"
+        // Pattern: "<lang>_name" or "<lang>_description"
         static const QRegularExpression langPattern(R"(^([a-z]{2,5})_(name|description)$)");
 
         for (int i = 0; i < headers.size(); ++i)
@@ -121,22 +126,24 @@ namespace botc::utils
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Line %1: %2").arg(rowIndex).arg(msg);
+            errors << QCoreApplication::translate("RolesCsvParser", "Line %1: %2").arg(rowIndex).arg(msg);
         };
 
         if (record.name.isEmpty())
-            err("The 'name' field cannot be empty.");
+            err(QCoreApplication::translate("RolesCsvParser", "The 'name' field cannot be empty."));
 
         if (!VALID_ALIGNMENTS.contains(record.alignment))
-            err(QString("Invalid \"alignment\" value ='%1'. "
-                "Valid values: %2").arg(record.alignment, VALID_ALIGNMENTS.join(", ")));
+            err(QCoreApplication::translate("RolesCsvParser", "Invalid \"alignment\" value '%1'. "
+                                                              "Valid values: %2")
+                .arg(record.alignment, VALID_ALIGNMENTS.join(", ")));
 
         if (!VALID_ROLE_TYPES.contains(record.roleType))
-            err(QString("Invalid \"role_type\" value ='%1'. "
-                "Valid values: %2").arg(record.roleType, VALID_ROLE_TYPES.join(", ")));
+            err(QCoreApplication::translate("RolesCsvParser", "Invalid \"role_type\" value '%1'. "
+                                                              "Valid values: %2")
+                .arg(record.roleType, VALID_ROLE_TYPES.join(", ")));
 
         if (record.description.isEmpty())
-            err("Field 'description' cannot be empty.");
+            err(QCoreApplication::translate("RolesCsvParser", "The 'description' field cannot be empty."));
 
         return errors;
     }

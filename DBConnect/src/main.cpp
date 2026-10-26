@@ -1,6 +1,7 @@
 #include <QApplication>
 
 #include "config/ConfigManager.h"
+#include "i18n/LocalizationManager.h"
 #include "ui/MainWindow.h"
 
 int main(int argc, char* argv[])
@@ -11,6 +12,17 @@ int main(int argc, char* argv[])
     // init ConfigManager and load config
     auto* configManager = botc::config::ConfigManager::instance();
     const auto serverSettings = configManager->getServerSettings();
+
+    // Install the UI translation before the first widget is created, so that
+    // setupUi() already sees the translated strings.
+    auto* localizationManager = botc::i18n::LocalizationManager::instance();
+    localizationManager->applyLanguage(configManager->getUiLanguage());
+    QObject::connect(configManager, &botc::config::ConfigManager::uiLanguageChanged,
+                     localizationManager,
+                     [localizationManager](const QString& language)
+                     {
+                         localizationManager->applyLanguage(language);
+                     });
 
     // init api client
     auto* apiClient = botc::api::BotCApiClient::instance();

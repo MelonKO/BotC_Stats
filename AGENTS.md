@@ -119,6 +119,8 @@ python -m pytest app/tests/ -v
 
 11. **Sides of the conflict**: `alignment` in the schema means the *side* (сторона), not "выравнивание". A role's side allows `good|evil|neutral` (neutral = decided by the storyteller, e.g. Traveller), the winning side allows `good|evil|draw`, and a player's end side allows only `good|evil`. Read `core/docs/SIDES.md` before adding or changing an alignment field.
 
+12. **DBConnect UI localization**: source strings are English and must go through `tr()` (member functions) or `QCoreApplication::translate("Context", ...)` (free functions/static helpers). The Russian catalog is `DBConnect/translations/dbconnect_ru.ts`; CMake compiles it with `qt_add_translations` and embeds it as the `:/i18n` resource, so no `.qm` files are deployed. After changing strings run `cmake --build <build dir> --target update_translations`, translate the new entries, and keep placeholders (`%1`, `%n`) intact. UI language never changes the gameplay-data language: roles are still requested with `lang=ru`.
+
 ## Common Pitfalls
 
 - ❌ Committing `DBConnect/config.ini` → it holds a real API key; the file is git-ignored, commit only `config.ini.example`

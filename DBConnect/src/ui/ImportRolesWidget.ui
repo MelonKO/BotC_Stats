@@ -12,22 +12,22 @@
             <property name="spacing">
                 <number>10</number>
             </property>
-            <!-- Заголовок -->
+            <!-- Title -->
             <item>
                 <widget class="QLabel">
                     <property name="text">
-                        <string>Импорт ролей</string>
+                        <string>Roles import</string>
                     </property>
                     <property name="styleSheet">
-                        <string>font-size: 16px; font-weight: bold;</string>
+                        <string notr="true">font-size: 16px; font-weight: bold;</string>
                     </property>
                 </widget>
             </item>
-            <!-- Выбор файла -->
+            <!-- File selection -->
             <item>
                 <widget class="QGroupBox">
                     <property name="title">
-                        <string>Файл CSV</string>
+                        <string>CSV file</string>
                     </property>
                     <layout class="QHBoxLayout">
                         <item>
@@ -36,14 +36,14 @@
                                     <bool>true</bool>
                                 </property>
                                 <property name="placeholderText">
-                                    <string>Путь к CSV файлу...</string>
+                                    <string>Path to the CSV file...</string>
                                 </property>
                             </widget>
                         </item>
                         <item>
                             <widget class="QPushButton" name="browseButton">
                                 <property name="text">
-                                    <string>Обзор...</string>
+                                    <string>Browse...</string>
                                 </property>
                                 <property name="maximumWidth">
                                     <number>90</number>
@@ -53,7 +53,7 @@
                         <item>
                             <widget class="QPushButton" name="clearButton">
                                 <property name="text">
-                                    <string>Очистить</string>
+                                    <string>Clear</string>
                                 </property>
                                 <property name="maximumWidth">
                                     <number>90</number>
@@ -64,19 +64,19 @@
                 </widget>
             </item>
 
-            <!-- Ошибки валидации (скрыто по умолчанию) -->
+            <!-- Validation errors (hidden by default) -->
             <item>
                 <widget class="QGroupBox" name="errorsGroup">
                     <property name="title">
-                        <string>⚠ Ошибки валидации</string>
+                        <string>⚠ Validation errors</string>
                     </property>
                     <property name="styleSheet">
-                        <string>QGroupBox { color: red; }</string>
+                        <string notr="true">QGroupBox { color: red; }</string>
                     </property>
                     <property name="visible">
                         <bool>false</bool>
                     </property>
-                    <!-- Запрещаем растягиваться по вертикали -->
+                    <!-- Do not stretch vertically -->
                     <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                             <horstretch>0</horstretch>
@@ -92,21 +92,21 @@
                 </widget>
             </item>
 
-            <!-- Предпросмотр -->
+            <!-- Preview -->
             <item>
                 <widget class="QGroupBox">
                     <property name="title">
-                        <string>Предпросмотр</string>
+                        <string>Preview</string>
                     </property>
                     <layout class="QVBoxLayout">
 
-                        <!-- Переключатель языка -->
+                        <!-- Language selector -->
                         <item>
                             <layout class="QHBoxLayout">
                                 <item>
                                     <widget class="QLabel">
                                         <property name="text">
-                                            <string>Язык:</string>
+                                            <string>Language:</string>
                                         </property>
                                     </widget>
                                 </item>
@@ -127,7 +127,7 @@
                             </layout>
                         </item>
 
-                        <!-- Таблица -->
+                        <!-- Table -->
                         <item>
                             <widget class="QTableWidget" name="previewTable">
                                 <property name="minimumHeight">
@@ -149,7 +149,7 @@
                 </widget>
             </item>
 
-            <!-- Статус + кнопка импорта -->
+            <!-- Status + import button -->
             <item>
                 <layout class="QHBoxLayout">
                     <item>
@@ -169,7 +169,7 @@
                     <item>
                         <widget class="QPushButton" name="importButton">
                             <property name="text">
-                                <string>Импортировать</string>
+                                <string>Import</string>
                             </property>
                             <property name="enabled">
                                 <bool>false</bool>

@@ -12,7 +12,7 @@ namespace botc::utils::games
         QString playerName;
         QString roleStartName;
         QString roleEndName;
-        QString alignmentEnd; // "добро" | "зло"
+        QString alignmentEnd; // Russian values: "добро" | "зло"
         bool isAlive                      = false;
         std::optional<uint8_t> seatNumber = 0;
     };
@@ -24,7 +24,7 @@ namespace botc::utils::games
         QString location;
         int gameNumber = 0;
         QStringList storytellerNames;
-        QString alignmentWin; // "добро" | "зло" | "ничья"
+        QString alignmentWin; // Russian values: "добро" | "зло" | "ничья"
         QTime duration;
         QString notes;
 

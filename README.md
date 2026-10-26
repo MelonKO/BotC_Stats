@@ -54,6 +54,8 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 Приложение читает и сохраняет `config.ini` относительно текущего рабочего каталога; не добавляйте в Git файл с реальным API-ключом. При каждой конфигурации CMake в каталог сборки копируется `DBConnect/config.ini`, если он существует, иначе — `DBConnect/config.ini.example`. Поэтому изменения только в копии каталога сборки могут быть перезаписаны при следующей конфигурации; для локальных настроек задайте исходный `DBConnect/config.ini` и запускайте приложение из каталога с нужным `config.ini`.
 
+Язык интерфейса переключается на вкладке **Settings → Interface → Language** (`System`, `English`, `Русский`) и применяется сразу, без перезапуска. Выбор хранится в `config.ini` в секции `[UI]` (`LANGUAGE = auto|en|ru`, по умолчанию `auto` — язык системы). Язык интерфейса не меняет язык игровых данных: роли по-прежнему запрашиваются с `lang=ru`.
+
 ### Повседневные задачи (`scripts/project.py`)
 
 Для повседневных операций есть единая точка входа — `scripts/project.py`. Он собирает DBConnect, перегенерирует клиентов из OpenAPI-спецификации, копирует их в рабочий код и запускает тесты:
@@ -109,6 +111,19 @@ Shared CMake presets are in `DBConnect/CMakePresets.json`; machine-specific path
 
 **Не меняйте тулчейн без нужды.** vcpkg включает версию компилятора, триплет и версию CMake, которой собираются порты, в ABI каждого пакета. Обновление CMake (или переключение между CMake из Visual Studio, MSYS2 и CLion) помечает все пакеты устаревшими и заново собирает Qt из исходников. Не удаляйте `vcpkg_installed` ради «чистой» сборки — используйте `build.py clean`, он удаляет только `build_debug`/`build_release`, и давайте прерванной установке vcpkg завершиться.
 
+### Локализация интерфейса DBConnect
+
+Исходный язык строк — английский; русский перевод лежит в `DBConnect/translations/dbconnect_ru.ts`. Каталог собирается `lrelease` и встраивается в исполняемый файл как ресурс `/i18n`, поэтому рядом с `build_release/dist/DBConnect.exe` никакие `.qm` не нужны. Инструменты `lupdate`/`lrelease` приходят из vcpkg-портов `qttools` и `qttranslations` (закреплены на версию Qt в `DBConnect/vcpkg.json`).
+
+```powershell
+# после изменения строк в tr()/translate() обновить .ts
+cmake --build build_debug --target update_translations
+# собрать .qm (обычная сборка делает это автоматически)
+cmake --build build_debug --target release_translations
+```
+
+Чтобы добавить язык: добавьте его код в `I18N_TRANSLATED_LANGUAGES` и `TS_FILES` в `DBConnect/CMakeLists.txt`, создайте и переведите новый `.ts`. Селектор языков в приложении строится по встроенным каталогам автоматически. Сообщения валидации CSV и стандартные диалоги Qt переводятся вместе с остальным интерфейсом.
+
 ## Project Structure
 
 ```
@@ -134,6 +149,7 @@ BotC/
 ├── DBConnect/                  # Qt6 GUI importer (games, roles, players)
 │   ├── src/
 │   ├── generated_api/          # Auto-generated OpenAPI C++ client
+│   ├── translations/           # Каталоги переводов интерфейса (*.ts)
 │   ├── CMakeLists.txt
 │   ├── config.ini.example      # Шаблон локальных настроек (без ключа)
 │   └── config.ini              # Локальные настройки, не отслеживается Git

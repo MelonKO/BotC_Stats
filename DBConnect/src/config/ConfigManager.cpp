@@ -28,4 +28,20 @@ namespace botc::config
         // and reload their caches without any debouncing.
         emit serverSettingsChanged(settings);
     }
+
+    QString ConfigManager::getUiLanguage() const
+    {
+        return m_settings.value("ui/language", "auto").toString();
+    }
+
+    void ConfigManager::setUiLanguage(const QString& language)
+    {
+        if (language == getUiLanguage())
+        {
+            return;
+        }
+
+        m_settings.setValue("ui/language", language);
+        emit uiLanguageChanged(language);
+    }
 }

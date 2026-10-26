@@ -40,6 +40,9 @@ namespace botc::ui
         explicit PlayersWidget(QWidget* parent = nullptr);
         ~PlayersWidget() override;
 
+    protected:
+        void changeEvent(QEvent* event) override;
+
     private slots:
         void onSearchTextChanged(const QString& text);
         void onRefreshClicked();
@@ -55,6 +58,7 @@ namespace botc::ui
         void selectPlayerById(const QString& playerId);
         void updateCounts();
         void applyStatus();
+        void retranslate();
         void showMessage(const QString& message, const QString& style);
         void setRefreshBusy(bool isBusy);
         void setRenameBusy(bool isBusy);

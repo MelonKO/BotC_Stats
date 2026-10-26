@@ -20,17 +20,17 @@
    <item>
     <widget class="QLabel" name="titleLabel">
      <property name="styleSheet">
-      <string>font-size: 16px; font-weight: bold;</string>
+      <string notr="true">font-size: 16px; font-weight: bold;</string>
      </property>
      <property name="text">
-      <string>Настройки API</string>
+      <string>API settings</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="ConnectionSettingsGroupBox">
      <property name="title">
-      <string>Параметры подключения</string>
+      <string>Connection parameters</string>
      </property>
      <layout class="QFormLayout" name="formLayout">
       <item row="0" column="0">
@@ -43,7 +43,7 @@
       <item row="0" column="1">
        <widget class="QLineEdit" name="apiUrlEdit">
         <property name="placeholderText">
-         <string>https://api.example.com</string>
+         <string notr="true">https://api.example.com</string>
         </property>
        </widget>
       </item>
@@ -62,14 +62,14 @@
            <enum>QLineEdit::EchoMode::Password</enum>
           </property>
           <property name="placeholderText">
-           <string>Введите ключ...</string>
+           <string>Enter the key...</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="toggleKeyButton">
           <property name="text">
-           <string>Показать</string>
+           <string>Show</string>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -88,10 +88,33 @@
       <item row="2" column="1">
        <widget class="QCheckBox" name="sslVerifyCheckBox">
         <property name="text">
-         <string>Проверять SSL сертификат</string>
+         <string>Verify the SSL certificate</string>
         </property>
         <property name="checked">
          <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="interfaceGroupBox">
+     <property name="title">
+      <string>Interface</string>
+     </property>
+     <layout class="QFormLayout" name="interfaceFormLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="languageLabel">
+        <property name="text">
+         <string>Language:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="languageCombo">
+        <property name="minimumWidth">
+         <number>200</number>
         </property>
        </widget>
       </item>
@@ -130,14 +153,14 @@
      <item>
       <widget class="QPushButton" name="resetButton">
        <property name="text">
-        <string>Сбросить</string>
+        <string>Reset</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="saveButton">
        <property name="text">
-        <string>Сохранить</string>
+        <string>Save</string>
        </property>
       </widget>
      </item>

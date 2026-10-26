@@ -1,5 +1,8 @@
 #include "MainWindow.h"
 
+#include <QEvent>
+#include <QTabWidget>
+
 #include "ImportGamesWidget.h"
 #include "ImportRolesWidget.h"
 #include "PlayersWidget.h"
@@ -20,18 +23,23 @@ namespace botc::ui
         connect(config::ConfigManager::instance(), &config::ConfigManager::serverSettingsChanged,
                 DBCache::instance(), &DBCache::refreshAll);
 
-        auto* tabs = new QTabWidget(this);
+        m_tabs = new QTabWidget(this);
 
-        auto importRolesWidget = new ImportRolesWidget(this);
-        tabs->addTab(importRolesWidget, tr("Roles import"));
+        auto* importRolesWidget = new ImportRolesWidget(this);
+        m_importRolesWidget = importRolesWidget;
+        m_tabs->addTab(importRolesWidget, tr("Roles import"));
 
         auto* importGamesWidget = new ImportGamesWidget(this);
-        tabs->addTab(importGamesWidget, tr("Games import"));
+        m_importGamesWidget = importGamesWidget;
+        m_tabs->addTab(importGamesWidget, tr("Games import"));
 
         auto* playersWidget = new PlayersWidget(this);
-        tabs->addTab(playersWidget, tr("Players"));
+        m_playersWidget = playersWidget;
+        m_tabs->addTab(playersWidget, tr("Players"));
 
-        tabs->addTab(new SettingsWidget(this), tr("Settings"));
+        auto* settingsWidget = new SettingsWidget(this);
+        m_settingsWidget = settingsWidget;
+        m_tabs->addTab(settingsWidget, tr("Settings"));
 
         connect(importRolesWidget, &ImportRolesWidget::onRolesImported,
                 DBCache::instance(), []
@@ -46,7 +54,7 @@ namespace botc::ui
                     DBCache::instance()->updatePlayers();
                 });
 
-        setCentralWidget(tabs);
+        setCentralWidget(m_tabs);
         setWindowTitle("BotC DBConnect");
         resize(800, 600);
     }
@@ -55,4 +63,22 @@ namespace botc::ui
     {
         delete ui;
     }
-} // botc::ui
+
+    void MainWindow::changeEvent(QEvent* event)
+    {
+        if (event->type() == QEvent::LanguageChange)
+            retranslate();
+
+        QMainWindow::changeEvent(event);
+    }
+
+    void MainWindow::retranslate()
+    {
+        ui->retranslateUi(this);
+
+        m_tabs->setTabText(m_tabs->indexOf(m_importRolesWidget), tr("Roles import"));
+        m_tabs->setTabText(m_tabs->indexOf(m_importGamesWidget), tr("Games import"));
+        m_tabs->setTabText(m_tabs->indexOf(m_playersWidget), tr("Players"));
+        m_tabs->setTabText(m_tabs->indexOf(m_settingsWidget), tr("Settings"));
+    }
+} // namespace botc::ui

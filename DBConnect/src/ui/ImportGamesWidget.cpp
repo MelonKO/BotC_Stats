@@ -1,5 +1,8 @@
 #include "ImportGamesWidget.h"
 
+#include <QColor>
+#include <QDir>
+#include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
@@ -10,27 +13,8 @@
 #include "OAIGamesImportStatusResponse.h"
 #include "ui_ImportGamesWidget.h"
 #include "../api/BotCApiClient.h"
-#include "../config/ConfigManager.h"
+#include "NetworkErrorMessages.h"
 #include "db_cache/DBCache.h"
-
-namespace
-{
-    QString networkErrorMessage(QNetworkReply::NetworkError err)
-    {
-        switch (err)
-        {
-        case QNetworkReply::ServiceUnavailableError:
-            return "Сервер отклонил запрос (503). Используйте пакетный импорт.";
-        case QNetworkReply::TimeoutError:
-            return "Превышено время ожидания ответа от сервера.";
-        case QNetworkReply::ConnectionRefusedError:
-        case QNetworkReply::HostNotFoundError:
-            return "Нет соединения с сервером. Проверьте настройки.";
-        default:
-            return QString("Сетевая ошибка (код %1).").arg(static_cast<int>(err));
-        }
-    }
-}
 
 namespace botc::ui
 {
@@ -46,7 +30,7 @@ namespace botc::ui
         connect(ui->clearButton, &QPushButton::clicked,
                 this, &ImportGamesWidget::onClearClicked);
 
-        // При клике на партию — показываем её игроков
+        // Selecting a game shows its players
         connect(ui->partiesTable, &QTableWidget::currentCellChanged,
                 this, [this](const int row, int, int, int) { onGameSelected(row); });
 
@@ -62,22 +46,35 @@ namespace botc::ui
         delete ui;
     }
 
+    void ImportGamesWidget::changeEvent(QEvent* event)
+    {
+        if (event->type() == QEvent::LanguageChange)
+            retranslate();
+
+        QWidget::changeEvent(event);
+    }
+
     void ImportGamesWidget::onBrowseClicked()
     {
         const QString path = QFileDialog::getOpenFileName(
-            this, "Выберите CSV файл",
+            this,
+            tr("Select a CSV file"),
             QDir::homePath(),
-            "CSV файлы (*.csv);;Все файлы (*)"
+            tr("CSV files (*.csv);;All files (*)")
         );
         if (path.isEmpty()) return;
 
         ui->filePathEdit->setText(path);
+        loadPreview(path);
+    }
+
+    void ImportGamesWidget::loadPreview(const QString& path)
+    {
         clearAll();
 
         m_lastResult = utils::games::GamesCsvParser::parse(path);
 
-        const auto* dbCache               = DBCache::instance();
-        const QStringList& availableRoles = dbCache->getRolesCache();
+        const QStringList& availableRoles = DBCache::instance()->getRolesCache();
 
         for (const utils::games::GameRecord& record : m_lastResult.records)
         {
@@ -85,12 +82,12 @@ namespace botc::ui
             {
                 if (!availableRoles.contains(player.roleStartName))
                 {
-                    m_lastResult.errors << QString("Role \"%1\" didn't contains in data base. You need to add it.")
+                    m_lastResult.errors << tr("Role \"%1\" is missing in the database. Add it before importing.")
                         .arg(player.roleStartName);
                 }
                 if (!availableRoles.contains(player.roleEndName))
                 {
-                    m_lastResult.errors << QString("Role \"%1\" didn't contains in data base. You need to add it.")
+                    m_lastResult.errors << tr("Role \"%1\" is missing in the database. Add it before importing.")
                         .arg(player.roleEndName);
                 }
             }
@@ -99,22 +96,38 @@ namespace botc::ui
         showPreview(m_lastResult);
     }
 
+    void ImportGamesWidget::retranslate()
+    {
+        ui->retranslateUi(this);
+
+        const QString path = ui->filePathEdit->text();
+        if (path.isEmpty())
+        {
+            ui->statusLabel->clear();
+            return;
+        }
+
+        // Re-parse so that the parser errors and the preview follow the new
+        // language as well.
+        loadPreview(path);
+    }
+
     void ImportGamesWidget::onImportClicked()
     {
         if (m_lastResult.records.isEmpty()) return;
         setImportEnabled(false);
 
-        m_importRolesProgressDial = new QProgressDialog("Импортирование ролей",
-                                                        "Отмена",
+        m_importGamesProgressDial = new QProgressDialog(tr("Importing games"),
+                                                        tr("Cancel"),
                                                         0,
                                                         static_cast<int>(m_lastResult.records.size()) + 1, this);
-        m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
-        m_importRolesProgressDial->show();
+        m_importGamesProgressDial->setWindowModality(Qt::WindowModal);
+        m_importGamesProgressDial->show();
 
         QList<OpenAPI::OAIGameImportRequest> gamesList;
         for (const utils::games::GameRecord& game : m_lastResult.records)
         {
-            m_importRolesProgressDial->setValue(m_importRolesProgressDial->value() + 1);
+            m_importGamesProgressDial->setValue(m_importGamesProgressDial->value() + 1);
             QVector<OpenAPI::OAIPlayerImportRequest> players;
             for (const utils::games::PlayerRecord& player : game.players)
             {
@@ -179,7 +192,7 @@ namespace botc::ui
 
         if (result.records.isEmpty())
         {
-            ui->statusLabel->setText("✘ Записи не загружены.");
+            ui->statusLabel->setText(tr("✘ No records loaded."));
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
             setImportEnabled(false);
             return;
@@ -193,7 +206,7 @@ namespace botc::ui
             {
                 if (!existingPlayers.contains(player.playerName))
                 {
-                    newPlayers << QString("Player \"%1\" will be created after import")
+                    newPlayers << tr("Player \"%1\" will be created after import")
                         .arg(player.playerName);
                 }
             }
@@ -205,17 +218,15 @@ namespace botc::ui
 
         populateGamesTable();
 
-        // Выбираем первую партию автоматически
+        // Select the first game automatically
         ui->partiesTable->selectRow(0);
         populatePlayersTable(0);
 
         const bool hasErrors = !result.errors.isEmpty();
         ui->statusLabel->setText(
             hasErrors
-                ? QString("⚠ Загружено партий: %1, обнаружены ошибки валидации")
-                .arg(result.records.size())
-                : QString("✔ Загружено партий: %1, ошибок нет")
-                .arg(result.records.size())
+                ? tr("⚠ Loaded %1 games, validation errors found").arg(result.records.size())
+                : tr("✔ Loaded %1 games, no errors").arg(result.records.size())
         );
         ui->statusLabel->setStyleSheet(statusStyle(!hasErrors));
         setImportEnabled(true);
@@ -224,7 +235,8 @@ namespace botc::ui
     void ImportGamesWidget::populateGamesTable()
     {
         const QStringList headers = {
-            "Дата", "Сценарий", "Место", "№", "Ведущий", "Победа", "Длит.(мин)", "Игроков"
+            tr("Date"), tr("Scenario"), tr("Location"), tr("No."),
+            tr("Storyteller"), tr("Winner"), tr("Duration (min)"), tr("Players")
         };
 
         auto& records = m_lastResult.records;
@@ -236,17 +248,17 @@ namespace botc::ui
 
         for (int row = 0; row < records.size(); ++row)
         {
-            const utils::games::GameRecord& p = records[row];
+            const utils::games::GameRecord& record = records[row];
 
             QStringList cells = {
-                p.gameDate.toString("dd.MM.yyyy"),
-                p.scenarioName,
-                p.location,
-                QString::number(p.gameNumber),
-                p.storytellerNames.join(", "),
-                p.alignmentWin,
-                p.duration.isValid() ? p.duration.toString("hh:mm:ss") : "—",
-                QString::number(p.players.size())
+                record.gameDate.toString("dd.MM.yyyy"),
+                record.scenarioName,
+                record.location,
+                QString::number(record.gameNumber),
+                record.storytellerNames.join(", "),
+                record.alignmentWin,
+                record.duration.isValid() ? record.duration.toString("hh:mm:ss") : "—",
+                QString::number(record.players.size())
             };
 
             for (int col = 0; col < cells.size(); ++col)
@@ -265,7 +277,8 @@ namespace botc::ui
     void ImportGamesWidget::populatePlayersTable(const int partyIndex)
     {
         const QStringList headers = {
-            "Место", "Игрок", "Роль (старт)", "Роль (финал)", "Фракция", "Жив"
+            tr("Seat"), tr("Player"), tr("Role (start)"), tr("Role (end)"),
+            tr("Alignment"), tr("Alive")
         };
 
         const utils::games::GameRecord& game_record = m_lastResult.records[partyIndex];
@@ -276,7 +289,7 @@ namespace botc::ui
         ui->playersTable->setHorizontalHeaderLabels(headers);
 
         ui->playersGroupBox->setTitle(
-            QString("Игроки — %1, %2 (%3)")
+            tr("Players — %1, %2 (%3)")
             .arg(game_record.scenarioName,
                  game_record.gameDate.toString("dd.MM.yyyy"),
                  game_record.storytellerNames.join(", "))
@@ -284,15 +297,15 @@ namespace botc::ui
 
         for (int row = 0; row < game_record.players.size(); ++row)
         {
-            const utils::games::PlayerRecord& pl = game_record.players[row];
+            const utils::games::PlayerRecord& player = game_record.players[row];
 
             QStringList cells = {
-                pl.seatNumber.has_value() ? QString::number(pl.seatNumber.value()) : "-",
-                pl.playerName,
-                pl.roleStartName,
-                pl.roleEndName,
-                pl.alignmentEnd,
-                pl.isAlive ? "✔" : "✘"
+                player.seatNumber.has_value() ? QString::number(player.seatNumber.value()) : "-",
+                player.playerName,
+                player.roleStartName,
+                player.roleEndName,
+                player.alignmentEnd,
+                player.isAlive ? "✔" : "✘"
             };
 
             for (int col = 0; col < cells.size(); ++col)
@@ -300,9 +313,9 @@ namespace botc::ui
                 auto* item = new QTableWidgetItem(cells[col]);
                 item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 
-                // Подсветка живых/мёртвых
+                // Highlight alive/dead players
                 if (col == 5)
-                    item->setForeground(pl.isAlive ? QColor(0, 150, 0) : QColor(200, 0, 0));
+                    item->setForeground(player.isAlive ? QColor(0, 150, 0) : QColor(200, 0, 0));
 
                 ui->playersTable->setItem(row, col, item);
             }
@@ -364,12 +377,12 @@ namespace botc::ui
                                                        QNetworkReply::NetworkError error_type,
                                                        const QString& error_str)
     {
-        m_importRolesProgressDial->setValue(m_importRolesProgressDial->maximum());
+        m_importGamesProgressDial->setValue(m_importGamesProgressDial->maximum());
 
         if (error_type != QNetworkReply::NoError)
         {
-            QMessageBox::warning(this, "Импорт партий", networkErrorMessage(error_type));
-            ui->statusLabel->setText("✘ Импорт завершён с ошибкой");
+            QMessageBox::warning(this, tr("Games import"), describeNetworkError(error_type));
+            ui->statusLabel->setText(tr("✘ Import finished with an error"));
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
             setImportEnabled(true);
             emit onGamesImported();
@@ -391,28 +404,28 @@ namespace botc::ui
             else
             {
                 successCount++;
-                message += QString("✔ Партия %1 импортирована, создано игроков: %2\n")
+                message += tr("✔ Game %1 imported, players created: %2\n")
                            .arg(result.getGameId())
                            .arg(result.getPlayersCreated());
             }
         }
 
-        QMessageBox::information(this, "Импорт партий", message.trimmed());
+        QMessageBox::information(this, tr("Games import"), message.trimmed());
 
         if (failedCount == 0)
         {
-            ui->statusLabel->setText(QString("✔ Импортировано партий: %1").arg(successCount));
+            ui->statusLabel->setText(tr("✔ Games imported: %1").arg(successCount));
             ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
         }
         else if (successCount == 0)
         {
-            ui->statusLabel->setText("✘ Импорт завершён с ошибками");
+            ui->statusLabel->setText(tr("✘ Import finished with errors"));
             ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
         }
         else
         {
             ui->statusLabel->setText(
-                QString("⚠ Импортировано: %1, ошибок: %2").arg(successCount).arg(failedCount)
+                tr("⚠ Imported: %1, errors: %2").arg(successCount).arg(failedCount)
             );
             ui->statusLabel->setStyleSheet("color: orange; font-weight: bold;");
         }
@@ -420,4 +433,4 @@ namespace botc::ui
         setImportEnabled(true);
         emit onGamesImported();
     }
-} // botc::ui
+} // namespace botc::ui

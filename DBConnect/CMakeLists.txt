@@ -10,11 +10,18 @@ endif ()
 
 # ─── Qt6 ──────────────────────────────────────────────────────────────────────
 # Find Qt6 packages via vcpkg toolchain (Core and Widgets are sufficient for basic GUI)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network LinguistTools)
 # Apply Qt6 default project settings (enables AUTOMOC, AUTOUIC, AUTORCC automatically)
-qt_standard_project_setup()
+# and declare the translation direction: English source strings, Russian catalog.
+qt_standard_project_setup(
+        I18N_SOURCE_LANGUAGE en
+        I18N_TRANSLATED_LANGUAGES ru
+)
 
 add_subdirectory(generated_api)
+# The generated API client is not part of the UI: keep its technical messages
+# out of the translator catalog.
+set_property(TARGET BotcStats PROPERTY QT_EXCLUDE_FROM_TRANSLATION ON)
 
 # ─── Sources ──────────────────────────────────────────────────────────────────
 set(SOURCES
@@ -25,6 +32,8 @@ set(SOURCES
         src/api/BotCNetworkAccessManager.h
         src/config/ConfigManager.cpp
         src/config/ConfigManager.h
+        src/i18n/LocalizationManager.cpp
+        src/i18n/LocalizationManager.h
         src/ui/MainWindow.cpp
         src/ui/MainWindow.h
         src/ui/MainWindow.ui
@@ -46,6 +55,8 @@ set(SOURCES
         src/ui/PlayersWidget.ui
         src/ui/PlayersTableModel.cpp
         src/ui/PlayersTableModel.h
+        src/ui/NetworkErrorMessages.cpp
+        src/ui/NetworkErrorMessages.h
         src/utils/csv/CsvParser.cpp
         src/utils/csv/CsvParser.h
         src/db_cache/DBCache.cpp
@@ -67,6 +78,18 @@ target_link_libraries(DBConnect PRIVATE
         Qt6::Widgets
         Qt6::Network
         BotcStats)
+
+# ─── Translations ─────────────────────────────────────────────────────────────
+# The .qm catalogs are compiled by lrelease and embedded into the executable
+# under the "/i18n" resource prefix, which LocalizationManager reads. Running
+# `update_translations` refreshes the .ts files with lupdate.
+set_source_files_properties(translations/dbconnect_ru.ts
+        PROPERTIES QT_I18N_TRANSLATED_LANGUAGES ru)
+qt_add_translations(TARGETS DBConnect
+        SOURCE_TARGETS DBConnect
+        TS_FILES translations/dbconnect_ru.ts
+        RESOURCE_PREFIX "/i18n"
+        MERGE_QT_TRANSLATIONS)
 
 # ─── Определяем путь к vcpkg_installed ────────────────────────────────────────
 # Priority: the explicitly set VCPKG_INSTALLED_DIR from the preset.

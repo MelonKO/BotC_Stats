@@ -1,5 +1,6 @@
 #include "CsvParser.h"
 
+#include <QCoreApplication>
 #include <QFile>
 
 namespace botc::utils
@@ -15,9 +16,8 @@ namespace botc::utils
         if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
             result.first = false;
-            result.second << QString("Can't open file: %1")
-                             .arg(m_file.fileName())
-                             .arg(m_file.errorString());
+            result.second << QCoreApplication::translate("CsvParser", "Can't open the file: %1 (%2)")
+                             .arg(m_file.fileName(), m_file.errorString());
             return result;
         }
 
@@ -27,7 +27,7 @@ namespace botc::utils
         if (m_textStream.atEnd())
         {
             result.first = false;
-            result.second << QString("File is empty");
+            result.second << QCoreApplication::translate("CsvParser", "The file is empty.");
             return result;
         }
 

@@ -32,8 +32,15 @@ namespace botc::config
         // does nothing when the values are unchanged.
         void setServerSettings(const ServerSettings& settings);
 
+        // Interface language preference: "auto" follows the operating system,
+        // anything else is a language code such as "en" or "ru". Kept out of
+        // ServerSettings: a language change must not reload server data.
+        [[nodiscard]] QString getUiLanguage() const;
+        void setUiLanguage(const QString& language);
+
     signals:
         void serverSettingsChanged(const botc::config::ServerSettings& settings);
+        void uiLanguageChanged(const QString& language);
 
     private:
         ConfigManager() : m_settings(m_iniPath, QSettings::IniFormat)

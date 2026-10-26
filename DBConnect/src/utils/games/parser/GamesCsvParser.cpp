@@ -1,5 +1,6 @@
 #include "GamesCsvParser.h"
 
+#include <QCoreApplication>
 #include <QMap>
 
 #include "../../csv/CsvParser.h"
@@ -52,7 +53,8 @@ namespace botc::utils::games
         for (const QString& c : required)
         {
             if (!headerToIndexMap.contains(c))
-                result.errors << QString("Отсутствует обязательная колонка: '%1'").arg(c);
+                result.errors << QCoreApplication::translate("GamesCsvParser",
+                                                             "A required column is missing: '%1'").arg(c);
         }
         if (!result.errors.isEmpty()) return result;
 
@@ -149,7 +151,7 @@ namespace botc::utils::games
                 else
                 {
                     result.errors <<
-                        QString("Line %1 (player %2): %3")
+                        QCoreApplication::translate("GamesCsvParser", "Line %1 (player %2): %3")
                         .arg(row.lineNumber)
                         .arg(playerIdx).
                         arg(parsedIsAlive.error());
@@ -183,21 +185,29 @@ namespace botc::utils::games
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Line %1: %2").arg(in_rowIndex).arg(msg);
+            errors << QCoreApplication::translate("GamesCsvParser", "Line %1: %2")
+                .arg(in_rowIndex).arg(msg);
         };
 
         if (!in_gameRecord.gameDate.isValid())
-            err("Incorrect format of game_date (expected YYYY-MM-DD).");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "Incorrect format of game_date (expected YYYY-MM-DD)."));
         if (in_gameRecord.scenarioName.isEmpty())
-            err("The \"scenario_name\" field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The \"scenario_name\" field cannot be empty."));
         if (in_gameRecord.location.isEmpty())
-            err("The \"location\" field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The \"location\" field cannot be empty."));
         if (in_gameRecord.gameNumber <= 0)
-            err("The 'game_number' field must be a positive number.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The 'game_number' field must be a positive number."));
         if (in_gameRecord.storytellerNames.isEmpty())
-            err("The 'storyteller_name' field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The 'storyteller_name' field cannot be empty."));
         if (!VALID_ALIGNMENT_WINS.contains(in_gameRecord.alignmentWin))
-            err(QString("Invalid value for the \"alignment_win\" field='%1'. Valid values: %2")
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "Invalid value for the \"alignment_win\" field '%1'. "
+                                            "Valid values: %2")
                 .arg(in_gameRecord.alignmentWin, VALID_ALIGNMENT_WINS.join(", ")));
 
         return errors;
@@ -209,17 +219,23 @@ namespace botc::utils::games
         QStringList errors;
         auto err = [&](const QString& msg)
         {
-            errors << QString("Line %1 (player %2): %3").arg(in_rowIndex).arg(in_playerIndex).arg(msg);
+            errors << QCoreApplication::translate("GamesCsvParser", "Line %1 (player %2): %3")
+                .arg(in_rowIndex).arg(in_playerIndex).arg(msg);
         };
 
         if (in_player.playerName.isEmpty())
-            err("The \"player_name\" field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The \"player_name\" field cannot be empty."));
         if (in_player.roleStartName.isEmpty())
-            err("The \"role_start_name\" field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The \"role_start_name\" field cannot be empty."));
         if (in_player.roleEndName.isEmpty())
-            err("The \"role_end_name\" field cannot be empty.");
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "The \"role_end_name\" field cannot be empty."));
         if (!VALID_ALIGNMENTS.contains(in_player.alignmentEnd))
-            err(QString("Invalid value for the \"alignment_end\" field='%1'. Valid values: %2")
+            err(QCoreApplication::translate("GamesCsvParser",
+                                            "Invalid value for the \"alignment_end\" field '%1'. "
+                                            "Valid values: %2")
                 .arg(in_player.alignmentEnd, VALID_ALIGNMENTS.join(", ")));
 
         return errors;
@@ -260,6 +276,8 @@ namespace botc::utils::games
         if (trueValues.contains(val)) return true;
         if (falseValues.contains(val)) return false;
 
-        return std::unexpected(QString("unexpected %1 value of \"is_alive\" field").arg(in_field));
+        return std::unexpected(QCoreApplication::translate("GamesCsvParser",
+                                                          "Unexpected value \"%1\" of the \"is_alive\" field.")
+            .arg(in_field));
     }
 }

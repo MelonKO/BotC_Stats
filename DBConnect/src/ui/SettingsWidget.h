@@ -36,6 +36,9 @@ namespace botc::ui
         explicit SettingsWidget(QWidget* parent = nullptr);
         ~SettingsWidget() override;
 
+    protected:
+        void changeEvent(QEvent* event) override;
+
     private slots:
         void onSaveClicked();
         void onResetClicked();
@@ -43,14 +46,18 @@ namespace botc::ui
         void onTestConnectionClicked();
         void onTestConnectionFinished(const OpenAPI::OAIHealthResponse& summary, QNetworkReply::NetworkError errorType,
                                       const QString& errorString);
+        void onLanguageChanged(int index);
 
     private:
         void loadSettings() const;
         void saveSettings() const;
         void createApiClient();
+        void retranslate();
+        void populateLanguageCombo();
+        void selectLanguage(const QString& preference);
 
     private:
         Ui::SettingsWidget* ui;
         QProgressDialog* testConnectionDialog = nullptr;
     };
-} // botc::ui
+} // namespace botc::ui

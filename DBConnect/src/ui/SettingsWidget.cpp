@@ -1,13 +1,17 @@
 #include "SettingsWidget.h"
 
+#include <QEvent>
+#include <QLocale>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QSignalBlocker>
 
 #include "OAISystemApi.h"
 #include "ui_SettingsWidget.h"
 #include "../api/BotCApiClient.h"
 #include "../api/BotCNetworkAccessManager.h"
 #include "../config/ConfigManager.h"
+#include "../i18n/LocalizationManager.h"
 
 namespace botc::ui
 {
@@ -15,6 +19,10 @@ namespace botc::ui
         QWidget(parent), ui(new Ui::SettingsWidget)
     {
         ui->setupUi(this);
+
+        populateLanguageCombo();
+        connect(ui->languageCombo, qOverload<int>(&QComboBox::currentIndexChanged),
+                this, &SettingsWidget::onLanguageChanged);
 
         connect(ui->saveButton, &QPushButton::clicked,
                 this, &SettingsWidget::onSaveClicked);
@@ -26,6 +34,7 @@ namespace botc::ui
                 this, &SettingsWidget::onTestConnectionClicked);
 
         loadSettings();
+        selectLanguage(config::ConfigManager::instance()->getUiLanguage());
     }
 
     SettingsWidget::~SettingsWidget()
@@ -33,29 +42,35 @@ namespace botc::ui
         delete ui;
     }
 
+    void SettingsWidget::changeEvent(QEvent* event)
+    {
+        if (event->type() == QEvent::LanguageChange)
+            retranslate();
+
+        QWidget::changeEvent(event);
+    }
+
     void SettingsWidget::onSaveClicked()
     {
         if (ui->apiUrlEdit->text().trimmed().isEmpty())
         {
-            QMessageBox::warning(this, "Ошибка", "Поле API URL не может быть пустым.");
+            QMessageBox::warning(this, tr("Error"), tr("The API URL field cannot be empty."));
             ui->apiUrlEdit->setFocus();
             return;
         }
 
         saveSettings();
 
-        // Показываем подтверждение прямо на вкладке
-        ui->statusLabel->setText("✔ Настройки сохранены");
+        // Confirm right on the tab
+        ui->statusLabel->setText(tr("✔ Settings saved"));
         ui->statusLabel->setStyleSheet("color: green;");
-
-        // emit settingsSaved(); // уведомляем другие части приложения
     }
 
     void SettingsWidget::onResetClicked()
     {
         const auto btn = QMessageBox::question(
-            this, "Сброс настроек",
-            "Сбросить все настройки к значениям по умолчанию?"
+            this, tr("Reset settings"),
+            tr("Reset all settings to their default values?")
         );
 
         if (btn == QMessageBox::Yes)
@@ -64,7 +79,14 @@ namespace botc::ui
             ui->apiKeyEdit->clear();
             ui->sslVerifyCheckBox->setChecked(true);
 
-            ui->statusLabel->setText("↺ Настройки сброшены");
+            // The language follows the system again; selecting it stores the
+            // value immediately, like any other change of the selector.
+            const int systemIndex = ui->languageCombo->findData(
+                QString::fromLatin1(i18n::LocalizationManager::kSystemLanguage));
+            if (systemIndex >= 0)
+                ui->languageCombo->setCurrentIndex(systemIndex);
+
+            ui->statusLabel->setText(tr("↺ Settings reset"));
             ui->statusLabel->setStyleSheet("color: orange;");
         }
     }
@@ -74,12 +96,12 @@ namespace botc::ui
         ui->apiKeyEdit->setEchoMode(
             checked ? QLineEdit::Normal : QLineEdit::Password
         );
-        ui->toggleKeyButton->setText(checked ? "Скрыть" : "Показать");
+        ui->toggleKeyButton->setText(checked ? tr("Hide") : tr("Show"));
     }
 
     void SettingsWidget::onTestConnectionClicked()
     {
-        testConnectionDialog = new QProgressDialog("Проверка подключения...", "", 0, 0, this);
+        testConnectionDialog = new QProgressDialog(tr("Checking the connection..."), "", 0, 0, this);
         testConnectionDialog->setWindowModality(Qt::WindowModal);
         testConnectionDialog->setCancelButton(nullptr);
         testConnectionDialog->show();
@@ -123,18 +145,28 @@ namespace botc::ui
         QString messageText;
         if (errorType == QNetworkReply::NoError)
         {
-            messageText = "Подключение успешно установлено.";
+            messageText = tr("Connection established successfully.");
         }
         else
         {
-            messageText = "Ошибка подключения: \n" + summary.getStatus();
+            messageText = tr("Connection failed: \n%1").arg(summary.getStatus());
         }
 
         QMessageBox::information(
             this,
-            "Проверка подключения",
+            tr("Connection check"),
             messageText
         );
+    }
+
+    void SettingsWidget::onLanguageChanged(const int index)
+    {
+        const QString preference = ui->languageCombo->itemData(index).toString();
+        if (preference.isEmpty())
+            return;
+
+        // Stored immediately: the language must change now, not after "Save".
+        config::ConfigManager::instance()->setUiLanguage(preference);
     }
 
     void SettingsWidget::loadSettings() const
@@ -156,4 +188,42 @@ namespace botc::ui
 
         config::ConfigManager::instance()->setServerSettings(settings);
     }
-} // botc::ui
+
+    void SettingsWidget::retranslate()
+    {
+        ui->retranslateUi(this);
+
+        populateLanguageCombo();
+        selectLanguage(config::ConfigManager::instance()->getUiLanguage());
+
+        ui->toggleKeyButton->setText(ui->toggleKeyButton->isChecked() ? tr("Hide") : tr("Show"));
+        ui->statusLabel->clear();
+    }
+
+    void SettingsWidget::populateLanguageCombo()
+    {
+        const QSignalBlocker blocker(ui->languageCombo);
+
+        ui->languageCombo->clear();
+        ui->languageCombo->addItem(
+            tr("System (%1)").arg(QLocale::system().nativeLanguageName()),
+            QString::fromLatin1(i18n::LocalizationManager::kSystemLanguage));
+
+        for (const QString& languageCode : i18n::LocalizationManager::instance()->availableLanguages())
+        {
+            ui->languageCombo->addItem(
+                i18n::LocalizationManager::displayName(languageCode),
+                languageCode);
+        }
+    }
+
+    void SettingsWidget::selectLanguage(const QString& preference)
+    {
+        int index = ui->languageCombo->findData(preference);
+        if (index < 0)
+            index = 0;
+
+        const QSignalBlocker blocker(ui->languageCombo);
+        ui->languageCombo->setCurrentIndex(index);
+    }
+} // namespace botc::ui

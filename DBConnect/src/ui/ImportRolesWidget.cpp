@@ -1,32 +1,23 @@
 #include "ImportRolesWidget.h"
 
+#include <QColor>
+#include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QSet>
+#include <QSignalBlocker>
 
 #include "OAIRolesImportResponse.h"
 #include "OAIRolesImportRequest.h"
 #include "ui_ImportRolesWidget.h"
 #include "../api/BotCApiClient.h"
-#include "../config/ConfigManager.h"
+#include "NetworkErrorMessages.h"
 
 namespace
 {
-    QString networkErrorMessage(QNetworkReply::NetworkError err)
-    {
-        switch (err)
-        {
-        case QNetworkReply::ServiceUnavailableError:
-            return "Сервер отклонил запрос (503). Попробуйте позже.";
-        case QNetworkReply::TimeoutError:
-            return "Превышено время ожидания ответа от сервера.";
-        case QNetworkReply::ConnectionRefusedError:
-        case QNetworkReply::HostNotFoundError:
-            return "Нет соединения с сервером. Проверьте настройки.";
-        default:
-            return QString("Сетевая ошибка (код %1).").arg(static_cast<int>(err));
-        }
-    }
+    const QString kErrorStyle = "color: red;";
+    const QString kErrorBoldStyle = "color: red; font-weight: bold;";
 }
 
 namespace botc::ui
@@ -42,7 +33,7 @@ namespace botc::ui
                 this, &ImportRolesWidget::onImportClicked);
         connect(ui->clearButton, &QPushButton::clicked,
                 this, &ImportRolesWidget::onClearClicked);
-        connect(ui->languageCombo, &QComboBox::currentTextChanged,
+        connect(ui->languageCombo, qOverload<int>(&QComboBox::currentIndexChanged),
                 this, &ImportRolesWidget::onLanguageChanged);
 
         setImportEnabled(false);
@@ -54,13 +45,21 @@ namespace botc::ui
         delete ui;
     }
 
+    void ImportRolesWidget::changeEvent(QEvent* event)
+    {
+        if (event->type() == QEvent::LanguageChange)
+            retranslate();
+
+        QWidget::changeEvent(event);
+    }
+
     void ImportRolesWidget::onBrowseClicked()
     {
         const QString path = QFileDialog::getOpenFileName(
             this,
-            "Выберите CSV файл",
+            tr("Select a CSV file"),
             QDir::homePath(),
-            "CSV файлы (*.csv);;Все файлы (*)"
+            tr("CSV files (*.csv);;All files (*)")
         );
         if (path.isEmpty()) return;
 
@@ -76,8 +75,8 @@ namespace botc::ui
     void ImportRolesWidget::onImportClicked()
     {
         if (m_lastResult.records.isEmpty()) return;
-        m_importRolesProgressDial = new QProgressDialog("Импортирование ролей",
-                                                        "Отмена",
+        m_importRolesProgressDial = new QProgressDialog(tr("Importing roles"),
+                                                        tr("Cancel"),
                                                         0,
                                                         static_cast<int>(m_lastResult.records.size()) + 1, this);
         m_importRolesProgressDial->setWindowModality(Qt::WindowModal);
@@ -90,8 +89,8 @@ namespace botc::ui
             if (m_importRolesProgressDial->wasCanceled())
             {
                 QMessageBox::information(this,
-                                         "Импортирование ролей",
-                                         "Импортирование ролей было отменено");
+                                         tr("Importing roles"),
+                                         tr("Role import was cancelled."));
                 return;
             }
 
@@ -123,11 +122,11 @@ namespace botc::ui
         setImportEnabled(false);
     }
 
-    void ImportRolesWidget::onLanguageChanged(const QString& lang)
+    void ImportRolesWidget::onLanguageChanged(const int index)
     {
-        m_currentLanguage = lang;
+        m_currentLanguage = ui->languageCombo->itemData(index).toString();
         if (!m_lastResult.records.isEmpty())
-            populateTable(lang);
+            populateTable(m_currentLanguage);
     }
 
     void ImportRolesWidget::onClearClicked()
@@ -146,12 +145,12 @@ namespace botc::ui
 
         if (error_type == QNetworkReply::NoError && apiErrors.isEmpty())
         {
-            QString message = QString("Создано ролей: %1\nОбновлено ролей: %2")
-                              .arg(summary.getRolesCreated())
-                              .arg(summary.getRolesUpdated());
-            QMessageBox::information(this, "Импорт ролей", message);
+            const QString message = tr("Roles created: %1\nRoles updated: %2")
+                                    .arg(summary.getRolesCreated())
+                                    .arg(summary.getRolesUpdated());
+            QMessageBox::information(this, tr("Roles import"), message);
             ui->statusLabel->setText(
-                QString("✔ Создано: %1, обновлено: %2")
+                tr("✔ Created: %1, updated: %2")
                 .arg(summary.getRolesCreated())
                 .arg(summary.getRolesUpdated())
             );
@@ -163,11 +162,11 @@ namespace botc::ui
             if (!apiErrors.isEmpty())
                 message = apiErrors.join("\n");
             else
-                message = networkErrorMessage(error_type);
+                message = describeNetworkError(error_type);
 
-            QMessageBox::warning(this, "Ошибка импорта ролей", message);
-            ui->statusLabel->setText("✘ Импорт завершён с ошибкой");
-            ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
+            QMessageBox::warning(this, tr("Roles import failed"), message);
+            ui->statusLabel->setText(tr("✘ Import finished with an error"));
+            ui->statusLabel->setStyleSheet(kErrorBoldStyle);
         }
 
         setImportEnabled(true);
@@ -176,50 +175,55 @@ namespace botc::ui
 
     void ImportRolesWidget::showPreview(const utils::ParseResult& result)
     {
-        // Заполняем комбобокс языков
-        ui->languageCombo->clear();
-        ui->languageCombo->addItem("(оригинал)");
-        for (const QString& lang : result.languages)
-            ui->languageCombo->addItem(lang);
+        const QString previousLanguage = m_currentLanguage;
+        populateLanguageCombo(result.languages);
 
         if (!result.errors.isEmpty())
             showErrors(result.errors);
+        else
+            ui->errorsGroup->setVisible(false);
 
-        if (result.records.isEmpty())
+        int languageIndex = ui->languageCombo->findData(previousLanguage);
+        if (languageIndex < 0)
+            languageIndex = 0;
+
         {
-            ui->statusLabel->setText("✘ Записи не загружены.");
-            ui->statusLabel->setStyleSheet("color: red;");
-            setImportEnabled(false);
-            return;
+            const QSignalBlocker blocker(ui->languageCombo);
+            ui->languageCombo->setCurrentIndex(languageIndex);
         }
+        m_currentLanguage = ui->languageCombo->itemData(languageIndex).toString();
 
-        populateTable("(оригинал)");
+        // Populate even when there are no records: this clears the previous
+        // preview and keeps the column headers consistent after a retranslation.
+        populateTable(m_currentLanguage);
 
-        const bool hasErrors = !result.errors.isEmpty();
-        ui->statusLabel->setText(
-            hasErrors
-                ? QString("⚠ Загружено %1 записей, обнаружены ошибки валидации")
-                .arg(result.records.size())
-                : QString("✔ Загружено %1 записей, ошибок нет")
-                .arg(result.records.size())
-        );
-        ui->statusLabel->setStyleSheet(statusStyle(!hasErrors));
-
-        // Импорт разрешаем даже при ошибках — пусть пользователь решает
-        setImportEnabled(true);
+        updatePreviewStatus();
     }
 
-    void ImportRolesWidget::populateTable(const QString& language)
+    void ImportRolesWidget::populateLanguageCombo(const QStringList& languages)
     {
-        const bool isOriginal = (language == "(оригинал)");
+        const QSignalBlocker blocker(ui->languageCombo);
+
+        ui->languageCombo->clear();
+        // The visible label is translated, the item data stays an empty string:
+        // it is the language key of the original values and never changes.
+        ui->languageCombo->addItem(tr("(original)"), QString());
+        for (const QString& language : languages)
+            ui->languageCombo->addItem(language, language);
+    }
+
+    void ImportRolesWidget::populateTable(const QString& languageCode)
+    {
+        const bool isOriginal = languageCode.isEmpty();
         const auto& records   = m_lastResult.records;
 
-        // Заголовки таблицы
+        // Column identifiers mirror the CSV header and stay untranslated: they
+        // are data field names, not interface labels.
         const QStringList headers = isOriginal
                                         ? QStringList{"name", "alignment", "role_type", "description"}
                                         : QStringList{
                                             "name", "alignment", "role_type", "description",
-                                            language + "_name", language + "_description"
+                                            languageCode + "_name", languageCode + "_description"
                                         };
 
         ui->previewTable->clear();
@@ -227,35 +231,32 @@ namespace botc::ui
         ui->previewTable->setRowCount(records.size());
         ui->previewTable->setHorizontalHeaderLabels(headers);
 
-        // Ошибочные строки — для подсветки
+        // Rows with validation errors, taken from the parser instead of the
+        // message text: the text is localized and must not be parsed.
         QSet<int> errorRows;
-        for (const QString& err : m_lastResult.errors)
+        for (const int lineNumber : m_lastResult.errorLines)
         {
-            // Извлекаем номер строки из "Строка N: ..."
-            static const QRegularExpression rx(R"(Строка (\d+):)");
-            auto m = rx.match(err);
-            if (m.hasMatch())
-                errorRows.insert(m.captured(1).toInt() - 2); // -2: заголовок + 0-based
+            if (lineNumber >= 2)
+                errorRows.insert(lineNumber - 2); // -2: header line + 0-based row
         }
 
         for (int row = 0; row < records.size(); ++row)
         {
-            const utils::RoleRecord& r = records[row];
-            const bool hasError        = errorRows.contains(row);
+            const utils::RoleRecord& record = records[row];
+            const bool hasError             = errorRows.contains(row);
 
-            QStringList cells = {r.name, r.alignment, r.roleType, r.description};
+            QStringList cells = {record.name, record.alignment, record.roleType, record.description};
             if (!isOriginal)
             {
-                cells << r.translations.value(language).first;
-                cells << r.translations.value(language).second;
+                cells << record.translations.value(languageCode).first;
+                cells << record.translations.value(languageCode).second;
             }
 
             for (int col = 0; col < cells.size(); ++col)
             {
                 auto* item = new QTableWidgetItem(cells[col]);
-                item->setFlags(item->flags() & ~Qt::ItemIsEditable); // только чтение
+                item->setFlags(item->flags() & ~Qt::ItemIsEditable); // read-only preview
 
-                // Подсвечиваем ошибочные строки
                 if (hasError)
                     item->setBackground(QColor(255, 220, 220));
 
@@ -264,9 +265,48 @@ namespace botc::ui
         }
 
         ui->previewTable->horizontalHeader()->setSectionResizeMode(
-            3, QHeaderView::Stretch // description растягивается
+            3, QHeaderView::Stretch // the description column takes the free space
         );
         ui->previewTable->resizeColumnsToContents();
+    }
+
+    void ImportRolesWidget::updatePreviewStatus()
+    {
+        if (m_lastResult.records.isEmpty())
+        {
+            ui->statusLabel->setText(tr("✘ No records loaded."));
+            ui->statusLabel->setStyleSheet(kErrorStyle);
+            setImportEnabled(false);
+            return;
+        }
+
+        const bool hasErrors = !m_lastResult.errors.isEmpty();
+        ui->statusLabel->setText(
+            hasErrors
+                ? tr("⚠ Loaded %1 records, validation errors found").arg(m_lastResult.records.size())
+                : tr("✔ Loaded %1 records, no errors").arg(m_lastResult.records.size())
+        );
+        ui->statusLabel->setStyleSheet(statusStyle(!hasErrors));
+
+        // Import is enabled even with errors: the user decides whether to proceed.
+        setImportEnabled(true);
+    }
+
+    void ImportRolesWidget::retranslate()
+    {
+        ui->retranslateUi(this);
+
+        const QString path = ui->filePathEdit->text();
+        if (path.isEmpty())
+        {
+            ui->statusLabel->clear();
+            return;
+        }
+
+        // Re-parse so that parser errors and the preview status follow the new
+        // language as well; the file is small and already on disk.
+        m_lastResult = utils::RolesCsvParser::parse(path);
+        showPreview(m_lastResult);
     }
 
     void ImportRolesWidget::showErrors(const QStringList& errors) const
@@ -281,13 +321,14 @@ namespace botc::ui
     void ImportRolesWidget::clearAll()
     {
         m_lastResult = {};
+        m_currentLanguage.clear();
         ui->previewTable->clear();
         ui->previewTable->setRowCount(0);
         ui->previewTable->setColumnCount(0);
         ui->errorsWidget->clear();
         ui->errorsGroup->setVisible(false);
         ui->statusLabel->clear();
-        ui->languageCombo->clear();
+        populateLanguageCombo({});
         setImportEnabled(false);
     }
 
@@ -302,4 +343,4 @@ namespace botc::ui
                    ? "color: green; font-weight: bold;"
                    : "color: orange; font-weight: bold;";
     }
-} // botc::ui
+} // namespace botc::ui

@@ -4,6 +4,8 @@
 
 #include "../api/BotCApiClient.h"
 
+class QTabWidget;
+
 namespace botc::utils
 {
     struct RoleRecord;
@@ -28,7 +30,18 @@ namespace botc::ui
         explicit MainWindow(QWidget* parent = nullptr);
         ~MainWindow() override;
 
+    protected:
+        void changeEvent(QEvent* event) override;
+
+    private:
+        void retranslate();
+
     private:
         Ui::MainWindow* ui;
+        QTabWidget* m_tabs = nullptr;
+        QWidget* m_importRolesWidget = nullptr;
+        QWidget* m_importGamesWidget = nullptr;
+        QWidget* m_playersWidget = nullptr;
+        QWidget* m_settingsWidget = nullptr;
     };
-} // botc::ui
+} // namespace botc::ui

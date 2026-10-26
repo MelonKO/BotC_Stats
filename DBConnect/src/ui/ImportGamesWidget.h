@@ -46,6 +46,9 @@ namespace botc::ui
     signals:
         void onGamesImported();
 
+    protected:
+        void changeEvent(QEvent* event) override;
+
     private slots:
         void onBrowseClicked();
         void onImportClicked();
@@ -53,6 +56,8 @@ namespace botc::ui
         void onGameSelected(int row);
 
     private:
+        void loadPreview(const QString& path);
+        void retranslate();
         void showPreview(const utils::games::GamesParseResult& result);
         void populateGamesTable();
         void populatePlayersTable(int partyIndex);
@@ -69,6 +74,6 @@ namespace botc::ui
     private:
         Ui::ImportGamesWidget* ui;
         utils::games::GamesParseResult m_lastResult;
-        QProgressDialog* m_importRolesProgressDial = nullptr;
+        QProgressDialog* m_importGamesProgressDial = nullptr;
     };
-} // botc::ui
+} // namespace botc::ui

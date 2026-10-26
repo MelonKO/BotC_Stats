@@ -54,7 +54,12 @@ namespace botc::ui
     {
         if (role != Qt::DisplayRole || orientation != Qt::Horizontal || section != Name) return {};
 
-        return QString("Имя");
+        return tr("Name");
+    }
+
+    void PlayersTableModel::retranslate()
+    {
+        emit headerDataChanged(Qt::Horizontal, Name, ColumnCount - 1);
     }
 
     Qt::ItemFlags PlayersTableModel::flags(const QModelIndex& index) const
@@ -75,12 +80,12 @@ namespace botc::ui
         const QString newName = value.toString().trimmed();
         if (newName.isEmpty())
         {
-            emit nameChangeRejected("Имя не может быть пустым.");
+            emit nameChangeRejected(tr("The name cannot be empty."));
             return false;
         }
         if (newName.size() > kMaxNameLength)
         {
-            emit nameChangeRejected(QString("Имя не может быть длиннее %1 символов.").arg(kMaxNameLength));
+            emit nameChangeRejected(tr("The name cannot be longer than %1 characters.").arg(kMaxNameLength));
             return false;
         }
         if (newName == m_players.at(index.row()).name) return false;

@@ -296,6 +296,15 @@ player future CSV imports resolve to, because `process_games_import()` matches
 players by name (`01-schema.sql:277`, `:299`, `:323`). A CSV that still carries
 the old name creates a new player. Previous names are not stored anywhere.
 
+### C10. Roles list request errors were hidden — `fixed`
+
+Before the Roles tab, a failed roles list request was dropped by `DBCache`, so
+the UI received only an empty name list and an unreachable API looked like an
+empty role dictionary. The cache now stores full role records and the last error,
+which the Roles tab displays; roles import validation still uses the name list
+derived from those records (`DBConnect/src/db_cache/DBCache.{h,cpp}`,
+`DBConnect/src/ui/RolesWidget.cpp`).
+
 ## Security
 
 ### S1. API key and server IP are still in git history — `open`

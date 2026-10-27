@@ -313,7 +313,15 @@ curl -k -X POST "https://<SERVER_IP>/api/roles/import" \
 
 ### `GET /api/roles` — Список доступных ролей
 
-Возвращает все роли, которые можно использовать при импорте. Необязательный параметр `lang` (например, `ru`) добавляет перевод в поле `translation`; если перевода нет, поле будет `null`. Требуется API-ключ.
+Возвращает все роли, которые можно использовать при импорте. Необязательный параметр
+`lang` (например, `ru`) добавляет локализованные названия типа и стороны роли, а
+также перевод названия и описания роли. Без `lang` все четыре локализованных
+поля (`role_type_translation`, `alignment_translation`, `translation.name` и
+`translation.description`) равны `null`. Если для указанного языка перевода нет
+или язык неизвестен, эти поля также равны `null`; запрос пока не проверяет язык
+по таблице `languages`. Названия типов и сторон локализуются по данным таблиц
+`role_type_translations` и `alignment_translations`, а не на клиенте. Требуется
+API-ключ.
 
 **Заголовки:**
 ```
@@ -324,13 +332,19 @@ X-API-Key: <ваш_ключ>
 ```json
 {
     "roles": [
-        {"name": "Gambler", "alignment": "good", "role_type": "Townsfolk"},
-        {"name": "Amnesiac", "alignment": "good", "role_type": "Townsfolk"},
-        {"name": "Chambermaid", "alignment": "good", "role_type": "Townsfolk"},
-        {"name": "Librarian", "alignment": "good", "role_type": "Townsfolk"},
-        {"name": "Investigator", "alignment": "good", "role_type": "Townsfolk"},
-        {"name": "Pukka", "alignment": "evil", "role_type": "Demon"},
-        {"name": "Slayer", "alignment": "evil", "role_type": "Minion"}
+        {
+            "id": "a09f3ff7-0f02-485a-b0e1-87388b27face",
+            "name": "Chambermaid",
+            "alignment": "good",
+            "role_type": "Outsider",
+            "description": "Simple, but not harmless",
+            "role_type_translation": "Изгой",
+            "alignment_translation": "добро",
+            "translation": {
+                "name": "Дамочка",
+                "description": "Служанка, которая следит за гостями"
+            }
+        }
     ]
 }
 ```

@@ -3,7 +3,7 @@
 Документ описывает фичу «просмотр списка ролей на сервере» по аналогии с вкладкой
 «Players» и заранее очерчивает второй этап — редактирование ролей.
 
-Статус: план, реализация не начата.
+Статус: этап 1 реализован (вкладка **Roles**), этап 2 — план.
 Ветка этапа 1: `feature/roles-list-view` (ответвлена от `develop`).
 Ветка этапа 2: `feature/roles-edit` (ответвляется от `develop` после мержа этапа 1).
 
@@ -146,9 +146,11 @@
 - После импорта ролей и после сохранения настроек сервера список обновляется сам.
 - Переключение языка интерфейса EN/RU перерисовывает заголовки, статусы и названия
   вкладок без перезапуска.
-- `python scripts/project.py generate` выполнен в том же коммите, что и правка
-  спеки; `python scripts/project.py verify` зелёный (`generate --check` плюс `pytest`
-  с новыми проверками перевода типа/стороны).
+- `python scripts/project.py generate` выполнен после правки спеки:
+  `core/api/app/models.py` версионируется и входит в коммит, а
+  `DBConnect/generated_api/` не хранится в git (`DBConnect/.gitignore:5`) и
+  пересобирается той же командой; `python scripts/project.py verify` зелёный
+  (`generate --check` плюс `pytest` с новыми проверками перевода типа/стороны).
 - `python DBConnect/scripts/build.py` собирает Debug без новых предупреждений.
 - Проверено вручную против локального стека (`core/docker-compose up -d`,
   `SSL_VERIFY = false` в локальном `DBConnect/config.ini`).
@@ -187,8 +189,9 @@
 показывается в диалоге и описано в `core/docs/API-ACCESS.md`.
 
 После изменения спеки — только `python scripts/project.py generate`
-(`core/api/app/models.py` и `DBConnect/generated_api` автогенерируются, руками не
-правятся); в клиенте появится `OAIRoleUpdateRequest` и `OAIRolesApi::updateRole`.
+(`core/api/app/models.py` автогенерируется и версионируется, `DBConnect/generated_api/`
+автогенерируется и в git не попадает — `DBConnect/.gitignore:5`; руками не правятся).
+В клиенте появится `OAIRoleUpdateRequest` и `OAIRolesApi::updateRole`.
 
 ### 5.2 Сервер
 

@@ -28,7 +28,7 @@
 | Компонент | Описание | Подробности |
 |-----------|----------|-------------|
 | **[core/](core/)** | Docker-стек: PostgreSQL 16, FastAPI, Nginx и Metabase. REST API, база данных и аналитические панели. | [core/README.md](core/README.md) |
-| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI: импорт партий и ролей из CSV, просмотр списка игроков и переименование игрока. Новые игроки создаются при импорте партий. Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
+| **[DBConnect/](DBConnect/)** | Qt6 desktop GUI: импорт партий и ролей из CSV, просмотр списка ролей и игроков, переименование игрока. Новые игроки создаются при импорте партий. Использует автогенерированный OpenAPI-клиент. | [DBConnect/](DBConnect/) |
 
 ## Quick Start
 
@@ -50,7 +50,9 @@ bash scripts/create-api-key.sh create "Your Name" "contact"
 
 ### 3. Импорт данных (DBConnect)
 
-Открыть приложение DBConnect. На вкладке **Settings** указать API URL и API key, сохранить. На вкладках **Import Games** / **Import Roles** выбрать CSV-файл и нажать **Import**.
+Открыть приложение DBConnect. На вкладке **Settings** указать API URL и API key,
+сохранить. Список ролей доступен на вкладке **Roles**. Для импорта выбрать
+CSV-файл на вкладке **Games import** или **Roles import** и нажать **Import**.
 
 Приложение читает и сохраняет `config.ini` относительно текущего рабочего каталога; не добавляйте в Git файл с реальным API-ключом. При каждой конфигурации CMake в каталог сборки копируется `DBConnect/config.ini`, если он существует, иначе — `DBConnect/config.ini.example`. Поэтому изменения только в копии каталога сборки могут быть перезаписаны при следующей конфигурации; для локальных настроек задайте исходный `DBConnect/config.ini` и запускайте приложение из каталога с нужным `config.ini`.
 
@@ -150,7 +152,7 @@ BotC/
 │   └── docs/                   # SSH and API access documentation
 ├── openapi/                    # Источник контракта API и генерация клиентов
 ├── scripts/                    # Единая точка входа (project.py)
-├── DBConnect/                  # Qt6 GUI importer (games, roles, players)
+├── DBConnect/                  # Qt6 GUI importer (games, role list/import, players)
 │   ├── src/
 │   ├── generated_api/          # Auto-generated OpenAPI C++ client
 │   ├── translations/           # Каталоги переводов интерфейса (*.ts)

@@ -468,26 +468,32 @@ Roles updated: %2</source>
 <context>
     <name>botc::ui::MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="+30"/>
-        <location line="+49"/>
+        <location filename="../src/ui/MainWindow.cpp" line="+31"/>
+        <location line="+53"/>
         <source>Roles import</source>
         <translation>Импорт ролей</translation>
     </message>
     <message>
-        <location line="-45"/>
-        <location line="+46"/>
+        <location line="-49"/>
+        <location line="+50"/>
         <source>Games import</source>
         <translation>Импорт партий</translation>
     </message>
     <message>
-        <location line="-42"/>
-        <location line="+43"/>
+        <location line="-46"/>
+        <location line="+47"/>
         <source>Players</source>
         <translation>Игроки</translation>
     </message>
     <message>
-        <location line="-39"/>
-        <location line="+40"/>
+        <location line="-43"/>
+        <location line="+44"/>
+        <source>Roles</source>
+        <translation>Роли</translation>
+    </message>
+    <message>
+        <location line="-40"/>
+        <location line="+41"/>
         <source>Settings</source>
         <translation>Настройки</translation>
     </message>
@@ -590,6 +596,77 @@ Game history stays with this player, but CSV files with the old name will create
         <location line="+5"/>
         <source>✔ Players list loaded.</source>
         <translation>✔ Список игроков загружен.</translation>
+    </message>
+</context>
+<context>
+    <name>botc::ui::RolesTableModel</name>
+    <message>
+        <location filename="../src/ui/RolesTableModel.cpp" line="+71"/>
+        <source>Role</source>
+        <translation>Роль</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Name</source>
+        <translation>Название (EN)</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Type</source>
+        <translation>Тип</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Side</source>
+        <translation>Сторона</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Description</source>
+        <translation>Описание</translation>
+    </message>
+</context>
+<context>
+    <name>botc::ui::RolesWidget</name>
+    <message>
+        <location filename="../src/ui/RolesWidget.ui" line="+19"/>
+        <source>Roles</source>
+        <translation>Роли</translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Search by name, type or side...</source>
+        <translation>Поиск по названию, типу или стороне...</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Refresh</source>
+        <translation>Обновить</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/RolesWidget.cpp" line="+136"/>
+        <source>Roles: %1, shown: %2</source>
+        <translation>Ролей: %1, показано: %2</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Loading roles...</source>
+        <translation>Загрузка списка ролей...</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>✘ Failed to load roles. %1</source>
+        <translation>✘ Не удалось загрузить роли. %1</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>No roles in the database.</source>
+        <translation>Ролей в базе нет.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>✔ Roles list loaded.</source>
+        <translation>✔ Список ролей загружен.</translation>
     </message>
 </context>
 <context>

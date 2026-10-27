@@ -58,6 +58,11 @@ set(SOURCES
         src/ui/PlayersWidget.ui
         src/ui/PlayersTableModel.cpp
         src/ui/PlayersTableModel.h
+        src/ui/RolesWidget.cpp
+        src/ui/RolesWidget.h
+        src/ui/RolesWidget.ui
+        src/ui/RolesTableModel.cpp
+        src/ui/RolesTableModel.h
         src/ui/NetworkErrorMessages.cpp
         src/ui/NetworkErrorMessages.h
         src/utils/csv/CsvParser.cpp

@@ -83,6 +83,9 @@ namespace botc
     void DBCache::requestRoles()
     {
         m_rolesRequestInFlight = true;
+        m_rolesError.clear();
+        m_rolesErrorType = QNetworkReply::NoError;
+        emit rolesRequestStarted();
         api::BotCApiClient::instance()->listRoles(m_rolesLang);
     }
 
@@ -103,17 +106,39 @@ namespace botc
 
         // Replace the previous cache before filling it so successive refreshes cannot duplicate entries.
         m_cachedRoles.clear();
+        m_roleEntries.clear();
         if (error_type == QNetworkReply::NoError)
         {
-            std::ranges::transform(
-                summary.getRoles(),
-                std::inserter(m_cachedRoles, m_cachedRoles.end()),
-                [](const OpenAPI::OAIRoleItem& role) -> QString
+            const QList<OpenAPI::OAIRoleItem> roles = summary.getRoles();
+            m_roleEntries.reserve(roles.size());
+            m_cachedRoles.reserve(roles.size());
+            for (const OpenAPI::OAIRoleItem& role : roles)
+            {
+                RoleEntry entry{
+                    role.getId(),
+                    role.getName(),
+                    role.getRoleType(),
+                    role.getRoleTypeTranslation(),
+                    role.getAlignment(),
+                    role.getAlignmentTranslation(),
+                    role.getDescription(),
+                    {},
+                    {}
+                };
+                if (role.is_translation_Set())
                 {
-                    QString transName = role.getTranslation().getName();
-                    return transName.isEmpty() ? role.getName() : transName;
+                    const OpenAPI::OAIRoleTranslation translation = role.getTranslation();
+                    entry.translationName = translation.getName();
+                    entry.translationDescription = translation.getDescription();
                 }
-            );
+                m_cachedRoles.append(entry.displayName());
+                m_roleEntries.append(entry);
+            }
+        }
+        else
+        {
+            m_rolesError = error_str;
+            m_rolesErrorType = error_type;
         }
 
         // Re-request before notifying listeners: a listener that refreshes again

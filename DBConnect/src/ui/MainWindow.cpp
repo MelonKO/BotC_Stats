@@ -6,6 +6,7 @@
 #include "ImportGamesWidget.h"
 #include "ImportRolesWidget.h"
 #include "PlayersWidget.h"
+#include "RolesWidget.h"
 #include "SettingsWidget.h"
 #include "ui_MainWindow.h"
 #include "db_cache/DBCache.h"
@@ -36,6 +37,10 @@ namespace botc::ui
         auto* playersWidget = new PlayersWidget(this);
         m_playersWidget = playersWidget;
         m_tabs->addTab(playersWidget, tr("Players"));
+
+        auto* rolesWidget = new RolesWidget(this);
+        m_rolesWidget = rolesWidget;
+        m_tabs->addTab(rolesWidget, tr("Roles"));
 
         auto* settingsWidget = new SettingsWidget(this);
         m_settingsWidget = settingsWidget;
@@ -79,6 +84,7 @@ namespace botc::ui
         m_tabs->setTabText(m_tabs->indexOf(m_importRolesWidget), tr("Roles import"));
         m_tabs->setTabText(m_tabs->indexOf(m_importGamesWidget), tr("Games import"));
         m_tabs->setTabText(m_tabs->indexOf(m_playersWidget), tr("Players"));
+        m_tabs->setTabText(m_tabs->indexOf(m_rolesWidget), tr("Roles"));
         m_tabs->setTabText(m_tabs->indexOf(m_settingsWidget), tr("Settings"));
     }
 } // namespace botc::ui

@@ -42,6 +42,7 @@ namespace botc::ui
         QWidget* m_importRolesWidget = nullptr;
         QWidget* m_importGamesWidget = nullptr;
         QWidget* m_playersWidget = nullptr;
+        QWidget* m_rolesWidget = nullptr;
         QWidget* m_settingsWidget = nullptr;
     };
 } // namespace botc::ui

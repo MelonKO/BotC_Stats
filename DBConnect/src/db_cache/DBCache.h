@@ -26,6 +26,27 @@ namespace botc
         QString name;
     };
 
+    /**
+     * A role record with its reference values and optional server translations.
+     */
+    struct RoleEntry
+    {
+        QString id;
+        QString name;
+        QString roleType;
+        QString roleTypeTranslation;
+        QString alignment;
+        QString alignmentTranslation;
+        QString description;
+        QString translationName;
+        QString translationDescription;
+
+        QString displayName() const { return translationName.isEmpty() ? name : translationName; }
+        QString displayDescription() const { return translationDescription.isEmpty() ? description : translationDescription; }
+        QString displayType() const { return roleTypeTranslation.isEmpty() ? roleType : roleTypeTranslation; }
+        QString displaySide() const { return alignmentTranslation.isEmpty() ? alignment : alignmentTranslation; }
+    };
+
     class DBCache final : public QObject
     {
         Q_OBJECT
@@ -41,6 +62,17 @@ namespace botc
 
         void updateRoles(const std::optional<QString>& lang);
         const QStringList& getRolesCache() const { return m_cachedRoles; }
+        /** Full role records used by the roles view. */
+        const QVector<RoleEntry>& getRoleEntries() const { return m_roleEntries; }
+
+        /** Error of the last roles list request; empty when that request succeeded. */
+        const QString& getRolesError() const { return m_rolesError; }
+
+        /** Network error of the last roles list request, NoError when it succeeded. */
+        QNetworkReply::NetworkError getRolesErrorType() const { return m_rolesErrorType; }
+
+        /** True while a roles list request is in flight. */
+        bool isRolesRequestInFlight() const { return m_rolesRequestInFlight; }
 
         void updatePlayers();
         const QStringList& getPlayersCache() const { return m_cachedPlayers; }
@@ -67,6 +99,8 @@ namespace botc
         bool isPlayersRequestInFlight() const { return m_playersRequestInFlight; }
 
     signals:
+        /** Emitted when a roles request is sent, not when one is only queued. */
+        void rolesRequestStarted();
         void onRolesCacheUpdated();
         void onPlayersCacheUpdated();
 
@@ -88,6 +122,9 @@ namespace botc
 
     private:
         QStringList m_cachedRoles{};
+        QVector<RoleEntry> m_roleEntries{};
+        QString m_rolesError{};
+        QNetworkReply::NetworkError m_rolesErrorType = QNetworkReply::NoError;
         QStringList m_cachedPlayers;
         // Same rows as m_cachedPlayers, but with the player id kept alongside the
         // name: the import widget only needs names, the players view needs ids.

@@ -37,15 +37,17 @@ namespace botc::ui
         ui->rolesTable->setSortingEnabled(true);
         ui->rolesTable->sortByColumn(RolesTableModel::Name, Qt::AscendingOrder);
         ui->rolesTable->verticalHeader()->setVisible(false);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Name, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Type, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Side, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Description, QHeaderView::Stretch);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::NameRu, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::TypeRu, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::SideRu, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::DescriptionRu, QHeaderView::Stretch);
-        ui->rolesTable->horizontalHeader()->setStretchLastSection(false);
+        QHeaderView* header = ui->rolesTable->horizontalHeader();
+        header->setSectionResizeMode(QHeaderView::Interactive);
+        header->setStretchLastSection(false);
+        ui->rolesTable->setColumnWidth(RolesTableModel::Name, 150);
+        ui->rolesTable->setColumnWidth(RolesTableModel::Type, 110);
+        ui->rolesTable->setColumnWidth(RolesTableModel::Side, 90);
+        ui->rolesTable->setColumnWidth(RolesTableModel::Description, 220);
+        ui->rolesTable->setColumnWidth(RolesTableModel::NameRu, 150);
+        ui->rolesTable->setColumnWidth(RolesTableModel::TypeRu, 120);
+        ui->rolesTable->setColumnWidth(RolesTableModel::SideRu, 110);
+        ui->rolesTable->setColumnWidth(RolesTableModel::DescriptionRu, 220);
 
         connect(ui->searchEdit, &QLineEdit::textChanged,
                 this, &RolesWidget::onSearchTextChanged);

@@ -204,10 +204,16 @@ async def get_all_roles(lang: Optional[str] = None) -> list[RoleItem]:
                        r.role_type,
                        r.description,
                        t.name        AS translation_name,
-                       t.description AS translation_description
+                       t.description AS translation_description,
+                       rt.name       AS role_type_translation,
+                       al.name       AS alignment_translation
                 FROM roles r
                          LEFT JOIN role_translations t
                                    ON t.role_id = r.id AND t.lang_code = $1
+                         LEFT JOIN role_type_translations rt
+                                   ON rt.role_type_en = r.role_type AND rt.lang_code = $1
+                         LEFT JOIN alignment_translations al
+                                   ON al.alignment_en = r.alignment AND al.lang_code = $1
                 ORDER BY r.role_type, r.name
                 """,
                 lang,
@@ -219,6 +225,8 @@ async def get_all_roles(lang: Optional[str] = None) -> list[RoleItem]:
                     alignment=r["alignment"],
                     role_type=r["role_type"],
                     description=r["description"],
+                    role_type_translation=r["role_type_translation"],
+                    alignment_translation=r["alignment_translation"],
                     translation=RoleTranslation(
                         name=r["translation_name"],
                         description=r["translation_description"],

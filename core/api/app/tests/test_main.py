@@ -245,6 +245,36 @@ class TestRolesListEndpoint:
         assert data["roles"][0]["name"] == "Chambermaid"
 
     @pytest.mark.asyncio
+    async def test_translated_type_and_side(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        conn.fetch = AsyncMock(return_value=[
+            {"id": "a09f3ff7-0f02-485a-b0e1-87388b27face", "name": "Chambermaid",
+             "alignment": "good", "role_type": "Outsider", "description": None,
+             "translation_name": "Дамочка", "translation_description": None,
+             "role_type_translation": "Изгой", "alignment_translation": "добро"},
+            {"id": "b1c2d3e4-f5a6-7890-abcd-1234567890ef", "name": "Imp",
+             "alignment": "evil", "role_type": "Demon", "description": None,
+             "translation_name": None, "translation_description": None,
+             "role_type_translation": None, "alignment_translation": None},
+        ])
+
+        response = await client.get(
+            "/api/roles", params={"lang": "ru"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["roles"][0]["role_type_translation"] == "Изгой"
+        assert data["roles"][0]["alignment_translation"] == "добро"
+        assert data["roles"][0]["translation"]["name"] == "Дамочка"
+        # A language without translations must not break the list: the localized
+        # fields stay null so the client falls back to the reference values.
+        assert data["roles"][1]["role_type_translation"] is None
+        assert data["roles"][1]["alignment_translation"] is None
+        assert data["roles"][1]["translation"] is None
+
+    @pytest.mark.asyncio
     async def test_empty_roles(self, app_client_with_auth):
         client, conn = app_client_with_auth
         conn.fetch = AsyncMock(return_value=[])

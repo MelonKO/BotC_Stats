@@ -170,6 +170,20 @@ class RoleItem(BaseModel):
     description: Annotated[str | None, Field(examples=['Simple, but not harmless'])] = (
         None
     )
+    role_type_translation: Annotated[
+        str | None,
+        Field(
+            description='Localized name of the role type for the requested language\n(only provided when the lang query parameter was given).\nNull when the language has no translation for this role type.\n',
+            examples=['Горожанин'],
+        ),
+    ] = None
+    alignment_translation: Annotated[
+        str | None,
+        Field(
+            description='Localized name of the role side for the requested language\n(only provided when the lang query parameter was given).\nNull when the language has no translation for this side.\n',
+            examples=['добро'],
+        ),
+    ] = None
     translation: Annotated[
         RoleTranslation | None,
         Field(

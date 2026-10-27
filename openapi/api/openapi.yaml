@@ -277,17 +277,17 @@ components:
           type: string
           nullable: true
           description: |
-            Localized name of the role type for the requested language
-            (only provided when the lang query parameter was given).
-            Null when the language has no translation for this role type.
+            Localized name of the role type for the requested language.
+            Null when the lang query parameter was not given, or when the
+            language has no translation for this role type.
           example: "Горожанин"
         alignment_translation:
           type: string
           nullable: true
           description: |
-            Localized name of the role side for the requested language
-            (only provided when the lang query parameter was given).
-            Null when the language has no translation for this side.
+            Localized name of the role side for the requested language.
+            Null when the lang query parameter was not given, or when the
+            language has no translation for this side.
           example: "добро"
         translation:
           description: Translation into the requested language (only present when the lang query parameter was provided).

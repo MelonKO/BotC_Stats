@@ -211,7 +211,7 @@ async def get_all_roles(lang: Optional[str] = None) -> list[RoleItem]:
                          LEFT JOIN role_translations t
                                    ON t.role_id = r.id AND t.lang_code = $1
                          LEFT JOIN role_type_translations rt
-                                   ON rt.role_type_en = r.role_type AND rt.lang_code = $1
+                                   ON rt.role_type_en = r.role_type::TEXT AND rt.lang_code = $1
                          LEFT JOIN alignment_translations al
                                    ON al.alignment_en = r.alignment AND al.lang_code = $1
                 ORDER BY r.role_type, r.name

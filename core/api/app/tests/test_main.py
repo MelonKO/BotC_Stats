@@ -243,6 +243,9 @@ class TestRolesListEndpoint:
         data = response.json()
         assert len(data["roles"]) == 2
         assert data["roles"][0]["name"] == "Chambermaid"
+        # Without lang the localized fields are null, not omitted.
+        assert data["roles"][0]["role_type_translation"] is None
+        assert data["roles"][0]["alignment_translation"] is None
 
     @pytest.mark.asyncio
     async def test_translated_type_and_side(self, app_client_with_auth):

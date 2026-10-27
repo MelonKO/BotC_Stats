@@ -17,6 +17,7 @@ from app.models import (
     RolesImportResponse,
     HealthResponse,
     RolesResponse,
+    RoleUpdateRequest,
 )
 from datetime import date
 
@@ -338,6 +339,38 @@ class TestRoleTranslation:
         """Empty name fails."""
         with pytest.raises(Exception):
             RoleTranslation(name="")
+
+    def test_whitespace_name_fails(self):
+        with pytest.raises(Exception):
+            RoleTranslation(name="   ")
+
+
+class TestRoleUpdateRequest:
+    """Tests for partial role update request validation."""
+
+    def test_valid_partial_update(self):
+        request = RoleUpdateRequest(name="Chambermaid")
+        assert request.name == "Chambermaid"
+
+    def test_invalid_alignment_fails(self):
+        with pytest.raises(Exception):
+            RoleUpdateRequest(alignment="unknown")
+
+    def test_name_length_is_limited(self):
+        with pytest.raises(Exception):
+            RoleUpdateRequest(name="R" * 201)
+
+    def test_translation_deletion_language_list(self):
+        request = RoleUpdateRequest(translations_to_delete=["ru"])
+        assert request.translations_to_delete[0].root == "ru"
+
+    def test_translation_deletion_language_length_is_limited(self):
+        with pytest.raises(Exception):
+            RoleUpdateRequest(translations_to_delete=["x"])
+
+    def test_nullable_description_can_be_cleared(self):
+        request = RoleUpdateRequest(description=None)
+        assert request.description is None
 
 
 # ============================================================

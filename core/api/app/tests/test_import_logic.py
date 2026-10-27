@@ -3,6 +3,7 @@ Tests for import_logic.py — import_game, import_roles, _parse_interval, check_
 """
 from datetime import timedelta
 from unittest.mock import AsyncMock
+from uuid import UUID
 from asyncpg.exceptions import UniqueViolationError
 
 import pytest
@@ -11,8 +12,19 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.import_logic import import_game, import_roles, _parse_interval, check_db_connection
-from app.models import GameImportRequest, RolesImportRequest, PlayerImportRequest
+from app.import_logic import (
+    import_game,
+    import_roles,
+    update_role,
+    _parse_interval,
+    check_db_connection,
+)
+from app.models import (
+    GameImportRequest,
+    RolesImportRequest,
+    PlayerImportRequest,
+    RoleUpdateRequest,
+)
 from tests.test_utils import (
     PatchGetConnection,
     PatchGetConnectionImportLogic,
@@ -353,3 +365,47 @@ class TestImportRoles:
 
         assert result["status"] == "ok"
         assert mock_conn.execute.call_count >= 3
+
+
+class TestUpdateRoleTransaction:
+    @pytest.mark.asyncio
+    async def test_translation_failure_rolls_back_role_update(self):
+        transaction_state = {"entered": False, "rolled_back": False}
+
+        class RecordingTransaction:
+            async def __aenter__(self):
+                transaction_state["entered"] = True
+
+            async def __aexit__(self, exception_type, exception, traceback):
+                transaction_state["rolled_back"] = exception_type is not None
+
+        mock_conn = AsyncMock()
+        mock_conn.transaction = lambda: RecordingTransaction()
+        role_update_calls = []
+
+        async def mock_fetchrow(query, *args):
+            if "FOR UPDATE" in query:
+                return {"id": "a09f3ff7-0f02-485a-b0e1-87388b27face"}
+            if "FROM languages" in query:
+                return {"code": "ru"}
+            if "UPDATE roles" in query:
+                role_update_calls.append((query, args))
+                return {"id": "a09f3ff7-0f02-485a-b0e1-87388b27face"}
+            return None
+
+        mock_conn.fetchrow = AsyncMock(side_effect=mock_fetchrow)
+        mock_conn.execute = AsyncMock(side_effect=RuntimeError("translation write failed"))
+        payload = RoleUpdateRequest(
+            name="Updated",
+            translations={"ru": {"name": "Обновлённая"}},
+        )
+
+        with PatchGetConnection(mock_conn), pytest.raises(RuntimeError):
+            await update_role(
+                UUID("a09f3ff7-0f02-485a-b0e1-87388b27face"),
+                payload,
+            )
+
+        assert transaction_state == {"entered": True, "rolled_back": True}
+        assert "UPDATE roles" in role_update_calls[0][0]
+        assert "INSERT INTO role_translations" in mock_conn.execute.call_args.args[0]

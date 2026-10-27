@@ -17,6 +17,9 @@ from app.import_logic import (
     get_all_players,
     rename_player,
     PlayerNameConflictError,
+    update_role,
+    RoleNameConflictError,
+    UnknownRoleLanguageError,
 )
 from app.models import (
     GameImportRequest,
@@ -31,6 +34,9 @@ from app.models import (
     PlayersResponse,
     PlayerItem,
     PlayerUpdateRequest,
+    RoleUpdateRequest,
+    RoleItem,
+    RoleTranslation,
 )
 
 
@@ -134,6 +140,44 @@ async def list_roles(
     """
     roles = await get_all_roles(lang)
     return RolesResponse(roles=roles)
+
+
+@app.patch("/api/roles/{roleId}", response_model=RoleItem)
+async def update_role_endpoint(
+        role_id: Annotated[UUID, Path(alias="roleId")],
+        data: RoleUpdateRequest,
+        lang: Annotated[Optional[str], Query(min_length=2, max_length=5)] = None,
+        owner: dict = Depends(validate_api_key),
+):
+    """Update an existing role and its requested language translations."""
+    if not data.model_fields_set:
+        raise HTTPException(status_code=422, detail="At least one role field must be provided")
+    if any(getattr(data, field) is None for field in ("name", "alignment", "role_type")
+           if field in data.model_fields_set):
+        raise HTTPException(status_code=422, detail="Role fields must not be null")
+    if any(
+        getattr(data, field) is None
+        for field in ("translations", "translations_to_delete")
+        if field in data.model_fields_set
+    ):
+        raise HTTPException(status_code=422, detail="Translation operations must not be null")
+    if data.translations:
+        for translation in data.translations.values():
+            if not isinstance(translation, RoleTranslation):
+                raise HTTPException(status_code=422, detail="Invalid role translation")
+    try:
+        role = await update_role(role_id, data, lang)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except UnknownRoleLanguageError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except RoleNameConflictError:
+        raise HTTPException(status_code=409, detail="Role name is already taken")
+
+    if role is None:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    return role
 
 
 @app.post("/api/roles/import", response_model=RolesImportResponse)

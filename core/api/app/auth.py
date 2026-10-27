@@ -8,13 +8,16 @@ def hash_api_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-async def validate_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> dict:
+async def validate_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> dict:
     """
     Validate the API key from the X-API-Key header.
 
     Returns owner info on success.
-    Raises HTTPException 401 if the key is unknown, 403 if it has been revoked.
+    Raises HTTPException 401 if the key is missing or unknown, 403 if it has been revoked.
     """
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing API key")
+
     key_hash = hash_api_key(x_api_key)
 
     async with get_connection() as conn:

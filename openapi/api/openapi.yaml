@@ -305,6 +305,7 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+          pattern: ".*\\S.*"
           example: "Дамочка"
         description:
           type: string
@@ -379,6 +380,48 @@ components:
           maxLength: 200
           example: "Мая Вишневская"
 
+    RoleUpdateRequest:
+      type: object
+      description: Fields to change for an existing role. At least one field is required.
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Chambermaid"
+        alignment:
+          type: string
+          pattern: "^(good|evil|neutral)$"
+          example: "good"
+        role_type:
+          type: string
+          pattern: "^(Townsfolk|Outsider|Minion|Demon|Traveller)$"
+          example: "Outsider"
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+          example: "Simple, but not harmless"
+        translations:
+          type: object
+          description: Map of 2–5 character language codes to translations to set or update.
+          additionalProperties:
+            $ref: "#/components/schemas/RoleTranslation"
+          example:
+            ru:
+              name: "Дамочка"
+              description: "Служанка, которая следит за гостями"
+        translations_to_delete:
+          type: array
+          description: 2–5 character language codes whose role translations should be removed.
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 2
+            maxLength: 5
+          example: [ "ru" ]
+
     PlayerItem:
       type: object
       description: Player record from the database.
@@ -448,6 +491,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/games/import_batch:
     post:
       operationId: importGames
@@ -474,6 +523,12 @@ paths:
                 $ref: "#/components/schemas/GamesImportStatusResponse"
         "401":
           description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
           content:
             application/json:
               schema:
@@ -518,6 +573,85 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/roles/{roleId}:
+    patch:
+      operationId: updateRole
+      summary: Update a role
+      description: |
+        Update role fields and requested translations without changing the role id.
+        Use `translations_to_delete` to remove translations for selected languages.
+        Requires a valid API key in the X-API-Key header.
+      tags: [ Roles ]
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          description: Role id.
+          schema:
+            type: string
+            format: uuid
+            example: "a09f3ff7-0f02-485a-b0e1-87388b27face"
+        - name: lang
+          in: query
+          required: false
+          description: Language code for localized fields in the response.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 5
+            example: "ru"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdateRequest"
+      responses:
+        "200":
+          description: Role updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleItem"
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Unknown role id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The role name is already taken by another role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid role id, request body, or unknown language code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/roles/import:
     post:
@@ -555,6 +689,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/players:
     get:
@@ -572,6 +712,12 @@ paths:
                 $ref: "#/components/schemas/PlayersResponse"
         "401":
           description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
           content:
             application/json:
               schema:
@@ -614,6 +760,12 @@ paths:
                 $ref: "#/components/schemas/PlayerItem"
         "401":
           description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
           content:
             application/json:
               schema:

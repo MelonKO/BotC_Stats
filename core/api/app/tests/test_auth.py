@@ -37,6 +37,14 @@ class TestHashApiKey:
 
 class TestValidateApiKey:
     @pytest.mark.asyncio
+    async def test_missing_key(self):
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_api_key(x_api_key=None)
+
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.detail == "Missing API key"
+
+    @pytest.mark.asyncio
     async def test_valid_key(self):
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value={

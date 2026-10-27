@@ -44,7 +44,10 @@ class RolesImportResponse(BaseModel):
 
 
 class RoleTranslation(BaseModel):
-    name: Annotated[str, Field(examples=['Дамочка'], max_length=200, min_length=1)]
+    name: Annotated[
+        str,
+        Field(examples=['Дамочка'], max_length=200, min_length=1, pattern='.*\\S.*'),
+    ]
     description: Annotated[
         str | None,
         Field(examples=['Служанка, которая следит за гостями'], max_length=2000),
@@ -79,6 +82,50 @@ class PlayerUpdateRequest(BaseModel):
     name: Annotated[
         str, Field(examples=['Мая Вишневская'], max_length=200, min_length=1)
     ]
+
+
+class TranslationsToDeleteItem(RootModel[str]):
+    root: Annotated[str, Field(max_length=5, min_length=2)]
+
+
+class RoleUpdateRequest(BaseModel):
+    name: Annotated[
+        str | None, Field(examples=['Chambermaid'], max_length=200, min_length=1)
+    ] = None
+    alignment: Annotated[
+        str | None, Field(examples=['good'], pattern='^(good|evil|neutral)$')
+    ] = None
+    role_type: Annotated[
+        str | None,
+        Field(
+            examples=['Outsider'],
+            pattern='^(Townsfolk|Outsider|Minion|Demon|Traveller)$',
+        ),
+    ] = None
+    description: Annotated[
+        str | None, Field(examples=['Simple, but not harmless'], max_length=2000)
+    ] = None
+    translations: Annotated[
+        dict[str, RoleTranslation] | None,
+        Field(
+            description='Map of 2–5 character language codes to translations to set or update.',
+            examples=[
+                {
+                    'ru': {
+                        'name': 'Дамочка',
+                        'description': 'Служанка, которая следит за гостями',
+                    }
+                }
+            ],
+        ),
+    ] = None
+    translations_to_delete: Annotated[
+        list[TranslationsToDeleteItem] | None,
+        Field(
+            description='2–5 character language codes whose role translations should be removed.',
+            examples=[['ru']],
+        ),
+    ] = None
 
 
 class PlayerItem(BaseModel):

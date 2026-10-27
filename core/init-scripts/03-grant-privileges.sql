@@ -43,6 +43,8 @@ GRANT SELECT, INSERT, UPDATE ON roles TO api_service;
 
 -- 2b. Read/write translation tables (for role import with translations)
 GRANT INSERT, UPDATE, SELECT ON role_translations TO api_service;
+-- PATCH /api/roles/{roleId} can explicitly delete a language translation.
+GRANT DELETE ON role_translations TO api_service;
 GRANT SELECT ON role_type_translations TO api_service;
 GRANT SELECT ON alignment_translations TO api_service;
 GRANT SELECT ON languages TO api_service;

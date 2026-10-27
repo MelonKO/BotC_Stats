@@ -3,7 +3,7 @@ Tests for FastAPI endpoints in main.py.
 Uses httpx.AsyncClient with ASGITransport and patched DB connections.
 """
 import hashlib
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from datetime import datetime
 from uuid import UUID
 
@@ -150,7 +150,7 @@ class TestGameImportEndpoint:
 
         response = await client.post("/api/games/import", json=valid_game_payload)
 
-        assert response.status_code == 422
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_invalid_api_key(self, app_client_with_auth, valid_game_payload):
@@ -296,12 +296,273 @@ class TestRolesListEndpoint:
 
         response = await client.get("/api/roles")
 
+        assert response.status_code == 401
+
+
+# ============================================================
+# Role update endpoint
+# ============================================================
+
+ROLE_ID = "a09f3ff7-0f02-485a-b0e1-87388b27face"
+
+
+def setup_role_update_mocks(conn, role_exists, execute_calls, response_row=None):
+    async def mock_fetchrow(query, *args):
+        if "api_keys" in query:
+            return valid_api_key_row()
+        if "FROM roles WHERE id = $1 FOR UPDATE" in query:
+            return {"id": ROLE_ID} if role_exists else None
+        if "FROM languages" in query:
+            return {"code": args[0]} if args[0] in ("ru", "en") else None
+        if "UPDATE roles" in query:
+            execute_calls.append((query, args))
+            return {"id": ROLE_ID}
+        if "FROM roles r" in query:
+            return response_row
+        if "FROM roles" in query and "WHERE id = $1" in query:
+            return response_row
+        return None
+
+    async def mock_execute(query, *args):
+        execute_calls.append((query, args))
+        return "UPDATE 1"
+
+    conn.fetchrow = AsyncMock(side_effect=mock_fetchrow)
+    conn.execute = AsyncMock(side_effect=mock_execute)
+
+
+class TestRoleUpdateEndpoint:
+    @pytest.mark.asyncio
+    async def test_update_all_fields_and_ru_translation(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(
+            conn,
+            True,
+            execute_calls,
+            {
+                "id": ROLE_ID, "name": "Updated Role", "alignment": "neutral",
+                "role_type": "Traveller", "description": None,
+                "translation_name": "Новая роль", "translation_description": "Описание",
+                "role_type_translation": "Странник", "alignment_translation": "нейтральный",
+            },
+        )
+        conn.transaction = Mock(side_effect=make_mock_transaction())
+
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            params={"lang": "ru"},
+            json={
+                "name": " Updated Role ",
+                "alignment": "neutral",
+                "role_type": "Traveller",
+                "description": None,
+                "translations": {"ru": {"name": "Новая роль", "description": "Описание"}},
+            },
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "id": ROLE_ID, "name": "Updated Role", "alignment": "neutral",
+            "role_type": "Traveller", "description": None,
+            "role_type_translation": "Странник", "alignment_translation": "нейтральный",
+            "translation": {"name": "Новая роль", "description": "Описание"},
+        }
+        role_update = next(args for query, args in execute_calls if "UPDATE roles" in query)
+        assert role_update[0] == UUID(ROLE_ID)
+        assert role_update[1] == "Updated Role"
+        translation_update = next(
+            args for query, args in execute_calls if "INSERT INTO role_translations" in query
+        )
+        assert translation_update == (UUID(ROLE_ID), "ru", "Новая роль", "Описание")
+        conn.transaction.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_clear_ru_translation(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(
+            conn,
+            True,
+            execute_calls,
+            {
+                "id": ROLE_ID, "name": "Chambermaid", "alignment": "good",
+                "role_type": "Townsfolk", "description": "Description",
+                "translation_name": None, "translation_description": None,
+                "role_type_translation": "Горожанин", "alignment_translation": "добро",
+            },
+        )
+
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            params={"lang": "ru"},
+            json={"translations_to_delete": ["ru"]},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["translation"] is None
+        assert any("DELETE FROM role_translations" in query for query, _ in execute_calls)
+
+    @pytest.mark.asyncio
+    async def test_without_lang_returns_localized_fields_as_null(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(
+            conn,
+            True,
+            execute_calls,
+            {
+                "id": ROLE_ID, "name": "Chambermaid", "alignment": "good",
+                "role_type": "Townsfolk", "description": None,
+            },
+        )
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"description": None},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 200
+        assert response.json()["translation"] is None
+        assert response.json()["role_type_translation"] is None
+        assert response.json()["alignment_translation"] is None
+
+    @pytest.mark.asyncio
+    async def test_unknown_role(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(conn, False, execute_calls)
+
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"name": "Updated"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 404
+        assert not any(
+            "UPDATE roles" in query or "role_translations" in query
+            for query, _ in execute_calls
+        )
+
+    @pytest.mark.asyncio
+    async def test_name_conflict(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(conn, True, execute_calls)
+
+        async def conflict_on_role_name(query, *args):
+            if "api_keys" in query:
+                return valid_api_key_row()
+            if "FROM roles WHERE id = $1 FOR UPDATE" in query:
+                return {"id": ROLE_ID}
+            if "UPDATE roles" in query:
+                raise UniqueViolationError("duplicate role name")
+            return None
+
+        conn.fetchrow = AsyncMock(side_effect=conflict_on_role_name)
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"name": "Imp"},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_blank_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        setup_role_update_mocks(conn, True, [])
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"name": "   "},
+            headers=auth_headers("sk-test-key-123"),
+        )
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_empty_request(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_unknown_language(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(conn, True, execute_calls)
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"translations": {"xx": {"name": "Translation"}}},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 422
+        assert not any(
+            "UPDATE roles" in query or "role_translations" in query
+            for query, _ in execute_calls
+        )
+
+    @pytest.mark.asyncio
+    async def test_unknown_language_to_delete(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        execute_calls = []
+        setup_role_update_mocks(conn, True, execute_calls)
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"translations_to_delete": ["xx"]},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 422
+        assert not any(
+            "UPDATE roles" in query or "role_translations" in query
+            for query, _ in execute_calls
+        )
+
+    @pytest.mark.asyncio
+    async def test_blank_translation_name(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"translations": {"ru": {"name": "   "}}},
+            headers=auth_headers("sk-test-key-123"),
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_requires_auth(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        response = await client.patch(f"/api/roles/{ROLE_ID}", json={"name": "Updated"})
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_invalid_api_key(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        conn.fetchrow = AsyncMock(return_value=None)
+        response = await client.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"name": "Updated"},
+            headers=auth_headers("sk-unknown-key"),
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_revoked_api_key(self, app_client_revoked_key):
+        response = await app_client_revoked_key.patch(
+            f"/api/roles/{ROLE_ID}",
+            json={"name": "Updated"},
+            headers=auth_headers("sk-revoked-key"),
+        )
+        assert response.status_code == 403
+        assert "revoked" in response.json()["detail"].lower()
 
 # ============================================================
 # Players list endpoint
 # ============================================================
+
 
 class TestPlayersListEndpoint:
     @pytest.mark.asyncio
@@ -342,7 +603,7 @@ class TestPlayersListEndpoint:
 
         response = await client.get("/api/players")
 
-        assert response.status_code == 422
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_invalid_api_key(self, app_client_with_auth):
@@ -520,7 +781,7 @@ class TestPlayerRenameEndpoint:
 
         response = await client.patch(f"/api/players/{PLAYER_ID}", json={"name": "Мая"})
 
-        assert response.status_code == 422
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_invalid_api_key(self, app_client_with_auth):
@@ -565,7 +826,7 @@ class TestRolesImportEndpoint:
             "/api/roles/import", json=valid_roles_import_payload,
         )
 
-        assert response.status_code == 422
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_invalid_role_alignment(self, app_client_with_auth):

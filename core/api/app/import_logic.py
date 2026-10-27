@@ -9,6 +9,7 @@ from app.db import get_connection
 from app.models import (
     GameImportRequest,
     RolesImportRequest,
+    RoleUpdateRequest,
     RoleItem,
     RoleTranslation,
     GameImportStatusResponse,
@@ -26,6 +27,22 @@ class PlayerNameConflictError(Exception):
     def __init__(self, name: str):
         super().__init__(f"Player name is already taken: {name}")
         self.name = name
+
+
+class RoleNameConflictError(Exception):
+    """Raised when the requested role name already belongs to another role."""
+
+    def __init__(self, name: str):
+        super().__init__(f"Role name is already taken: {name}")
+        self.name = name
+
+
+class UnknownRoleLanguageError(Exception):
+    """Raised when a role translation uses an unsupported language code."""
+
+    def __init__(self, language_code: str):
+        super().__init__(f"Unknown language code: {language_code}")
+        self.language_code = language_code
 
 
 def _parse_interval(value: str | None) -> timedelta | None:
@@ -392,3 +409,148 @@ async def rename_player(player_id: UUID, new_name: str) -> PlayerItem | None:
             return None
 
         return PlayerItem(id=row["id"], name=row["name"])
+
+
+async def update_role(
+    role_id: UUID,
+    payload: RoleUpdateRequest,
+    lang: Optional[str] = None,
+) -> RoleItem | None:
+    """Update a role and requested translations atomically, then return its current view."""
+    values = payload.model_dump(exclude_unset=True)
+    values.pop("translations", None)
+    values.pop("translations_to_delete", None)
+    translations = payload.translations or {}
+    translations_to_delete = [
+        language_code.root for language_code in payload.translations_to_delete or []
+    ]
+    role_fields = ("name", "alignment", "role_type", "description")
+
+    async with get_connection() as conn:
+        async with conn.transaction():
+            existing = await conn.fetchrow(
+                "SELECT id FROM roles WHERE id = $1 FOR UPDATE",
+                role_id,
+            )
+            if existing is None:
+                return None
+
+            if "name" in values:
+                role_name = values["name"]
+                if not isinstance(role_name, str) or not role_name.strip():
+                    raise ValueError("Role name must not be blank")
+                values["name"] = role_name.strip()
+
+            if set(translations).intersection(translations_to_delete):
+                raise ValueError("A translation cannot be set and deleted in the same request")
+
+            language_codes = [*translations, *translations_to_delete]
+            for language_code in language_codes:
+                if not 2 <= len(language_code) <= 5:
+                    raise UnknownRoleLanguageError(language_code)
+                language = await conn.fetchrow(
+                    "SELECT code FROM languages WHERE code = $1",
+                    language_code,
+                )
+                if language is None:
+                    raise UnknownRoleLanguageError(language_code)
+
+            assignments: list[str] = []
+            parameters: list[object] = [role_id]
+            for field in role_fields:
+                if field not in values:
+                    continue
+                parameters.append(values[field])
+                assignments.append(f"{field} = ${len(parameters)}")
+            if assignments:
+                try:
+                    updated = await conn.fetchrow(
+                        f"UPDATE roles SET {', '.join(assignments)} WHERE id = $1 RETURNING id",
+                        *parameters,
+                    )
+                except UniqueViolationError as exc:
+                    if "name" in values:
+                        raise RoleNameConflictError(values["name"]) from exc
+                    raise
+                if updated is None:
+                    return None
+
+            for language_code, translation in translations.items():
+                if not isinstance(translation, RoleTranslation):
+                    raise ValueError("Invalid role translation")
+                translation_name = translation.name.strip()
+                if not translation_name:
+                    raise ValueError("Role translation name must not be blank")
+                await conn.execute(
+                    """
+                    INSERT INTO role_translations (role_id, lang_code, name, description)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (role_id, lang_code) DO UPDATE
+                    SET name = EXCLUDED.name,
+                        description = EXCLUDED.description
+                    """,
+                    role_id,
+                    language_code,
+                    translation_name,
+                    translation.description,
+                )
+
+            for language_code in translations_to_delete:
+                await conn.execute(
+                    """
+                    DELETE FROM role_translations
+                    WHERE role_id = $1 AND lang_code = $2
+                    """,
+                    role_id,
+                    language_code,
+                )
+
+            if lang:
+                row = await conn.fetchrow(
+                    """
+                    SELECT r.id, r.name, r.alignment, r.role_type, r.description,
+                           t.name AS translation_name,
+                           t.description AS translation_description,
+                           rt.name AS role_type_translation,
+                           al.name AS alignment_translation
+                    FROM roles r
+                    LEFT JOIN role_translations t
+                      ON t.role_id = r.id AND t.lang_code = $2
+                    LEFT JOIN role_type_translations rt
+                      ON rt.role_type_en = r.role_type::TEXT AND rt.lang_code = $2
+                    LEFT JOIN alignment_translations al
+                      ON al.alignment_en = r.alignment AND al.lang_code = $2
+                    WHERE r.id = $1
+                    """,
+                    role_id,
+                    lang,
+                )
+                return RoleItem(
+                    id=row["id"],
+                    name=row["name"],
+                    alignment=row["alignment"],
+                    role_type=row["role_type"],
+                    description=row["description"],
+                    role_type_translation=row["role_type_translation"],
+                    alignment_translation=row["alignment_translation"],
+                    translation=RoleTranslation(
+                        name=row["translation_name"],
+                        description=row["translation_description"],
+                    ) if row["translation_name"] is not None else None,
+                )
+
+            row = await conn.fetchrow(
+                """
+                SELECT id, name, alignment, role_type, description
+                FROM roles
+                WHERE id = $1
+                """,
+                role_id,
+            )
+            return RoleItem(
+                id=row["id"],
+                name=row["name"],
+                alignment=row["alignment"],
+                role_type=row["role_type"],
+                description=row["description"],
+            )

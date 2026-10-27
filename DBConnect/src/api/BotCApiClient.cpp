@@ -6,6 +6,8 @@
 #include "OAIPlayerItem.h"
 #include "OAIPlayerUpdateRequest.h"
 #include "OAIPlayersApi.h"
+#include "OAIRoleItem.h"
+#include "OAIRoleUpdateRequest.h"
 #include "OAIRolesApi.h"
 #include "OAISystemApi.h"
 
@@ -101,6 +103,12 @@ namespace botc::api
         m_playersAPI->updatePlayer(playerId, request);
     }
 
+    void BotCApiClient::updateRole(const QString& roleId, const OpenAPI::OAIRoleUpdateRequest& request,
+                                   const std::optional<QString>& lang) const
+    {
+        m_rolesAPI->updateRole(roleId, request, lang.value_or(QStringLiteral("")));
+    }
+
     void BotCApiClient::initSystemAPI()
     {
         m_systemAPI = new OpenAPI::OAISystemApi{};
@@ -164,6 +172,20 @@ namespace botc::api
                 this, [this](const OpenAPI::OAIRolesImportResponse& summary)
                 {
                     handleRolesImportReply(summary, QNetworkReply::NetworkError::NoError, "");
+                });
+
+        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::updateRoleSignal,
+                this, [this](const OpenAPI::OAIRoleItem& role)
+                {
+                    handleRoleUpdateReply(role, QNetworkReply::NetworkError::NoError, 200, "");
+                });
+        connect(m_rolesAPI, &OpenAPI::OAIRolesApi::updateRoleSignalErrorFull,
+                this, [this](OpenAPI::OAIHttpRequestWorker* worker,
+                             const QNetworkReply::NetworkError errorType,
+                             const QString& errorStr)
+                {
+                    const int httpStatus = nullptr == worker ? 0 : worker->getHttpResponseCode();
+                    handleRoleUpdateReply(OpenAPI::OAIRoleItem{}, errorType, httpStatus, errorStr);
                 });
     }
 
@@ -242,5 +264,12 @@ namespace botc::api
                                                 const int http_status, const QString& error_str)
     {
         emit playerUpdateFinished(player, error_type, http_status, error_str);
+    }
+
+    void BotCApiClient::handleRoleUpdateReply(const OpenAPI::OAIRoleItem& role,
+                                              const QNetworkReply::NetworkError error_type,
+                                              const int http_status, const QString& error_str)
+    {
+        emit roleUpdateFinished(role, error_type, http_status, error_str);
     }
 }

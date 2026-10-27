@@ -63,6 +63,9 @@ set(SOURCES
         src/ui/RolesWidget.ui
         src/ui/RolesTableModel.cpp
         src/ui/RolesTableModel.h
+        src/ui/RoleEditDialog.cpp
+        src/ui/RoleEditDialog.h
+        src/ui/RoleEditDialog.ui
         src/ui/NetworkErrorMessages.cpp
         src/ui/NetworkErrorMessages.h
         src/utils/csv/CsvParser.cpp

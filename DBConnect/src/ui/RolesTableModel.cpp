@@ -21,6 +21,13 @@ namespace botc::ui
         return m_roles.at(row).id;
     }
 
+    RoleEntry RolesTableModel::roleAt(const int row) const
+    {
+        if (row < 0 || row >= m_roles.size()) return {};
+
+        return m_roles.at(row);
+    }
+
     int RolesTableModel::rowCount(const QModelIndex& parent) const
     {
         return parent.isValid() ? 0 : static_cast<int>(m_roles.size());

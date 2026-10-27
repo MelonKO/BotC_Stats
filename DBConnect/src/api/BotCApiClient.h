@@ -2,12 +2,16 @@
 
 #include "QNetworkReply"
 
+#include <optional>
+
     namespace OpenAPI
     {
         class OAIPlayersResponse;
         class OAIPlayersApi;
         class OAIPlayerItem;
         class OAIPlayerUpdateRequest;
+        class OAIRoleItem;
+        class OAIRoleUpdateRequest;
         class OAIRolesImportRequest;
     class OAIRolesImportResponse;
     class OAIRolesResponse;
@@ -53,6 +57,8 @@ namespace botc::api
         void importRoles(const OpenAPI::OAIRolesImportRequest& request) const;
         void listPlayers() const;
         void updatePlayer(const QString& playerId, const OpenAPI::OAIPlayerUpdateRequest& request) const;
+        void updateRole(const QString& roleId, const OpenAPI::OAIRoleUpdateRequest& request,
+                        const std::optional<QString>& lang) const;
 
     signals:
         // callbacks
@@ -70,11 +76,14 @@ namespace botc::api
         void playersListFinished(const OpenAPI::OAIPlayersResponse& summary,
                                  QNetworkReply::NetworkError error_type, const QString& error_str);
         // http_status is the HTTP response code, or 0 when no response arrived
-        // (network failure, timeout). The players view needs it to tell a taken
-        // name (409) from an unknown player (404).
+        // (network failure, timeout). The player and roles views use it to map
+        // conflict, missing-record, authentication and validation responses.
         void playerUpdateFinished(const OpenAPI::OAIPlayerItem& player,
                                   QNetworkReply::NetworkError error_type,
                                   int http_status, const QString& error_str);
+        void roleUpdateFinished(const OpenAPI::OAIRoleItem& role,
+                                QNetworkReply::NetworkError error_type,
+                                int http_status, const QString& error_str);
 
     private:
         void initSystemAPI();
@@ -99,6 +108,9 @@ namespace botc::api
         void handlePlayerUpdateReply(const OpenAPI::OAIPlayerItem& player,
                                      QNetworkReply::NetworkError error_type,
                                      int http_status, const QString& error_str);
+        void handleRoleUpdateReply(const OpenAPI::OAIRoleItem& role,
+                                   QNetworkReply::NetworkError error_type,
+                                   int http_status, const QString& error_str);
 
     private:
         BotCApiClient() = default;

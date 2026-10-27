@@ -599,13 +599,125 @@ Game history stays with this player, but CSV files with the old name will create
     </message>
 </context>
 <context>
+    <name>botc::ui::RoleEditDialog</name>
+    <message>
+        <location filename="../src/ui/RoleEditDialog.ui" line="+6"/>
+        <source>Edit role</source>
+        <translation>Редактирование роли</translation>
+    </message>
+    <message>
+        <source>Changing the type or side affects historical statistics. Changing the Russian name affects CSV imports of games.</source>
+        <translation type="vanished">Изменение типа или стороны влияет на историческую статистику. Изменение русского названия влияет на импорт партий из CSV.</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Name (EN)</source>
+        <translation>Название (EN)</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Type</source>
+        <translation>Тип</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Side</source>
+        <translation>Сторона</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>Description (EN)</source>
+        <translation>Описание (EN)</translation>
+    </message>
+    <message>
+        <location line="+17"/>
+        <source>Name (RU)</source>
+        <translation>Название (RU)</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Description (RU)</source>
+        <translation>Описание (RU)</translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>Leave both Russian fields empty to remove the Russian translation.</source>
+        <translation>Оставьте оба русских поля пустыми, чтобы удалить русский перевод.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/RoleEditDialog.cpp" line="+17"/>
+        <source>Townsfolk</source>
+        <translation>Горожанин</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Outsider</source>
+        <translation>Изгой</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Minion</source>
+        <translation>Приспешник</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Demon</source>
+        <translation>Демон</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Traveller</source>
+        <translation>Странник</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>good</source>
+        <translation>добро</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>evil</source>
+        <translation>зло</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>neutral</source>
+        <translation>нейтральный</translation>
+    </message>
+    <message>
+        <location line="+45"/>
+        <source>English name must contain 1 to 200 characters.</source>
+        <translation>Английское название должно содержать от 1 до 200 символов.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>English description must not exceed 2000 characters.</source>
+        <translation>Английское описание не должно превышать 2000 символов.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Russian name must not exceed 200 characters.</source>
+        <translation>Русское название не должно превышать 200 символов.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Russian description must not exceed 2000 characters.</source>
+        <translation>Русское описание не должно превышать 2000 символов.</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>A Russian description requires a Russian name.</source>
+        <translation>Для русского описания необходимо указать русское название.</translation>
+    </message>
+</context>
+<context>
     <name>botc::ui::RolesTableModel</name>
     <message>
         <source>Role</source>
         <translation type="vanished">Роль</translation>
     </message>
     <message>
-        <location filename="../src/ui/RolesTableModel.cpp" line="+97"/>
+        <location filename="../src/ui/RolesTableModel.cpp" line="+104"/>
         <source>Name</source>
         <translation>Название (EN)</translation>
     </message>
@@ -659,11 +771,61 @@ Game history stays with this player, but CSV files with the old name will create
     </message>
     <message>
         <location line="+10"/>
+        <source>Edit</source>
+        <translation>Изменить</translation>
+    </message>
+    <message>
+        <location line="+13"/>
         <source>Refresh</source>
         <translation>Обновить</translation>
     </message>
     <message>
-        <location filename="../src/ui/RolesWidget.cpp" line="+139"/>
+        <location filename="../src/ui/RolesWidget.cpp" line="+162"/>
+        <source>Confirm role changes</source>
+        <translation>Подтверждение изменений роли</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Changing the role type or side affects historical statistics. Changing the English name affects role imports, and changing the Russian name affects game CSV imports. Save these changes?</source>
+        <translation>Изменение типа или стороны роли влияет на историческую статистику. Изменение английского названия влияет на импорт ролей, а русского — на импорт партий из CSV. Сохранить изменения?</translation>
+    </message>
+    <message>
+        <location line="+59"/>
+        <source>Role &quot;%1&quot; updated.</source>
+        <translation>Роль «%1» обновлена.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Missing or invalid API key. The role was not changed.</source>
+        <translation>Отсутствует или неверный API-ключ. Роль не изменена.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>API key has been revoked. The role was not changed.</source>
+        <translation>API-ключ отозван. Роль не изменена.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Role not found. The list has been refreshed.</source>
+        <translation>Роль не найдена. Список обновлён.</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>A role with this English name already exists. The role was not changed.</source>
+        <translation>Роль с таким английским названием уже существует. Изменения не сохранены.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Invalid role data. The role was not changed.</source>
+        <translation>Некорректные данные роли. Изменения не сохранены.</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to update the role. %1</source>
+        <translation>Не удалось обновить роль. %1</translation>
+    </message>
+    <message>
+        <location line="+30"/>
         <source>Roles: %1, shown: %2</source>
         <translation>Ролей: %1, показано: %2</translation>
     </message>
@@ -679,6 +841,11 @@ Game history stays with this player, but CSV files with the old name will create
     </message>
     <message>
         <location line="+9"/>
+        <source>Updating role...</source>
+        <translation>Обновление роли...</translation>
+    </message>
+    <message>
+        <location line="+14"/>
         <source>No roles in the database.</source>
         <translation>Ролей в базе нет.</translation>
     </message>

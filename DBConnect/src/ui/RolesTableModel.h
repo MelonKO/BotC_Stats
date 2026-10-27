@@ -43,6 +43,9 @@ namespace botc::ui
         /** Database id of the row, or an empty string when row is out of range. */
         QString roleIdAt(int row) const;
 
+        /** Copy of the role at row, or an empty record when row is out of range. */
+        RoleEntry roleAt(int row) const;
+
         int rowCount(const QModelIndex& parent = {}) const override;
         int columnCount(const QModelIndex& parent = {}) const override;
         QVariant data(const QModelIndex& index, int role) const override;

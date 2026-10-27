@@ -37,6 +37,19 @@
                         </widget>
                     </item>
                     <item>
+                        <widget class="QPushButton" name="editButton">
+                            <property name="text">
+                                <string>Edit</string>
+                            </property>
+                            <property name="maximumWidth">
+                                <number>120</number>
+                            </property>
+                            <property name="enabled">
+                                <bool>false</bool>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
                         <widget class="QPushButton" name="refreshButton">
                             <property name="text">
                                 <string>Refresh</string>

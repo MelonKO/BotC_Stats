@@ -1,15 +1,20 @@
 #include "RolesWidget.h"
 
 #include <QEvent>
-#include <QHeaderView>
 #include <QItemSelectionModel>
-#include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QSet>
 #include <QSortFilterProxyModel>
 
 #include "NetworkErrorMessages.h"
+#include "RoleEditDialog.h"
 #include "RolesTableModel.h"
+#include "OAIRoleItem.h"
+#include "OAIRoleTranslation.h"
+#include "OAIRoleUpdateRequest.h"
 #include "ui_RolesWidget.h"
+#include "../api/BotCApiClient.h"
 #include "../db_cache/DBCache.h"
 
 namespace
@@ -53,6 +58,14 @@ namespace botc::ui
                 this, &RolesWidget::onSearchTextChanged);
         connect(ui->refreshButton, &QPushButton::clicked,
                 this, &RolesWidget::onRefreshClicked);
+        connect(ui->editButton, &QPushButton::clicked,
+                this, &RolesWidget::onEditClicked);
+        connect(ui->rolesTable->selectionModel(), &QItemSelectionModel::selectionChanged,
+                this, &RolesWidget::onSelectionChanged);
+        connect(ui->rolesTable, &QTableView::doubleClicked,
+                this, [this](const QModelIndex&) { onEditClicked(); });
+        connect(api::BotCApiClient::instance(), &api::BotCApiClient::roleUpdateFinished,
+                this, &RolesWidget::onRoleUpdateFinished);
         connect(DBCache::instance(), &DBCache::onRolesCacheUpdated,
                 this, &RolesWidget::refreshFromCache);
         connect(DBCache::instance(), &DBCache::rolesRequestStarted,
@@ -61,6 +74,7 @@ namespace botc::ui
         refreshFromCache();
         DBCache::instance()->updateRoles(QString("ru"));
         setRefreshBusy(DBCache::instance()->isRolesRequestInFlight());
+        onSelectionChanged();
     }
 
     RolesWidget::~RolesWidget()
@@ -106,12 +120,130 @@ namespace botc::ui
         updateCounts();
         applyStatus();
         setRefreshBusy(DBCache::instance()->isRolesRequestInFlight());
+        onSelectionChanged();
     }
 
     void RolesWidget::onRolesRequestStarted()
     {
         setRefreshBusy(true);
+        onSelectionChanged();
         applyStatus();
+    }
+
+    void RolesWidget::onSelectionChanged()
+    {
+        const bool hasSelection = !selectedRoleId().isEmpty();
+        ui->editButton->setEnabled(hasSelection && !m_isRoleUpdateInFlight
+                                   && !DBCache::instance()->isRolesRequestInFlight());
+    }
+
+    void RolesWidget::onEditClicked()
+    {
+        if (m_isRoleUpdateInFlight || DBCache::instance()->isRolesRequestInFlight()) return;
+
+        const QString roleId = selectedRoleId();
+        if (roleId.isEmpty()) return;
+
+        RoleEntry selectedRole;
+        for (int row = 0; row < m_model->rowCount(); ++row)
+        {
+            if (m_model->roleIdAt(row) != roleId) continue;
+            selectedRole = m_model->roleAt(row);
+            break;
+        }
+        if (selectedRole.id.isEmpty()) return;
+
+        RoleEditDialog dialog(selectedRole, this);
+        if (dialog.exec() != QDialog::Accepted) return;
+
+        const RoleEntry editedRole = dialog.editedRole();
+        const auto answer = QMessageBox::warning(
+            this,
+            tr("Confirm role changes"),
+            tr("Changing the role type or side affects historical statistics. "
+               "Changing the English name affects role imports, and changing the Russian name "
+               "affects game CSV imports. Save these changes?"),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes) return;
+
+        m_isRoleUpdateInFlight = true;
+        setRoleUpdateBusy(true);
+        m_actionMessage.clear();
+        applyStatus();
+
+        OpenAPI::OAIRoleUpdateRequest request;
+        request.setName(editedRole.name);
+        request.setRoleType(editedRole.roleType);
+        request.setAlignment(editedRole.alignment);
+        request.setDescription(editedRole.description);
+        QMap<QString, OpenAPI::OAIRoleTranslation> translations;
+        QSet<QString> translationsToDelete;
+        if (dialog.hasRussianTranslation())
+        {
+            OpenAPI::OAIRoleTranslation translation;
+            translation.setName(editedRole.translationName);
+            translation.setDescription(editedRole.translationDescription);
+            translations.insert(QStringLiteral("ru"), translation);
+        }
+        else
+        {
+            translationsToDelete.insert(QStringLiteral("ru"));
+        }
+        request.setTranslations(translations);
+        request.setTranslationsToDelete(translationsToDelete);
+        api::BotCApiClient::instance()->updateRole(roleId, request, QStringLiteral("ru"));
+    }
+
+    void RolesWidget::onRoleUpdateFinished(const OpenAPI::OAIRoleItem& role,
+                                           const QNetworkReply::NetworkError errorType,
+                                           const int httpStatus, const QString& errorStr)
+    {
+        if (!m_isRoleUpdateInFlight) return;
+
+        m_isRoleUpdateInFlight = false;
+        setRoleUpdateBusy(false);
+
+        switch (httpStatus)
+        {
+        case 200:
+        {
+            RoleEntry updated{
+                role.getId(), role.getName(), role.getRoleType(), role.getRoleTypeTranslation(),
+                role.getAlignment(), role.getAlignmentTranslation(), role.getDescription(), {}, {}
+            };
+            if (role.is_translation_Set())
+            {
+                const OpenAPI::OAIRoleTranslation translation = role.getTranslation();
+                updated.translationName = translation.getName();
+                updated.translationDescription = translation.getDescription();
+            }
+            DBCache::instance()->applyRoleUpdate(updated);
+            showMessage(tr("Role \"%1\" updated.").arg(updated.name), kOkStyle);
+            DBCache::instance()->updateRoles(QStringLiteral("ru"));
+            return;
+        }
+        case 401:
+            showMessage(tr("Missing or invalid API key. The role was not changed."), kErrorStyle);
+            return;
+        case 403:
+            showMessage(tr("API key has been revoked. The role was not changed."), kErrorStyle);
+            return;
+        case 404:
+            showMessage(tr("Role not found. The list has been refreshed."), kErrorStyle);
+            DBCache::instance()->updateRoles(QStringLiteral("ru"));
+            return;
+        case 409:
+            showMessage(tr("A role with this English name already exists. The role was not changed."), kErrorStyle);
+            return;
+        case 422:
+            showMessage(tr("Invalid role data. The role was not changed."), kErrorStyle);
+            return;
+        default:
+            showMessage(tr("Failed to update the role. %1").arg(describeNetworkError(errorType)), kErrorStyle);
+            ui->statusLabel->setToolTip(errorStr);
+            return;
+        }
     }
 
     QString RolesWidget::selectedRoleId() const
@@ -164,6 +296,20 @@ namespace botc::ui
         }
 
         ui->statusLabel->setToolTip(QString());
+        if (m_isRoleUpdateInFlight)
+        {
+            ui->statusLabel->setText(tr("Updating role..."));
+            ui->statusLabel->setStyleSheet(kMutedStyle);
+            return;
+        }
+
+        if (!m_actionMessage.isEmpty())
+        {
+            ui->statusLabel->setText(m_actionMessage);
+            ui->statusLabel->setStyleSheet(m_actionStyle);
+            return;
+        }
+
         if (m_model->rowCount() == 0)
         {
             ui->statusLabel->setText(tr("No roles in the database."));
@@ -177,6 +323,27 @@ namespace botc::ui
 
     void RolesWidget::setRefreshBusy(const bool isBusy)
     {
-        ui->refreshButton->setEnabled(!isBusy);
+        ui->refreshButton->setEnabled(!isBusy && !m_isRoleUpdateInFlight);
+    }
+
+    void RolesWidget::setRoleUpdateBusy(const bool isBusy)
+    {
+        if (isBusy)
+        {
+            ui->editButton->setEnabled(false);
+            ui->refreshButton->setEnabled(false);
+        }
+        else
+        {
+            setRefreshBusy(DBCache::instance()->isRolesRequestInFlight());
+            onSelectionChanged();
+        }
+    }
+
+    void RolesWidget::showMessage(const QString& message, const QString& style)
+    {
+        m_actionMessage = message;
+        m_actionStyle = style;
+        applyStatus();
     }
 } // namespace botc::ui

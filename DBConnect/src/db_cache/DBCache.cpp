@@ -31,6 +31,28 @@ namespace botc
         updatePlayers();
     }
 
+    void DBCache::applyRoleUpdate(const RoleEntry& role)
+    {
+        const auto entry = std::ranges::find_if(m_roleEntries, [&role](const RoleEntry& cachedRole)
+        {
+            return cachedRole.id == role.id;
+        });
+        if (entry == m_roleEntries.end()) return;
+
+        *entry = role;
+        m_cachedRoles.clear();
+        m_cachedRoles.reserve(m_roleEntries.size());
+        for (const RoleEntry& cachedRole : m_roleEntries)
+        {
+            m_cachedRoles.append(cachedRole.displayName());
+        }
+
+        if (m_rolesRequestInFlight)
+            m_rolesRefreshPending = true;
+
+        emit onRolesCacheUpdated();
+    }
+
     void DBCache::applyPlayerRename(const QString& playerId, const QString& name)
     {
         const auto entry = std::ranges::find_if(m_playerEntries, [&playerId](const PlayerEntry& player)

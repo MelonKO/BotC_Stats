@@ -61,6 +61,7 @@ namespace botc
         const QStringList& getRolesCache() const { return m_cachedRoles; }
         /** Full role records used by the roles view. */
         const QVector<RoleEntry>& getRoleEntries() const { return m_roleEntries; }
+        void applyRoleUpdate(const RoleEntry& role);
 
         /** Error of the last roles list request; empty when that request succeeded. */
         const QString& getRolesError() const { return m_rolesError; }

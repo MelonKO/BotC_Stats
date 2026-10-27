@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>botc::ui::RoleEditDialog</class>
+    <widget class="QDialog" name="botc::ui::RoleEditDialog">
+        <property name="windowTitle">
+            <string>Edit role</string>
+        </property>
+        <layout class="QVBoxLayout" name="mainLayout">
+            <property name="margin">
+                <number>16</number>
+            </property>
+            <property name="spacing">
+                <number>10</number>
+            </property>
+            <item>
+                <layout class="QFormLayout" name="formLayout">
+                    <item row="0" column="0">
+                        <widget class="QLabel" name="nameLabel">
+                            <property name="text">
+                                <string>Name (EN)</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="1">
+                        <widget class="QLineEdit" name="nameEdit">
+                            <property name="maxLength">
+                                <number>200</number>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="0">
+                        <widget class="QLabel" name="roleTypeLabel">
+                            <property name="text">
+                                <string>Type</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="1">
+                        <widget class="QComboBox" name="roleTypeCombo"/>
+                    </item>
+                    <item row="2" column="0">
+                        <widget class="QLabel" name="alignmentLabel">
+                            <property name="text">
+                                <string>Side</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="1">
+                        <widget class="QComboBox" name="alignmentCombo"/>
+                    </item>
+                    <item row="3" column="0">
+                        <widget class="QLabel" name="descriptionLabel">
+                            <property name="text">
+                                <string>Description (EN)</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="3" column="1">
+                        <widget class="QPlainTextEdit" name="descriptionEdit">
+                            <property name="maximumHeight">
+                                <number>100</number>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="4" column="0">
+                        <widget class="QLabel" name="translationNameLabel">
+                            <property name="text">
+                                <string>Name (RU)</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="4" column="1">
+                        <widget class="QLineEdit" name="translationNameEdit">
+                            <property name="maxLength">
+                                <number>200</number>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="5" column="0">
+                        <widget class="QLabel" name="translationDescriptionLabel">
+                            <property name="text">
+                                <string>Description (RU)</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="5" column="1">
+                        <widget class="QPlainTextEdit" name="translationDescriptionEdit">
+                            <property name="maximumHeight">
+                                <number>100</number>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="QLabel" name="translationHintLabel">
+                    <property name="text">
+                        <string>Leave both Russian fields empty to remove the Russian translation.</string>
+                    </property>
+                    <property name="wordWrap">
+                        <bool>true</bool>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QLabel" name="validationLabel">
+                    <property name="styleSheet">
+                        <string notr="true">color: red; font-weight: bold;</string>
+                    </property>
+                    <property name="text">
+                        <string></string>
+                    </property>
+                    <property name="wordWrap">
+                        <bool>true</bool>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QDialogButtonBox" name="buttonBox">
+                    <property name="standardButtons">
+                        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+                    </property>
+                </widget>
+            </item>
+        </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>

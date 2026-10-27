@@ -601,12 +601,11 @@ Game history stays with this player, but CSV files with the old name will create
 <context>
     <name>botc::ui::RolesTableModel</name>
     <message>
-        <location filename="../src/ui/RolesTableModel.cpp" line="+71"/>
         <source>Role</source>
-        <translation>Роль</translation>
+        <translation type="vanished">Роль</translation>
     </message>
     <message>
-        <location line="+2"/>
+        <location filename="../src/ui/RolesTableModel.cpp" line="+97"/>
         <source>Name</source>
         <translation>Название (EN)</translation>
     </message>
@@ -624,6 +623,26 @@ Game history stays with this player, but CSV files with the old name will create
         <location line="+2"/>
         <source>Description</source>
         <translation>Описание</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Name (RU)</source>
+        <translation>Название (RU)</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Type (RU)</source>
+        <translation>Тип (RU)</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Side (RU)</source>
+        <translation>Сторона (RU)</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Description (RU)</source>
+        <translation>Описание (RU)</translation>
     </message>
 </context>
 <context>
@@ -644,7 +663,7 @@ Game history stays with this player, but CSV files with the old name will create
         <translation>Обновить</translation>
     </message>
     <message>
-        <location filename="../src/ui/RolesWidget.cpp" line="+136"/>
+        <location filename="../src/ui/RolesWidget.cpp" line="+139"/>
         <source>Roles: %1, shown: %2</source>
         <translation>Ролей: %1, показано: %2</translation>
     </message>

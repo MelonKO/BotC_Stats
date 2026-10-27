@@ -42,9 +42,6 @@ namespace botc
         QString translationDescription;
 
         QString displayName() const { return translationName.isEmpty() ? name : translationName; }
-        QString displayDescription() const { return translationDescription.isEmpty() ? description : translationDescription; }
-        QString displayType() const { return roleTypeTranslation.isEmpty() ? roleType : roleTypeTranslation; }
-        QString displaySide() const { return alignmentTranslation.isEmpty() ? alignment : alignmentTranslation; }
     };
 
     class DBCache final : public QObject

@@ -35,14 +35,17 @@ namespace botc::ui
 
         ui->rolesTable->setModel(m_proxy);
         ui->rolesTable->setSortingEnabled(true);
-        ui->rolesTable->sortByColumn(RolesTableModel::RoleName, Qt::AscendingOrder);
+        ui->rolesTable->sortByColumn(RolesTableModel::Name, Qt::AscendingOrder);
         ui->rolesTable->verticalHeader()->setVisible(false);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::RoleName, QHeaderView::ResizeToContents);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Name, QHeaderView::Stretch);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Type, QHeaderView::Stretch);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Side, QHeaderView::Stretch);
-        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Description, QHeaderView::Interactive);
-        ui->rolesTable->horizontalHeader()->setStretchLastSection(true);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Name, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Type, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Side, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::Description, QHeaderView::Stretch);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::NameRu, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::TypeRu, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::SideRu, QHeaderView::ResizeToContents);
+        ui->rolesTable->horizontalHeader()->setSectionResizeMode(RolesTableModel::DescriptionRu, QHeaderView::Stretch);
+        ui->rolesTable->horizontalHeader()->setStretchLastSection(false);
 
         connect(ui->searchEdit, &QLineEdit::textChanged,
                 this, &RolesWidget::onSearchTextChanged);
@@ -125,7 +128,7 @@ namespace botc::ui
         {
             if (m_model->roleIdAt(row) != roleId) continue;
 
-            const QModelIndex proxyIndex = m_proxy->mapFromSource(m_model->index(row, RolesTableModel::RoleName));
+            const QModelIndex proxyIndex = m_proxy->mapFromSource(m_model->index(row, RolesTableModel::Name));
             if (proxyIndex.isValid()) ui->rolesTable->selectRow(proxyIndex.row());
             return;
         }

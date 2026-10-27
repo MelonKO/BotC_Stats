@@ -40,22 +40,48 @@ namespace botc::ui
         if (role == RoleIdRole) return roleEntry.id;
         if (role == Qt::ToolTipRole)
         {
-            return index.column() == Name ? roleEntry.name : roleEntry.displayDescription();
+            switch (index.column())
+            {
+            case Name:
+                return roleEntry.name;
+            case Type:
+                return roleEntry.roleType;
+            case Side:
+                return roleEntry.alignment;
+            case Description:
+                return roleEntry.description;
+            case NameRu:
+                return roleEntry.translationName;
+            case TypeRu:
+                return roleEntry.roleTypeTranslation;
+            case SideRu:
+                return roleEntry.alignmentTranslation;
+            case DescriptionRu:
+                return roleEntry.translationDescription;
+            default:
+                return {};
+            }
         }
         if (role != Qt::DisplayRole) return {};
 
         switch (index.column())
         {
-        case RoleName:
-            return roleEntry.displayName();
         case Name:
             return roleEntry.name;
         case Type:
-            return roleEntry.displayType();
+            return roleEntry.roleType;
         case Side:
-            return roleEntry.displaySide();
+            return roleEntry.alignment;
         case Description:
-            return roleEntry.displayDescription();
+            return roleEntry.description;
+        case NameRu:
+            return roleEntry.translationName;
+        case TypeRu:
+            return roleEntry.roleTypeTranslation;
+        case SideRu:
+            return roleEntry.alignmentTranslation;
+        case DescriptionRu:
+            return roleEntry.translationDescription;
         default:
             return {};
         }
@@ -67,8 +93,6 @@ namespace botc::ui
 
         switch (section)
         {
-        case RoleName:
-            return tr("Role");
         case Name:
             return tr("Name");
         case Type:
@@ -77,6 +101,14 @@ namespace botc::ui
             return tr("Side");
         case Description:
             return tr("Description");
+        case NameRu:
+            return tr("Name (RU)");
+        case TypeRu:
+            return tr("Type (RU)");
+        case SideRu:
+            return tr("Side (RU)");
+        case DescriptionRu:
+            return tr("Description (RU)");
         default:
             return {};
         }
@@ -84,6 +116,6 @@ namespace botc::ui
 
     void RolesTableModel::retranslate()
     {
-        emit headerDataChanged(Qt::Horizontal, RoleName, ColumnCount - 1);
+        emit headerDataChanged(Qt::Horizontal, Name, ColumnCount - 1);
     }
 } // namespace botc::ui

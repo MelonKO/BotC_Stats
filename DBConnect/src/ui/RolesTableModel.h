@@ -19,11 +19,14 @@ namespace botc::ui
     public:
         enum Column
         {
-            RoleName = 0,
-            Name,
+            Name = 0,
             Type,
             Side,
             Description,
+            NameRu,
+            TypeRu,
+            SideRu,
+            DescriptionRu,
             ColumnCount
         };
 

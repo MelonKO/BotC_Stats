@@ -96,11 +96,18 @@
 
 | Колонка | Содержимое |
 |---------|------------|
-| Role | перевод названия (`translation.name`), при его отсутствии — `name` |
-| Name | `name` из справочника (английское, системное значение) |
-| Type | `role_type_translation` (Горожанин, Изгой, Приспешник, Демон, Странник), при отсутствии перевода — `role_type` (`Townsfolk` и т. д.) |
-| Side | `alignment_translation` (добро / зло / нейтральный), при отсутствии перевода — `alignment`; стороны роли — только `good`/`evil`/`neutral` (см. `core/docs/SIDES.md`) |
-| Description | `translation.description`, при отсутствии — `description` |
+| Name | `name` из справочника (английское, основное) |
+| Type | `role_type` из справочника (английское, основное) |
+| Side | `alignment` из справочника (английское, основное) |
+| Description | `description` из справочника (английское, основное) |
+| Name (RU) | `translation.name` |
+| Type (RU) | `role_type_translation` |
+| Side (RU) | `alignment_translation` |
+| Description (RU) | `translation.description` |
+
+Русские поля не подменяют английские: каждое значение показано в своей колонке;
+если перевода нет, RU-ячейка остаётся пустой. Порядок колонок соответствует превью
+импорта ролей: сначала исходные английские поля, затем локализованные.
 
 Плюс: поле поиска (фильтр по всем колонкам, фиксированная строка, без учёта
 регистра), кнопка **Refresh** с блокировкой на время запроса, счётчик
@@ -120,9 +127,9 @@
 | № | Задача | Файлы |
 |---|--------|-------|
 | R1.0 | Расширить `GET /api/roles`: в `RoleItem` добавить nullable `role_type_translation` и `alignment_translation` (заполняются только при заданном `lang`), в SQL — `LEFT JOIN role_type_translations`/`alignment_translations` по `lang_code`; обновить спеку и `TestRolesListEndpoint` (моки `fetch` учитывают новые ключи), затем `python scripts/project.py generate` | `openapi/api/openapi.yaml:248-280,466-502`, `core/api/app/import_logic.py:195-246`, `core/api/app/tests/test_main.py:227-266` |
-| R1.1 | Добавить `RoleEntry` (`id`, `name`, `roleType`, `roleTypeTranslation`, `alignment`, `alignmentTranslation`, `description`, `translationName`, `translationDescription` + `displayName()`/`displayType()`/`displaySide()`/`displayDescription()` с откатом на значения справочника), хранилище `QVector<RoleEntry>`, геттеры `getRoleEntries()`, `getRolesError()`, `getRolesErrorType()`, `isRolesRequestInFlight()`; заполнять записи в `onRoleListFinished` (`translation` nullable — читать через `is_translation_Set()`), `m_cachedRoles` собирать из записей (сохранить текущую семантику «перевод, иначе оригинал»); очищать ошибку в `requestRoles()` по образцу `requestPlayers()`; добавить сигнал о начале запроса (сейчас кеш уведомляет только о завершении, поэтому вкладка не узнаёт, что обновление уже идёт извне — после импорта ролей или сохранения настроек) | `DBConnect/src/db_cache/DBCache.h`, `DBCache.cpp` |
-| R1.2 | Модель таблицы: колонки `Role/Name/Type/Side/Description`, `RoleIdRole = Qt::UserRole + 1` (скрытый), `setRoles()`, `roleIdAt()`, `headerData()` через `tr()`, `retranslate()` | `DBConnect/src/ui/RolesTableModel.{h,cpp}` (новые) |
-| R1.3 | Виджет: `.ui` копируется с `PlayersWidget.ui` (поиск, Refresh, таблица ≥250 px, alternating rows, single row selection, статус + счётчик); прокси-модель с `setFilterKeyColumn(-1)` (поиск по всем колонкам; у Players явно задан только `Name`, `PlayersWidget.cpp:41`), сортировка по `Role`, сохранение выбора по id, `changeEvent/retranslate`, `refreshFromCache`, `applyStatus`, busy по `isRolesRequestInFlight()` + сигналу начала запроса. Значения колонок берутся из `displayType()`/`displaySide()`, поэтому `retranslate()` перерисовывает только заголовки, статусы и подписи (данные с сервера от языка UI не зависят) | `DBConnect/src/ui/RolesWidget.{h,cpp,ui}` (новые) |
+| R1.1 | Добавить `RoleEntry` (`id`, `name`, `roleType`, `roleTypeTranslation`, `alignment`, `alignmentTranslation`, `description`, `translationName`, `translationDescription` + `displayName()` для прежнего списка кеша), хранилище `QVector<RoleEntry>`, геттеры `getRoleEntries()`, `getRolesError()`, `getRolesErrorType()`, `isRolesRequestInFlight()`; заполнять записи в `onRoleListFinished` (`translation` nullable — читать через `is_translation_Set()`), `m_cachedRoles` собирать из записей в том же порядке и с прежней семантикой (RU name, иначе EN); очищать ошибку в `requestRoles()` по образцу `requestPlayers()`; добавить сигнал о начале запроса (сейчас кеш уведомляет только о завершении, поэтому вкладка не узнаёт, что обновление уже идёт извне — после импорта ролей или сохранения настроек) | `DBConnect/src/db_cache/DBCache.h`, `DBCache.cpp` |
+| R1.2 | Модель таблицы: колонки `Name/Type/Side/Description`, затем `Name (RU)/Type (RU)/Side (RU)/Description (RU)`; RU-колонки содержат только перевод и остаются пустыми, если его нет; `RoleIdRole = Qt::UserRole + 1` (скрытый), `setRoles()`, `roleIdAt()`, `headerData()` через `tr()`, `retranslate()` | `DBConnect/src/ui/RolesTableModel.{h,cpp}` (новые) |
+| R1.3 | Виджет: `.ui` копируется с `PlayersWidget.ui` (поиск, Refresh, таблица ≥250 px, alternating rows, single row selection, статус + счётчик); прокси-модель с `setFilterKeyColumn(-1)` (поиск по всем колонкам; у Players явно задан только `Name`, `PlayersWidget.cpp:41`), сортировка по `Name`, сохранение выбора по id, `changeEvent/retranslate`, `refreshFromCache`, `applyStatus`, busy по `isRolesRequestInFlight()` + сигналу начала запроса. Значения колонок — исходные английские поля и отдельные RU-переводы; RU-значения не подменяют EN при отсутствии перевода | `DBConnect/src/ui/RolesWidget.{h,cpp,ui}` (новые) |
 | R1.4 | Вкладка в главном окне: `m_rolesWidget`, `addTab(..., tr("Roles"))` после Players, строка переименования в `retranslate()`, при старте `DBCache::updateRoles("ru")` (тот же язык, что в `MainWindow.cpp:47`) | `DBConnect/src/ui/MainWindow.{h,cpp}` |
 | R1.6 | Регистрация новых файлов и `translations --update` + перевод новых строк интерфейса (контексты `botc::ui::RolesWidget`, `botc::ui::RolesTableModel`; названия типов/сторон идут с сервера и в каталог не попадают), плейсхолдеры `%1`/`%2` сохранить | `DBConnect/CMakeLists.txt:56-67`, `DBConnect/translations/dbconnect_ru.ts` |
 | R1.7 | Документация: строка про DBConnect и раздел использования в `README.md:31,53`, актуализировать пример `GET /api/roles` (сейчас в ответе нет `id`, `description`, `translation`, а также новых `role_type_translation`/`alignment_translation`) — `core/docs/API-ACCESS.md:314-338`, новая запись `C10` (следующий свободный номер после `C9`, `core/docs/KNOWN-ISSUES.md:278-297`): ошибка списка ролей раньше не сохранялась в кеше и не доходила до UI, теперь показывается на вкладке | `README.md`, `core/docs/API-ACCESS.md`, `core/docs/KNOWN-ISSUES.md` |
@@ -134,11 +141,11 @@
 
 ### 4.3 Критерии приёмки этапа 1
 
-- На вкладке Roles видны все роли сервера с русскими названиями, типами и сторонами
-  (из `role_translations`, `role_type_translations`, `alignment_translations`); если
-  перевода нет, показывается значение из справочника — пустых ячеек нет.
-- Поиск фильтрует по отображаемому названию, английскому названию, типу, стороне и
-  описанию; кириллица и латиница работают без учёта регистра.
+- На вкладке Roles видны все роли сервера. Основные EN-колонки всегда содержат
+  значения справочника; переводы показаны отдельно в RU-колонках и не подменяют
+  исходные значения. Если перевода нет, RU-ячейка остаётся пустой.
+- Поиск фильтрует по английскому и русскому названию, типу, стороне и описанию;
+  кириллица и латиница работают без учёта регистра.
 - Кнопка Refresh блокируется на время запроса; повторное нажатие не порождает второй
   параллельный запрос (склейка в `DBCache`).
 - Ошибки различаются: неверный ключ (401), таймаут, недоступный сервер — текст через
@@ -161,7 +168,7 @@
 2. Неверный API key в Settings → ошибка 401 с понятным текстом, повтор после
    исправления ключа восстанавливает список.
 3. Остановленный API → сообщение о соединении, tooltip с деталями.
-4. Поиск `дамочка`, `Chambermaid`, `Горожанин`, `нейтральный` — ожидаемые строки.
+4. Поиск `Flowergirl`, `Цветочница`, `Townsfolk`, `Горожанин`, `good`, `добро` — ожидаемые строки.
 5. Сортировка по колонкам Type/Side/Name, затем поиск — фильтр и сортировка совместимы.
 6. Импорт на вкладке `Roles import` файла с новой ролью → она появляется на вкладке Roles.
 7. Смена языка интерфейса на вкладке Settings → все строки новые, кириллица не «плывёт».
@@ -232,10 +239,10 @@
 
 | Риск | Что делать |
 |------|------------|
-| Общий кеш ролей используется валидацией импорта партий (`ImportGamesWidget.cpp:77`) — ошибка в `getRolesCache()` ломает импорт | `m_cachedRoles` продолжает собираться из записей в том же порядке и с той же семантикой (перевод, иначе оригинал); добавить проверку вручную: импорт партий после появления вкладки Roles |
+| Общий кеш ролей используется валидацией импорта партий (`ImportGamesWidget.cpp:77`) — ошибка в `getRolesCache()` ломает импорт | `m_cachedRoles` продолжает собираться из записей в том же порядке и с той же семантикой (RU name, иначе EN); добавить проверку вручную: импорт партий после появления вкладки Roles |
 | Гонка кеша ролей при старте (KNOWN-ISSUES C3) | Вне объёма фичи и **не** считается исправленной: показ ошибки на вкладке Roles только упрощает диагностику; рекомендация из C3 (дождаться начальной загрузки перед валидацией CSV) остаётся отдельной задачей |
 | `lang` в `GET /api/roles` не сверяется с таблицей `languages` — опечатка даёт молча `null` во всех переводах (включая новые поля типа/стороны) | Зафиксировать в документации этапа 1; валидацию языка (в том числе для `PATCH` этапа 2) делать отдельной задачей, не в этой фиче |
-| У языка нет перевода типа или стороны (новый язык, неполный сид) | `displayType()`/`displaySide()` откатываются на значение справочника; тест API на `role_type_translation = null` |
+| У языка нет перевода типа или стороны (новый язык, неполный сид) | Соответствующая RU-ячейка остаётся пустой, английская основная ячейка всё равно показывает значение справочника; тест API на `role_type_translation = null` |
 | Правка `role_type`/`alignment` меняет историческую аналитику | Предупреждение в диалоге и в `API-ACCESS.md`; при необходимости — отказ от правки этих полей на этапе 2 (см. Q4) |
 | `DELETE` ролям не выдан, удаление не предусмотрено | Вне объёма; UI не предлагает удаление |
 | Описания длинные (≤2000), колонки растянуты | `QHeaderView::Stretch` для названий, для Description — `Interactive` + tooltip полным текстом |

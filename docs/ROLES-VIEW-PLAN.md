@@ -3,9 +3,11 @@
 Документ описывает фичу «просмотр списка ролей на сервере» по аналогии с вкладкой
 «Players» и заранее очерчивает второй этап — редактирование ролей.
 
-Статус: этап 1 реализован (вкладка **Roles**), этап 2 — план.
+Статус: этапы 1 и 2 реализованы; локальная сборка и тесты пройдены. Сквозная
+проверка PATCH на живом сервере не выполнялась.
 Ветка этапа 1: `feature/roles-list-view` (ответвлена от `develop`).
-Ветка этапа 2: `feature/roles-edit` (ответвляется от `develop` после мержа этапа 1).
+Ветка этапа 2: `feature/roles-edit` создана от `develop`; поскольку этап 1 ещё не
+влит, prerequisite-коммиты этапа 1 перенесены в неё cherry-pick’ом.
 
 ## 1. Цель и границы
 
@@ -178,7 +180,8 @@
 
 ## 5. Этап 2 — редактирование роли
 
-Отдельная ветка `feature/roles-edit` от `develop` после мержа этапа 1.
+Ветка `feature/roles-edit`, созданная от `develop` (коммиты этапа 1 перенесены
+cherry-pick’ом как зависимости, так как ещё не влиты).
 
 ### 5.1 Контракт API (сначала спека, потом код)
 
@@ -188,8 +191,9 @@
   security `ApiKeyAuth`, опциональный `lang` как у `GET /api/roles`);
 - схема `RoleUpdateRequest`: все поля опциональны, `name` 1–200, `alignment`
   `^(good|evil|neutral)$`, `role_type` из перечисления, `description` nullable
-  ≤2000, `translations: {lang: RoleTranslation}`; минимум одно поле в теле
-  (`minProperties: 1`);
+  ≤2000, `translations: {lang: RoleTranslation}` для добавления/обновления и
+  `translations_to_delete: [lang, ...]` для удаления перевода; минимум одно поле
+  в теле (`minProperties: 1`); нельзя задавать и удалять один язык в одном запросе;
 - ответы: 200 `RoleItem` (с `translation` для запрошенного `lang`), 401, 404
   (нет роли), 409 (имя занято), 422 (некорректное тело/неизвестный язык).
 
@@ -206,36 +210,36 @@
 
 | № | Задача | Файлы |
 |---|--------|-------|
-| R2.1 | `update_role(role_id, payload)` в **одной транзакции** (учесть I4: `import_roles` не транзакционен), `UPDATE roles ... RETURNING`, upsert переводов по `(role_id, lang_code)`; перед upsert явно проверить язык по таблице `languages`, чтобы неизвестный `lang` давал 422, а не ошибку FK. Пустое тело запроса проверять в эндпоинте: `minProperties: 1` в спеке не гарантирует проверку в сгенерированной Pydantic-модели | `core/api/app/import_logic.py` |
-| R2.2 | Исключение конфликта имени по образцу `PlayerNameConflictError` (`import_logic.py:23-28`, `:379-381`); пустое имя → `ValueError` | `import_logic.py` |
-| R2.3 | Маршрут и маппинг ошибок: 200/404/409/422, как у `PATCH /api/players/{playerId}` (`core/api/app/main.py:162-185`) | `core/api/app/main.py` |
-| R2.4 | Права: у `api_service` уже есть `UPDATE` на `roles` и `INSERT, UPDATE, SELECT` на `role_translations` (`03-grant-privileges.sql:41-48`) — табличный грант покрывает правку всех полей, миграция не нужна (в отличие от `100-grant-players-update.sql`, где грант колоночный) | `core/init-scripts/03-grant-privileges.sql` (проверить) |
-| R2.5 | Тесты: `TestRoleUpdateEndpoint` по образцу `TestPlayerRenameEndpoint` (`test_main.py:354-510`, мок `fetchrow` + разбор параметров), включая неизвестный язык (422) и пустое тело (422); плюс `test_schemas.py` на `RoleUpdateRequest` (неверный `alignment`, длина имени) | `core/api/app/tests/` |
+| R2.1 | `update_role(role_id, payload)` в **одной транзакции**: проверить существование роли и языков, выполнить динамический `UPDATE roles ... RETURNING`, upsert переводов по `(role_id, lang_code)` и удалить `translations_to_delete`; неизвестный язык → 422. Пустое тело и недопустимый `null` у обязательных полей проверяются в эндпоинте (одного `minProperties` недостаточно) | `core/api/app/import_logic.py` |
+| R2.2 | Исключения `RoleNameConflictError` и `UnknownRoleLanguageError` (`import_logic.py:32-43`); английское имя нормализуется (`strip()`), пустое → 422, конфликт уникального имени → 409 | `core/api/app/import_logic.py` |
+| R2.3 | Маршрут и маппинг ошибок: 200/401/403/404/409/422; обработка ролей по образцу PATCH игрока (`core/api/app/main.py:206-228`) | `core/api/app/main.py` |
+| R2.4 | У `api_service` уже есть `UPDATE` на `roles` и `INSERT, UPDATE, SELECT` на `role_translations`; для удаления перевода добавлен `DELETE` только на `role_translations` (не на `roles`), в init grant и миграции `101-grant-role-translations-delete.sql` для существующих БД | `core/init-scripts/03-grant-privileges.sql`, `core/migrations/101-grant-role-translations-delete.sql` |
+| R2.5 | Тесты `TestRoleUpdateEndpoint` (`test_main.py:334-562`) и `TestUpdateRoleTransaction`: обновление всех полей, добавление/удаление перевода, auth 401/403, 404/409/422, пустое тело, неизвестные языки, rollback при сбое транзакции; schema tests проверяют ограничения длины и значения | `core/api/app/tests/test_main.py`, `test_import_logic.py`, `test_schemas.py` |
 
 ### 5.3 Клиент
 
 | № | Задача | Файлы |
 |---|--------|-------|
-| R2.6 | `BotCApiClient::updateRole(roleId, request)` + сигнал `roleUpdateFinished(OAIRoleItem, errorType, httpStatus, errorStr)` по образцу `updatePlayer` (`BotCApiClient.h:55`, сигнал `:75-77`); HTTP-код читается только из full-worker варианта сигнала (`BotCApiClient.cpp:191-200`) — без него 404/409/422 не различить; таймаут ролей 30 с уже задан (`BotCApiClient.cpp:150`) | `DBConnect/src/api/BotCApiClient.{h,cpp}` |
-| R2.7 | `DBCache::applyRoleUpdate(...)` — точечное обновление записи в кеше по id, по образцу `applyPlayerRename` (`DBCache.cpp:34-54`) | `DBConnect/src/db_cache/DBCache.{h,cpp}` |
-| R2.8 | `RoleEditDialog` со всеми полями роли: name (EN), Type (combo: Townsfolk/Outsider/Minion/Demon/Traveller), Side (combo: good/evil/neutral), Description, RU name/description; клиентская валидация (1–200, ≤2000), кнопки Save/Cancel, блокировка на время запроса | `DBConnect/src/ui/RoleEditDialog.{h,cpp,ui}` (новые) |
-| R2.9 | Открытие диалога — двойной клик по строке и/или кнопка Edit; таблица остаётся только для чтения (никаких редактируемых флагов в модели — D4); подтверждение с предупреждением: импорт партий ищет роли по **русским переводам** `role_translations` (`import_logic.py:60-63`), поэтому правка RU-названия меняет то, какие роли найдёт следующий CSV-импорт, а правка английского имени расходится с ключом `roles.name`, по которому импорт ролей делает upsert; маппинг 404/409/422 и сетевых ошибок; после успеха — патч кеша и `updateRoles("ru")` | `DBConnect/src/ui/RolesWidget.{h,cpp}` |
-| R2.10 | Регистрация файлов в CMake, новые строки в `dbconnect_ru.ts`, перевод | `DBConnect/CMakeLists.txt`, `DBConnect/translations/dbconnect_ru.ts` |
+| R2.6 | `BotCApiClient::updateRole(roleId, request, lang)` + сигнал `roleUpdateFinished(OAIRoleItem, errorType, httpStatus, errorStr)`; HTTP-код берётся из full-worker сигнала (`BotCApiClient.cpp:182-189`), таймаут 30 с наследуется от roles API | `DBConnect/src/api/BotCApiClient.{h,cpp}` |
+| R2.7 | `DBCache::applyRoleUpdate(...)` — патч записи и производного списка имён по id, затем сигнал обновления; повторный fetch подтверждает результат | `DBConnect/src/db_cache/DBCache.{h,cpp}` |
+| R2.8 | `RoleEditDialog` со всеми доступными полями: Name/Description (EN), Type, Side, Name/Description (RU); Type/Side выбираются из фиксированных справочных значений. Валидация имени и описаний, пустая RU-пара удаляет перевод; Save/Cancel | `DBConnect/src/ui/RoleEditDialog.{h,cpp,ui}` |
+| R2.9 | Редактирование открывается кнопкой Edit и двойным нажатием на строку; таблица остаётся read-only. Перед PATCH показывается подтверждение о влиянии типа/стороны на историческую аналитику и изменений английского/RU имён на импорты; обрабатываются 404/409/422 и сетевые ошибки; после успеха обновляется кеш и выполняется fetch `GET /api/roles?lang=ru` | `DBConnect/src/ui/RolesWidget.{h,cpp}` |
+| R2.10 | Регистрация диалога в CMake и полный русский перевод диалога/feedback | `DBConnect/CMakeLists.txt`, `DBConnect/translations/dbconnect_ru.ts` |
 
 ### 5.4 Документация и проверка этапа 2
 
-- `core/docs/API-ACCESS.md`: новый раздел `PATCH /api/roles/{roleId}` (тело, коды,
-  пример cURL), предупреждение о влиянии правки `role_type`/`alignment` на
-  аналитические представления (`v_role_stats`, `v_role_type_stats` считаются из
-  `roles`, поэтому правка меняет статистику ретроспективно; правка разрешена
-  решением 2026-10-27, но предупреждение обязательно) и о переименовании
-  ролей относительно будущих CSV-импортов.
-- `core/docs/KNOWN-ISSUES.md`: связать с I4 (транзакционность ролей), Q1 (изменяемость `roles.alignment` упомянута там как побочный аргумент против выводимой исторической стороны) и Q4 (статистика ролей по текущей стороне роли).
-- `README.md`: описание возможностей DBConnect.
-- Проверка: `python scripts/project.py verify`, `python scripts/project.py generate --check`
-  (в коммите generated-код из спеки), ручные сценарии — правка перевода, правка типа,
-  конфликт имени (409), правка удалённой роли (404), пустое имя/неверный тип (422),
-  недоступный сервер, отмена диалога; визуальная проверка Metabase после правки типа.
+- `core/docs/API-ACCESS.md`: описать PATCH-тело, ответы, примеры изменения и удаления
+  RU-перевода, а также влияние правок на историческую аналитику и импорты.
+- `core/docs/KNOWN-ISSUES.md`: зафиксировать, что PATCH роли транзакционен, но I4
+  остаётся открытым для пакетного `import_roles`; Q1/Q4 и влияние изменений типа/
+  стороны на историю остаются документированными рисками.
+- `core/migrations/README.md`: добавить миграцию нового права для существующих баз.
+- `README.md`: описание списка и редактирования ролей во вкладке Roles; импорт остаётся
+  во вкладке Roles import.
+- Проверки API: `python scripts/project.py verify` (сгенерированный контракт + tests).
+  Проверки клиента: сборка Debug и translations. Ручные сценарии для живого API/UI:
+  изменение RU/EN полей, удаление RU-перевода, 404/409/422 и отказ соединения;
+  визуальная проверка Metabase после правки типа/стороны не выполнены в этой среде.
 
 ## 6. Риски и связанные известные проблемы
 
@@ -243,9 +247,9 @@
 |------|------------|
 | Общий кеш ролей используется валидацией импорта партий (`ImportGamesWidget.cpp:77`) — ошибка в `getRolesCache()` ломает импорт | `m_cachedRoles` продолжает собираться из записей в том же порядке и с той же семантикой (RU name, иначе EN); добавить проверку вручную: импорт партий после появления вкладки Roles |
 | Гонка кеша ролей при старте (KNOWN-ISSUES C3) | Вне объёма фичи и **не** считается исправленной: показ ошибки на вкладке Roles только упрощает диагностику; рекомендация из C3 (дождаться начальной загрузки перед валидацией CSV) остаётся отдельной задачей |
-| `lang` в `GET /api/roles` не сверяется с таблицей `languages` — опечатка даёт молча `null` во всех переводах (включая новые поля типа/стороны) | Зафиксировать в документации этапа 1; валидацию языка (в том числе для `PATCH` этапа 2) делать отдельной задачей, не в этой фиче |
+| `lang` в `GET /api/roles` не сверяется с таблицей `languages` — неизвестный код даёт `null` во всех переводах | Зафиксировано в API-документации; `PATCH` отдельно валидирует языки в операциях set/delete и отвечает 422 для неизвестного кода |
 | У языка нет перевода типа или стороны (новый язык, неполный сид) | Соответствующая RU-ячейка остаётся пустой, английская основная ячейка всё равно показывает значение справочника; тест API на `role_type_translation = null` |
-| Правка `role_type`/`alignment` меняет историческую аналитику | Предупреждение в диалоге и в `API-ACCESS.md`; при необходимости — отказ от правки этих полей на этапе 2 (см. Q4) |
+| Правка `role_type`/`alignment` меняет историческую аналитику | Редактирование поддержано по решению 2026-10-27; диалог и `API-ACCESS.md` предупреждают о влиянии на историю |
 | `DELETE` ролям не выдан, удаление не предусмотрено | Вне объёма; UI не предлагает удаление |
 | Описания длинные (≤2000), колонки растянуты | Все колонки имеют `QHeaderView::Interactive` и меняются мышью; начальные ширины заданы по содержимому, длинные описания можно расширить; для полного текста есть tooltip |
 | Клиент и сервер разъезжаются по контракту | Обязательный `python scripts/project.py generate --check` в проверке обеих веток |
@@ -256,7 +260,10 @@
 - Сообщения коммитов английские, по одной задаче (`feat:`, `docs:`, `chore:`).
 - Push — только после того, как работа проверена, отчёт о изменениях и проверках
   предоставлен и пользователь явно подтвердил отправку.
-- Этап 2 — `feature/roles-edit` от `develop` после мержа этапа 1 (D5).
+- Этап 2 — `feature/roles-edit`, создана от `develop`; пока этап 1 не влит,
+  его коммиты перенесены в эту ветку как prerequisite через cherry-pick.
+- Изменения пока только локальные; push выполняется после проверок, отчёта и
+  отдельного явного подтверждения пользователя.
 - Версия монорепозитория не меняется: фича не ломает контракт (этап 1 — только
   клиент, этап 2 — аддитивный путь API).
 

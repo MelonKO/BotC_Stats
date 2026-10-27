@@ -158,11 +158,18 @@ with that behaviour.
 
 ### I4. `import_roles` is not transactional — `open`
 
-`core/api/app/import_logic.py:261-311` commits each `execute` separately and
-writes translations after the role, so a failure in the middle leaves partially
-imported roles while the client is told the import failed. The
-`UniqueViolationError` branch (`:306-307`) is practically unreachable because the
-statement uses `ON CONFLICT DO UPDATE`.
+This issue is scoped to bulk role import via `POST /api/roles/import`.
+`import_roles()` in [`import_logic.py`](../api/app/import_logic.py) executes each
+role write and its translation writes without wrapping the whole bulk import in
+a transaction. A failure partway through can therefore leave partial import
+results while the client is told the import failed. The `UniqueViolationError`
+branch is practically unreachable because the statement uses
+`ON CONFLICT DO UPDATE`.
+
+This remains open and is independent of `PATCH /api/roles/{roleId}`:
+`update_role()` performs each individual role update atomically in a transaction
+([`main.py`](../api/app/main.py),
+[`import_logic.py`](../api/app/import_logic.py)).
 
 Next step: run the whole role import inside a single transaction (with an
 advisory lock, as the games import does), so a failure leaves neither roles nor

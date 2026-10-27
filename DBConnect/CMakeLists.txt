@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(DBConnect VERSION 1.0.0 LANGUAGES CXX)
+project(DBConnect VERSION 1.1.0 LANGUAGES CXX)
 
 # Keep executable and generated runtime configuration files beside each other.
 # Presets set this explicitly; the fallback also supports direct CMake invocations.

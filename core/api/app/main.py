@@ -79,7 +79,7 @@ logging.basicConfig(
 app = FastAPI(
     title="BotC Import API",
     description="API for importing Blood on the Clocktower game records",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 

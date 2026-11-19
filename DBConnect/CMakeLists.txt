@@ -40,6 +40,9 @@ set(SOURCES
         src/ui/MainWindow.cpp
         src/ui/MainWindow.h
         src/ui/MainWindow.ui
+        src/ui/GamesWidget.cpp
+        src/ui/GamesWidget.h
+        src/ui/GamesWidget.ui
         src/ui/SettingsWidget.cpp
         src/ui/SettingsWidget.h
         src/ui/SettingsWidget.ui

@@ -11,6 +11,8 @@ from app.db import get_pool, close_pool
 from app.import_logic import (
     import_game,
     import_games_batch,
+    get_games_page,
+    get_game_details,
     get_all_roles,
     import_roles,
     check_db_connection,
@@ -37,6 +39,8 @@ from app.models import (
     RoleUpdateRequest,
     RoleItem,
     RoleTranslation,
+    GamesResponse,
+    GameDetailsResponse,
 )
 
 
@@ -127,6 +131,28 @@ async def create_import_batch(
     Requires a valid API key in the X-API-Key header.
     """
     return await import_games_batch(data.games, owner)
+
+
+@app.get("/api/games", response_model=GamesResponse)
+async def list_games(
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        owner: dict = Depends(validate_api_key),
+):
+    """Return a paginated list of game summaries, newest first."""
+    return await get_games_page(limit, offset)
+
+
+@app.get("/api/games/{gameId}", response_model=GameDetailsResponse)
+async def read_game(
+        game_id: Annotated[UUID, Path(alias="gameId")],
+        owner: dict = Depends(validate_api_key),
+):
+    """Return a game summary and its player roster."""
+    game = await get_game_details(game_id)
+    if game is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return game
 
 
 @app.get("/api/roles", response_model=RolesResponse)

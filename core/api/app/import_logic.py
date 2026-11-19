@@ -15,6 +15,10 @@ from app.models import (
     GameImportStatusResponse,
     GamesImportStatusResponse,
     PlayerItem,
+    GameSummaryItem,
+    GamesResponse,
+    GameDetailsResponse,
+    GamePlayerItem,
 )
 
 _IMPORT_ADVISORY_LOCK_KEY = 7391823
@@ -269,6 +273,93 @@ async def get_all_roles(lang: Optional[str] = None) -> list[RoleItem]:
                 )
                 for r in rows
             ]
+
+
+async def get_games_page(limit: int, offset: int) -> GamesResponse:
+    """Return a page of game summaries, newest first."""
+    async with get_connection() as conn:
+        total = await conn.fetchval("SELECT COUNT(*) FROM v_game_summary")
+        rows = await conn.fetch(
+            """
+            SELECT game_uuid AS id,
+                   game_date,
+                   game_number,
+                   scenario_name,
+                   location,
+                   storyteller,
+                   alignment_win,
+                   alignment_win_ru,
+                   duration::text AS duration,
+                   players::integer AS players,
+                   survivors::integer AS survivors,
+                   notes
+            FROM v_game_summary
+            ORDER BY game_date DESC, game_number DESC, scenario_name, game_uuid
+            LIMIT $1 OFFSET $2
+            """,
+            limit,
+            offset,
+        )
+    return GamesResponse(
+        games=[GameSummaryItem(**dict(row)) for row in rows],
+        total=total or 0,
+        limit=limit,
+        offset=offset,
+    )
+
+
+async def get_game_details(game_id: UUID) -> GameDetailsResponse | None:
+    """Return a game summary with its roster, or None when the game is absent."""
+    async with get_connection() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT game_uuid AS id,
+                   game_date,
+                   game_number,
+                   scenario_name,
+                   location,
+                   storyteller,
+                   alignment_win,
+                   alignment_win_ru,
+                   duration::text AS duration,
+                   players::integer AS players,
+                   survivors::integer AS survivors,
+                   notes
+            FROM v_game_summary
+            WHERE game_uuid = $1
+            """,
+            game_id,
+        )
+        if row is None:
+            return None
+        player_rows = await conn.fetch(
+            """
+            SELECT gp.seat_number,
+                   p.name,
+                   COALESCE(role_start_translation.name, role_start.name) AS role_start,
+                   COALESCE(role_end_translation.name, role_end.name) AS role_end,
+                   COALESCE(alignment_translation.name,
+                       CASE gp.alignment_end WHEN 'good' THEN 'добро' ELSE 'зло' END) AS alignment_end,
+                   gp.is_alive
+            FROM game_players gp
+            JOIN players p ON p.id = gp.player_id
+            JOIN roles role_start ON role_start.id = gp.role_start_id
+            JOIN roles role_end ON role_end.id = gp.role_end_id
+            LEFT JOIN role_translations role_start_translation
+                ON role_start_translation.role_id = role_start.id AND role_start_translation.lang_code = 'ru'
+            LEFT JOIN role_translations role_end_translation
+                ON role_end_translation.role_id = role_end.id AND role_end_translation.lang_code = 'ru'
+            LEFT JOIN alignment_translations alignment_translation
+                ON alignment_translation.alignment_en = gp.alignment_end AND alignment_translation.lang_code = 'ru'
+            WHERE gp.game_id = $1
+            ORDER BY gp.seat_number NULLS LAST, p.name
+            """,
+            game_id,
+        )
+    return GameDetailsResponse(
+        **dict(row),
+        game_players=[GamePlayerItem(**dict(player)) for player in player_rows],
+    )
 
 
 async def check_db_connection() -> bool:

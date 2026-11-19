@@ -437,6 +437,109 @@ components:
           type: string
           example: "Alice"
 
+    GameSummaryItem:
+      type: object
+      description: Summary of a stored game session.
+      required:
+        - id
+        - game_date
+        - game_number
+        - scenario_name
+        - location
+        - alignment_win
+        - players
+        - survivors
+      properties:
+        id:
+          type: string
+          format: uuid
+        game_date:
+          type: string
+          format: date
+        game_number:
+          type: integer
+        scenario_name:
+          type: string
+        location:
+          type: string
+        storyteller:
+          type: string
+          nullable: true
+        alignment_win:
+          type: string
+          enum: [good, evil, draw]
+        alignment_win_ru:
+          type: string
+          nullable: true
+        duration:
+          type: string
+          nullable: true
+        players:
+          type: integer
+        survivors:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    GamesResponse:
+      type: object
+      description: One page of game summaries.
+      required:
+        - games
+        - total
+        - limit
+        - offset
+      properties:
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameSummaryItem"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    GamePlayerItem:
+      type: object
+      description: A player in a stored game.
+      required:
+        - name
+        - role_start
+        - role_end
+        - alignment_end
+        - is_alive
+      properties:
+        seat_number:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        role_start:
+          type: string
+        role_end:
+          type: string
+        alignment_end:
+          type: string
+          enum: [добро, зло]
+        is_alive:
+          type: boolean
+
+    GameDetailsResponse:
+      allOf:
+        - $ref: "#/components/schemas/GameSummaryItem"
+        - type: object
+          required:
+            - game_players
+          properties:
+            game_players:
+              type: array
+              items:
+                $ref: "#/components/schemas/GamePlayerItem"
+
 # ============================================================
 #  Paths
 # ============================================================
@@ -529,6 +632,91 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/games:
+    get:
+      operationId: listGames
+      summary: List stored games
+      description: Return a paginated list of game summaries, newest first.
+      tags: [ Games ]
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Page of stored games.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GamesResponse"
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/games/{gameId}:
+    get:
+      operationId: getGame
+      summary: Get stored game details
+      description: Return a game summary and its player roster.
+      tags: [ Games ]
+      security:
+        - ApiKeyAuth: [ ]
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Game details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDetailsResponse"
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: API key has been revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Game not found.
           content:
             application/json:
               schema:

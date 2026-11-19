@@ -150,6 +150,196 @@
     </message>
 </context>
 <context>
+    <name>botc::ui::GamesWidget</name>
+    <message>
+        <location filename="../src/ui/GamesWidget.ui" line="+10"/>
+        <source>Game list</source>
+        <translation>Список партий</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Search this page...</source>
+        <translation>Поиск на странице...</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Refresh</source>
+        <translation>Обновить</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Games</source>
+        <translation>Партии</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Game details</source>
+        <translation>Сведения о партии</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <location filename="../src/ui/GamesWidget.cpp" line="+35"/>
+        <location line="+195"/>
+        <location line="+51"/>
+        <source>Select a game to view its players.</source>
+        <translation>Выберите партию, чтобы увидеть игроков.</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <source>Previous</source>
+        <translation>Назад</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Next</source>
+        <translation>Вперёд</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/GamesWidget.cpp" line="-235"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Seat</source>
+        <translation>Место</translation>
+    </message>
+    <message>
+        <location line="-310"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Player</source>
+        <translation>Игрок</translation>
+    </message>
+    <message>
+        <location line="-310"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Role (start)</source>
+        <translation>Роль (начало)</translation>
+    </message>
+    <message>
+        <location line="-309"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Role (end)</source>
+        <translation>Роль (конец)</translation>
+    </message>
+    <message>
+        <location line="-310"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Alignment</source>
+        <translation>Сторона</translation>
+    </message>
+    <message>
+        <location line="-310"/>
+        <location line="+206"/>
+        <location line="+104"/>
+        <source>Alive</source>
+        <translation>Жив</translation>
+    </message>
+    <message>
+        <location line="-197"/>
+        <source>Failed to load game details. %1</source>
+        <translation>Не удалось загрузить сведения о партии. %1</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>The server returned details for a different game.</source>
+        <translation>Сервер вернул сведения о другой партии.</translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>Date</source>
+        <translation>Дата</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Scenario</source>
+        <translation>Сценарий</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Location</source>
+        <translation>Место</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>No.</source>
+        <translation>№</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Storyteller</source>
+        <translation>Рассказчик</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Winner</source>
+        <translation>Победитель</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Players</source>
+        <translation>Игроки</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Survivors</source>
+        <translation>Выжившие</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Duration</source>
+        <translation>Длительность</translation>
+    </message>
+    <message>
+        <location line="+50"/>
+        <source>%1, %2, game %3 — %4; winner: %5; %6 players, %7 survivors; duration: %8</source>
+        <translation>%1, %2, партия №%3 — %4; победившая сторона: %5; игроков: %6, выживших: %7; длительность: %8</translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>; storyteller(s): %1</source>
+        <translation>; рассказчики: %1</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>
+Notes: %1</source>
+        <translation>
+Заметки: %1</translation>
+    </message>
+    <message>
+        <location line="+43"/>
+        <source>Loading game details...</source>
+        <translation>Загрузка состава партии...</translation>
+    </message>
+    <message>
+        <location line="+31"/>
+        <source>%1–%2 of %3</source>
+        <translation>%1–%2 из %3</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Loading games...</source>
+        <translation>Загрузка партий...</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Failed to load games. %1</source>
+        <translation>Не удалось загрузить партии. %1</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>No games in the database.</source>
+        <translation>В базе нет партий.</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Games list loaded.</source>
+        <translation>Список партий загружен.</translation>
+    </message>
+</context>
+<context>
     <name>botc::ui::ImportGamesWidget</name>
     <message>
         <location filename="../src/ui/ImportGamesWidget.ui" line="+20"/>
@@ -468,32 +658,54 @@ Roles updated: %2</source>
 <context>
     <name>botc::ui::MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="+31"/>
-        <location line="+53"/>
         <source>Roles import</source>
-        <translation>Импорт ролей</translation>
+        <translation type="vanished">Импорт ролей</translation>
     </message>
     <message>
-        <location line="-49"/>
-        <location line="+50"/>
         <source>Games import</source>
-        <translation>Импорт партий</translation>
+        <translation type="vanished">Импорт партий</translation>
     </message>
     <message>
-        <location line="-46"/>
+        <location filename="../src/ui/MainWindow.cpp" line="+49"/>
         <location line="+47"/>
         <source>Players</source>
         <translation>Игроки</translation>
     </message>
     <message>
-        <location line="-43"/>
-        <location line="+44"/>
+        <location line="-60"/>
+        <location line="+58"/>
         <source>Roles</source>
         <translation>Роли</translation>
     </message>
     <message>
-        <location line="-40"/>
-        <location line="+41"/>
+        <location line="-62"/>
+        <location line="+66"/>
+        <source>Catalog</source>
+        <translation>Каталог</translation>
+    </message>
+    <message>
+        <location line="-63"/>
+        <location line="+9"/>
+        <location line="+55"/>
+        <location line="+2"/>
+        <source>Import CSV</source>
+        <translation>Импорт CSV</translation>
+    </message>
+    <message>
+        <location line="-60"/>
+        <location line="+59"/>
+        <source>Game list</source>
+        <translation>Список партий</translation>
+    </message>
+    <message>
+        <location line="-55"/>
+        <location line="+50"/>
+        <source>Games</source>
+        <translation>Партии</translation>
+    </message>
+    <message>
+        <location line="-42"/>
+        <location line="+44"/>
         <source>Settings</source>
         <translation>Настройки</translation>
     </message>

@@ -2,7 +2,9 @@
 
 #include "BotCNetworkAccessManager.h"
 #include "OAIGamesApi.h"
+#include "OAIGameDetailsResponse.h"
 #include "OAIGamesImportStatusResponse.h"
+#include "OAIGamesResponse.h"
 #include "OAIPlayerItem.h"
 #include "OAIPlayerUpdateRequest.h"
 #include "OAIPlayersApi.h"
@@ -48,6 +50,7 @@ namespace botc::api
         m_systemAPI->setNewServerForAllOperations(newUrl);
         m_rolesAPI->setNewServerForAllOperations(newUrl);
         m_gameAPI->setNewServerForAllOperations(newUrl);
+        m_gamesReadAPI->setNewServerForAllOperations(newUrl);
         m_playersAPI->setNewServerForAllOperations(newUrl);
     }
 
@@ -57,6 +60,7 @@ namespace botc::api
         m_systemAPI->addHeaders("X-API-Key", m_apiKey);
         m_rolesAPI->addHeaders("X-API-Key", m_apiKey);
         m_gameAPI->addHeaders("X-API-Key", m_apiKey);
+        m_gamesReadAPI->addHeaders("X-API-Key", m_apiKey);
         m_playersAPI->addHeaders("X-API-Key", m_apiKey);
     }
 
@@ -81,6 +85,17 @@ namespace botc::api
     void BotCApiClient::importGamesBatch(const OpenAPI::OAIGamesImportRequest& request) const
     {
         m_gameAPI->importGames(request);
+    }
+
+    void BotCApiClient::listGames(const int limit, const int offset) const
+    {
+        m_gamesReadAPI->listGames(OpenAPI::OptionalParam<qint32>{limit},
+                                  OpenAPI::OptionalParam<qint32>{offset});
+    }
+
+    void BotCApiClient::getGame(const QString& gameId) const
+    {
+        m_gamesReadAPI->getGame(gameId);
     }
 
     void BotCApiClient::listRoles(const std::optional<QString>& lang) const
@@ -145,6 +160,36 @@ namespace botc::api
                 this, [this](const OpenAPI::OAIGamesImportStatusResponse& summary)
                 {
                     handleGamesBatchImportReply(summary, QNetworkReply::NetworkError::NoError, "");
+                });
+
+        initGamesReadAPI();
+    }
+
+    void BotCApiClient::initGamesReadAPI()
+    {
+        m_gamesReadAPI = new OpenAPI::OAIGamesApi{};
+        m_gamesReadAPI->setNetworkAccessManager(m_networkManager);
+        m_gamesReadAPI->addHeaders("X-API-Key", m_apiKey);
+        m_gamesReadAPI->setNewServerForAllOperations(QUrl(m_baseUrl));
+        m_gamesReadAPI->setTimeOut(kRequestTimeoutMs);
+
+        connect(m_gamesReadAPI, &OpenAPI::OAIGamesApi::listGamesSignalError,
+                this, &BotCApiClient::handleGamesListReply);
+        connect(m_gamesReadAPI, &OpenAPI::OAIGamesApi::listGamesSignal,
+                this, [this](const OpenAPI::OAIGamesResponse& summary)
+                {
+                    handleGamesListReply(summary, QNetworkReply::NoError, "");
+                });
+        connect(m_gamesReadAPI, &OpenAPI::OAIGamesApi::getGameSignalError,
+                this, [this](const OpenAPI::OAIGameDetailsResponse& summary,
+                             const QNetworkReply::NetworkError errorType, const QString& errorStr)
+                {
+                    handleGameDetailsReply(summary, errorType, errorStr);
+                });
+        connect(m_gamesReadAPI, &OpenAPI::OAIGamesApi::getGameSignal,
+                this, [this](const OpenAPI::OAIGameDetailsResponse& summary)
+                {
+                    handleGameDetailsReply(summary, QNetworkReply::NoError, "");
                 });
     }
 
@@ -239,6 +284,20 @@ namespace botc::api
                                                     const QString& error_str)
     {
         emit gamesImportBatchFinished(summary, error_type, error_str);
+    }
+
+    void BotCApiClient::handleGamesListReply(const OpenAPI::OAIGamesResponse& summary,
+                                             const QNetworkReply::NetworkError error_type,
+                                             const QString& error_str)
+    {
+        emit gamesListFinished(summary, error_type, error_str);
+    }
+
+    void BotCApiClient::handleGameDetailsReply(const OpenAPI::OAIGameDetailsResponse& summary,
+                                               const QNetworkReply::NetworkError error_type,
+                                               const QString& error_str)
+    {
+        emit gameDetailsFinished(summary, error_type, error_str);
     }
 
     void BotCApiClient::handleRolesListReply(const OpenAPI::OAIRolesResponse& summary,

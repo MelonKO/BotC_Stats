@@ -133,6 +133,52 @@ class PlayerItem(BaseModel):
     name: Annotated[str, Field(examples=['Alice'])]
 
 
+class AlignmentWin(Enum):
+    good = 'good'
+    evil = 'evil'
+    draw = 'draw'
+
+
+class GameSummaryItem(BaseModel):
+    id: UUID
+    game_date: date
+    game_number: int
+    scenario_name: str
+    location: str
+    storyteller: str | None = None
+    alignment_win: AlignmentWin
+    alignment_win_ru: str | None = None
+    duration: str | None = None
+    players: int
+    survivors: int
+    notes: str | None = None
+
+
+class GamesResponse(BaseModel):
+    games: list[GameSummaryItem]
+    total: Annotated[int, Field(ge=0)]
+    limit: int
+    offset: int
+
+
+class AlignmentEnd(Enum):
+    добро = 'добро'
+    зло = 'зло'
+
+
+class GamePlayerItem(BaseModel):
+    seat_number: int | None = None
+    name: str
+    role_start: str
+    role_end: str
+    alignment_end: AlignmentEnd
+    is_alive: bool
+
+
+class GameDetailsResponse(GameSummaryItem):
+    game_players: list[GamePlayerItem]
+
+
 class GameImportRequest(BaseModel):
     game_date: Annotated[date, Field(examples=['2026-01-15'])]
     scenario_name: Annotated[

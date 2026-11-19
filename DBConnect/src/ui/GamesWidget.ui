@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>botc::ui::GamesWidget</class>
+ <widget class="QWidget" name="botc::ui::GamesWidget">
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="margin"><number>16</number></property>
+   <property name="spacing"><number>10</number></property>
+   <item>
+    <widget class="QLabel" name="titleLabel">
+     <property name="text"><string>Game list</string></property>
+     <property name="styleSheet"><string notr="true">font-size: 16px; font-weight: bold;</string></property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="searchLayout">
+     <item>
+      <widget class="QLineEdit" name="searchEdit">
+       <property name="placeholderText"><string>Search this page...</string></property>
+       <property name="clearButtonEnabled"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="refreshButton"><property name="text"><string>Refresh</string></property></widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <widget class="QGroupBox" name="gamesGroup">
+      <property name="title"><string>Games</string></property>
+      <layout class="QVBoxLayout" name="gamesLayout">
+       <item>
+        <widget class="QTableWidget" name="gamesTable">
+         <property name="minimumHeight"><number>180</number></property>
+         <property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property>
+         <property name="selectionMode"><enum>QAbstractItemView::SingleSelection</enum></property>
+         <property name="alternatingRowColors"><bool>true</bool></property>
+         <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QGroupBox" name="detailsGroup">
+      <property name="title"><string>Game details</string></property>
+      <layout class="QVBoxLayout" name="detailsLayout">
+       <item>
+        <widget class="QLabel" name="detailsLabel">
+         <property name="text"><string>Select a game to view its players.</string></property>
+         <property name="wordWrap"><bool>true</bool></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="playersTable">
+         <property name="minimumHeight"><number>140</number></property>
+         <property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property>
+         <property name="alternatingRowColors"><bool>true</bool></property>
+         <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="footerLayout">
+     <item><widget class="QLabel" name="statusLabel"><property name="text"><string/></property></widget></item>
+     <item><spacer name="horizontalSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property></spacer></item>
+     <item><widget class="QPushButton" name="previousButton"><property name="text"><string>Previous</string></property></widget></item>
+     <item><widget class="QLabel" name="pageLabel"><property name="text"><string/></property></widget></item>
+     <item><widget class="QPushButton" name="nextButton"><property name="text"><string>Next</string></property></widget></item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

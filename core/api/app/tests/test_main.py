@@ -4,7 +4,7 @@ Uses httpx.AsyncClient with ASGITransport and patched DB connections.
 """
 import hashlib
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 import pytest
@@ -215,6 +215,117 @@ class TestGameImportEndpoint:
         response = await client.post(
             "/api/games/import", json=payload,
             headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 422
+
+
+# ============================================================
+# Games read endpoints
+# ============================================================
+
+class TestGamesReadEndpoints:
+    @pytest.mark.asyncio
+    async def test_list_games_returns_page(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        conn.fetchval = AsyncMock(return_value=1)
+        conn.fetch = AsyncMock(return_value=[{
+            "id": UUID("a09f3ff7-0f02-485a-b0e1-87388b27face"),
+            "game_date": date(2026, 1, 15),
+            "game_number": 2,
+            "scenario_name": "Тест",
+            "location": "Москва",
+            "storyteller": "МелонКО",
+            "alignment_win": "good",
+            "alignment_win_ru": "добро",
+            "duration": "01:30:00",
+            "players": 7,
+            "survivors": 3,
+            "notes": None,
+        }])
+
+        response = await client.get(
+            "/api/games", params={"limit": 10, "offset": 5},
+            headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["limit"] == 10
+        assert data["offset"] == 5
+        assert data["games"][0]["scenario_name"] == "Тест"
+        assert conn.fetch.await_args.args[1:] == (10, 5)
+
+    @pytest.mark.asyncio
+    async def test_list_games_requires_api_key(self, app_client_with_auth):
+        client, _ = app_client_with_auth
+
+        response = await client.get("/api/games")
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_game_details_returns_roster(self, app_client_with_auth):
+        client, conn = app_client_with_auth
+        game_id = UUID("a09f3ff7-0f02-485a-b0e1-87388b27face")
+        summary = {
+            "id": game_id,
+            "game_date": date(2026, 1, 15),
+            "game_number": 2,
+            "scenario_name": "Тест",
+            "location": "Москва",
+            "storyteller": "МелонКО",
+            "alignment_win": "good",
+            "alignment_win_ru": "добро",
+            "duration": "01:30:00",
+            "players": 1,
+            "survivors": 1,
+            "notes": None,
+        }
+
+        async def mock_fetchrow(query, *args):
+            if "api_keys" in query:
+                return {"id": 1, "owner_name": "Test User", "active": True,
+                        "created_at": datetime(2026, 1, 1), "last_used_at": None}
+            return summary
+
+        conn.fetchrow = AsyncMock(side_effect=mock_fetchrow)
+        conn.fetch = AsyncMock(return_value=[{
+            "seat_number": 1,
+            "name": "Анна",
+            "role_start": "Дамочка",
+            "role_end": "Дамочка",
+            "alignment_end": "добро",
+            "is_alive": True,
+        }])
+
+        response = await client.get(
+            f"/api/games/{game_id}", headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(game_id)
+        assert data["game_players"][0]["name"] == "Анна"
+
+    @pytest.mark.asyncio
+    async def test_game_details_not_found(self, app_client_with_auth):
+        client, _ = app_client_with_auth
+        game_id = UUID("a09f3ff7-0f02-485a-b0e1-87388b27face")
+
+        response = await client.get(
+            f"/api/games/{game_id}", headers=auth_headers("sk-test-key-123"),
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_game_details_rejects_invalid_uuid(self, app_client_with_auth):
+        client, _ = app_client_with_auth
+
+        response = await client.get(
+            "/api/games/not-a-uuid", headers=auth_headers("sk-test-key-123"),
         )
 
         assert response.status_code == 422

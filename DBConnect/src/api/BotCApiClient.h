@@ -15,10 +15,12 @@
         class OAIRolesImportRequest;
     class OAIRolesImportResponse;
     class OAIRolesResponse;
+    class OAIGameDetailsResponse;
     class OAIGameImportStatusResponse;
     class OAIGameImportRequest;
     class OAIGamesImportRequest;
     class OAIGamesImportStatusResponse;
+    class OAIGamesResponse;
     class OAIHealthResponse;
     class OAISystemApi;
     class OAIRolesApi;
@@ -53,6 +55,8 @@ namespace botc::api
         void healthCheck() const;
         void importGame(const OpenAPI::OAIGameImportRequest& importGameRequest) const;
         void importGamesBatch(const OpenAPI::OAIGamesImportRequest& request) const;
+        void listGames(int limit, int offset) const;
+        void getGame(const QString& gameId) const;
         void listRoles(const std::optional<QString>& lang) const;
         void importRoles(const OpenAPI::OAIRolesImportRequest& request) const;
         void listPlayers() const;
@@ -69,6 +73,10 @@ namespace botc::api
                                 QNetworkReply::NetworkError error_type, const QString& error_str);
         void gamesImportBatchFinished(const OpenAPI::OAIGamesImportStatusResponse& summary,
                                       QNetworkReply::NetworkError error_type, const QString& error_str);
+        void gamesListFinished(const OpenAPI::OAIGamesResponse& summary,
+                               QNetworkReply::NetworkError error_type, const QString& error_str);
+        void gameDetailsFinished(const OpenAPI::OAIGameDetailsResponse& summary,
+                                 QNetworkReply::NetworkError error_type, const QString& error_str);
         void rolesListFinished(const OpenAPI::OAIRolesResponse& summary,
                                QNetworkReply::NetworkError error_type, const QString& error_str);
         void rolesImportFinished(const OpenAPI::OAIRolesImportResponse& summary,
@@ -88,6 +96,7 @@ namespace botc::api
     private:
         void initSystemAPI();
         void initGameAPI();
+        void initGamesReadAPI();
         void initRolesAPI();
         void initPlayersAPI();
 
@@ -97,6 +106,10 @@ namespace botc::api
                                    QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleGamesBatchImportReply(const OpenAPI::OAIGamesImportStatusResponse& summary,
                                          QNetworkReply::NetworkError error_type, const QString& error_str);
+        void handleGamesListReply(const OpenAPI::OAIGamesResponse& summary,
+                                  QNetworkReply::NetworkError error_type, const QString& error_str);
+        void handleGameDetailsReply(const OpenAPI::OAIGameDetailsResponse& summary,
+                                    QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleRolesListReply(const OpenAPI::OAIRolesResponse& summary,
                                   QNetworkReply::NetworkError error_type, const QString& error_str);
         void handleRolesImportReply(const OpenAPI::OAIRolesImportResponse& summary,
@@ -122,6 +135,7 @@ namespace botc::api
         BotCNetworkAccessManager* m_networkManager = nullptr;
 
         OpenAPI::OAIGamesApi* m_gameAPI      = nullptr;
+        OpenAPI::OAIGamesApi* m_gamesReadAPI = nullptr;
         OpenAPI::OAIRolesApi* m_rolesAPI     = nullptr;
         OpenAPI::OAISystemApi* m_systemAPI   = nullptr;
         OpenAPI::OAIPlayersApi* m_playersAPI = nullptr;

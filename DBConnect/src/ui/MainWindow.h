@@ -39,10 +39,13 @@ namespace botc::ui
     private:
         Ui::MainWindow* ui;
         QTabWidget* m_tabs = nullptr;
+        QTabWidget* m_rolesPages = nullptr;
+        QTabWidget* m_gamesPages = nullptr;
+        QWidget* m_playersWidget = nullptr;
+        QWidget* m_settingsWidget = nullptr;
+        QWidget* m_rolesCatalogWidget = nullptr;
         QWidget* m_importRolesWidget = nullptr;
         QWidget* m_importGamesWidget = nullptr;
-        QWidget* m_playersWidget = nullptr;
-        QWidget* m_rolesWidget = nullptr;
-        QWidget* m_settingsWidget = nullptr;
+        QWidget* m_gamesWidget = nullptr;
     };
 } // namespace botc::ui
